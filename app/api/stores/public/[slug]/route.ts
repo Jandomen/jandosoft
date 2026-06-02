@@ -6,7 +6,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   try {
     const { slug } = await params;
     await connectDB();
-    const store = await Store.findOne({ slug, isPublic: true }).lean();
+    const store = await Store.findOne({ slug }).lean();
     if (!store) {
       return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
     }
