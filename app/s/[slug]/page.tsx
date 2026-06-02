@@ -1,5 +1,8 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connectDB } from "@/lib/mongodb";
+import { Store } from "@/lib/models/Store";
+import { slugify } from "@/lib/utils";
 import { StorePublicAI } from "./StorePublicAI";
 import TrackingWrapper from "@/components/TrackingWrapper";
 
@@ -9,11 +12,25 @@ interface Props {
 
 async function getStore(slug: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const res = await fetch(`${baseUrl}/api/stores/public/${slug}`, { cache: "no-store" });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.store || null;
+    await connectDB();
+    let store = await Store.findOne({ slug }).lean();
+    if (!store) {
+      store = await Store.findOne({
+        name: { $regex: new RegExp("^" + slug.replace(/-/g, "[- ]") + "$", "i") }
+      }).lean();
+      if (store && !store.slug) {
+        const newSlug = slugify(store.name || "tienda");
+        await Store.updateOne({ _id: store._id }, { $set: { slug: newSlug } }).catch(() => {});
+        (store as any).slug = newSlug;
+      }
+    }
+    if (!store) {
+      const nameVariation = slug.replace(/-/g, " ");
+      store = await Store.findOne({ name: { $regex: new RegExp("^" + nameVariation + "$", "i") } }).lean();
+    }
+    if (!store) return null;
+    const { customers, orders, stripeAccountId, paymentsEnabled, platformFeePercent, ...publicData } = store as any;
+    return publicData;
   } catch {
     return null;
   }
