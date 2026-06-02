@@ -1033,7 +1033,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                           )}
                         </div>
                       </div>
-                      <button onClick={async () => { const v = !publicVisible; setPublicVisible(v); try { await onEditStore?.(userStore?._id || userStore?.id, { isPublic: v }); } catch { setPublicVisible(!v); } }} className={cn("px-3 md:px-4 py-1.5 md:py-2 rounded-xl font-black text-[8px] md:text-[9px] italic uppercase transition-all shrink-0", publicVisible ? "bg-emerald-50 text-emerald-600" : "bg-zinc-200 text-zinc-400")}>
+                      <button onClick={async () => { const v = !publicVisible; setPublicVisible(v); try { await onEditStore?.(userStore?._id || userStore?.id, { isPublic: v }); showToast(v ? "✅ Tienda pública activada" : "Tienda privada", "success"); } catch { setPublicVisible(!v); showToast("Error al actualizar", "error"); } }} className={cn("px-3 md:px-4 py-1.5 md:py-2 rounded-xl font-black text-[8px] md:text-[9px] italic uppercase transition-all shrink-0", publicVisible ? "bg-emerald-50 text-emerald-600" : "bg-zinc-200 text-zinc-400")}>
                         {publicVisible ? "ACTIVO" : "INACTIVO"}
                       </button>
                     </div>
@@ -1046,13 +1046,16 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                             <p className="text-[7px] md:text-[8px] font-bold text-zinc-400 italic truncate">Chat IA visible en la página pública</p>
                           </div>
                         </div>
-                        <button onClick={async () => { const v = !publicAIEnabled; setPublicAIEnabled(v); try { await onEditStore?.(userStore?._id || userStore?.id, { publicAI: v }); } catch { setPublicAIEnabled(!v); } }} className={cn("px-3 md:px-4 py-1.5 md:py-2 rounded-xl font-black text-[8px] md:text-[9px] italic uppercase transition-all shrink-0", publicAIEnabled ? "bg-emerald-50 text-emerald-600" : "bg-zinc-200 text-zinc-400")}>
+                        <button onClick={async () => { const v = !publicAIEnabled; setPublicAIEnabled(v); try { await onEditStore?.(userStore?._id || userStore?.id, { publicAI: v }); showToast(v ? "✅ IA pública activada" : "IA pública desactivada", "success"); } catch { setPublicAIEnabled(!v); showToast("Error al actualizar", "error"); } }} className={cn("px-3 md:px-4 py-1.5 md:py-2 rounded-xl font-black text-[8px] md:text-[9px] italic uppercase transition-all shrink-0", publicAIEnabled ? "bg-emerald-50 text-emerald-600" : "bg-zinc-200 text-zinc-400")}>
                           {publicAIEnabled ? "ACTIVO" : "INACTIVO"}
                         </button>
                       </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <div className="grid grid-cols-3 gap-3 md:gap-4">
+                      <button onClick={async () => { try { await onEditStore?.(userStore?._id || userStore?.id, { isPublic: publicVisible, publicAI: publicAIEnabled }); showToast("✅ Configuración guardada", "success"); } catch { showToast("Error al guardar", "error"); } }} className="w-full py-3 md:py-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black italic text-[9px] md:text-xs hover:bg-emerald-700 transition-all shadow-xl">
+                        GUARDAR
+                      </button>
                       <button onClick={() => setEditingStore(true)} className="w-full py-3 md:py-4 bg-red-600 text-white rounded-xl md:rounded-2xl font-black italic text-[11px] md:text-sm hover:bg-red-700 transition-all shadow-xl">
                         EDITAR
                       </button>

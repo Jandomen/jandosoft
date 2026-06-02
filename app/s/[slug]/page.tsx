@@ -10,7 +10,7 @@ interface Props {
 async function getStore(slug: string) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const res = await fetch(`${baseUrl}/api/stores/public/${slug}`, { next: { revalidate: 60 } });
+    const res = await fetch(`${baseUrl}/api/stores/public/${slug}`, { cache: "no-store" });
     if (!res.ok) return null;
     const data = await res.json();
     return data.store || null;
