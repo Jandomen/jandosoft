@@ -52,7 +52,8 @@ import {
   Megaphone,
   UserCircle,
   Receipt,
-  Menu
+  Menu,
+  ExternalLink
 } from "lucide-react";
 import AdminView from "@/components/admin/Admin";
 import ChatView from "@/components/chat/Chat";
@@ -223,13 +224,20 @@ function SafeUserDashboard(p: {
                 <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-red-600 to-red-700 max-[400px]:rounded-xl rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-lg">
                   <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                 </div>
-                <div>
-                  <h4 className="text-base md:text-lg font-black italic text-zinc-950">{storeName || "Tienda"}</h4>
-                  <div className="flex items-center gap-2 mt-1.5">
+                <div className="min-w-0">
+                  <h4 className="text-base md:text-lg font-black italic text-zinc-950 truncate">{storeName || "Tienda"}</h4>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                     <span className="px-2 py-0.5 bg-red-50 text-red-600 rounded-full text-[8px] md:text-[9px] font-black italic uppercase">{storeType || "General"}</span>
                     {storeIndustry && <span className="text-[8px] md:text-[9px] text-zinc-400 font-black italic">{storeIndustry}</span>}
                   </div>
                 </div>
+                {store.slug && (
+                  <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                    <a href={`/s/${store.slug}`} target="_blank" className="p-2 hover:bg-zinc-50 rounded-xl transition-all group" title="Ver tienda pública">
+                      <ExternalLink className="w-4 h-4 text-zinc-300 group-hover:text-emerald-600 transition-colors" />
+                    </a>
+                  </div>
+                )}
               </div>
             );
           })}

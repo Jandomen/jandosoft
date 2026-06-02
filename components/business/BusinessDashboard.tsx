@@ -243,11 +243,9 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <button onClick={() => { navigator.clipboard.writeText(window.location.origin + "/s/" + userStore.slug); showToast("URL copiada al portapapeles", "success"); }} className="p-1 hover:bg-zinc-100 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Copiar URL">
                   <Copy className="w-3.5 h-3.5 text-zinc-400 hover:text-zinc-950" />
                 </button>
-                {(userStore as any)?.isPublic && (
-                  <a href={"/s/" + userStore.slug} target="_blank" className="p-1 hover:bg-zinc-100 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Abrir sitio público">
-                    <ExternalLink className="w-3.5 h-3.5 text-emerald-600 hover:text-emerald-700" />
-                  </a>
-                )}
+                <a href={"/s/" + userStore.slug} target="_blank" className={cn("p-1 hover:bg-zinc-100 rounded-lg transition-all opacity-0 group-hover:opacity-100", (userStore as any)?.isPublic ? "text-emerald-600 hover:text-emerald-700" : "text-zinc-300 hover:text-zinc-500")} title="Abrir sitio público">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
               </div>
             )}
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingStore(false); setConfirmDelete(false); setSettingsForm({ name: userStore?.name || "", desc: userStore?.desc || "", industry: userStore?.industry || "", slug: userStore?.slug || "", image: userStore?.image || "" }); setPublicVisible(!!(userStore as any)?.isPublic); setPublicAIEnabled(!!(userStore as any)?.publicAI); setShowSettings(true); }} className="p-1.5 md:p-2 hover:bg-zinc-50 rounded-xl transition-all" title="Configuración de la tienda">
@@ -627,7 +625,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
             {section === "ai" && (
               <div className="h-full flex flex-col">
-                <BusinessAI agentName={userStore?.name || "mi negocio"} products={products} setProducts={setProducts} customers={customers} setCustomers={setCustomers} orders={orders} setOrders={setOrders} totalSales={totalSales} kbEntries={kbEntries} setKbEntries={setKbEntries} automations={automations} setAutomations={setAutomations} onPersist={persistStore} onExecuteAutomations={executeAutomations} maxMessages={planLimits?.maxMessages ?? 999} />
+                <BusinessAI agentName={userStore?.name || "mi negocio"} store={userStore} products={products} setProducts={setProducts} customers={customers} setCustomers={setCustomers} orders={orders} setOrders={setOrders} totalSales={totalSales} kbEntries={kbEntries} setKbEntries={setKbEntries} automations={automations} setAutomations={setAutomations} onPersist={persistStore} onExecuteAutomations={executeAutomations} maxMessages={planLimits?.maxMessages ?? 999} />
               </div>
             )}
 
@@ -1019,6 +1017,41 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                         </div>
                       )}
                     </div>
+
+                    <div className="flex items-center justify-between p-3 md:p-4 bg-zinc-50 rounded-xl md:rounded-2xl border border-zinc-100 gap-2">
+                      <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                        <Globe className="w-4 h-4 md:w-5 md:h-5 text-zinc-400 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[11px] md:text-xs font-black italic text-zinc-950 truncate">Tienda Pública</p>
+                          {userStore?.slug && (
+                            <button onClick={() => { navigator.clipboard.writeText(window.location.origin + "/s/" + userStore.slug); showToast("URL copiada", "success"); }} className="flex items-center gap-1 text-[7px] md:text-[8px] font-bold text-zinc-400 italic hover:text-red-600 transition-colors truncate">
+                              /s/{userStore.slug} <Copy className="w-2.5 h-2.5 md:w-3 md:h-3 shrink-0" />
+                            </button>
+                          )}
+                          {!userStore?.slug && (
+                            <p className="text-[7px] md:text-[8px] font-bold text-zinc-400 italic">Generando slug...</p>
+                          )}
+                        </div>
+                      </div>
+                      <button onClick={async () => { const v = !publicVisible; setPublicVisible(v); try { await onEditStore?.(userStore?._id || userStore?.id, { isPublic: v }); } catch { setPublicVisible(!v); } }} className={cn("px-3 md:px-4 py-1.5 md:py-2 rounded-xl font-black text-[8px] md:text-[9px] italic uppercase transition-all shrink-0", publicVisible ? "bg-emerald-50 text-emerald-600" : "bg-zinc-200 text-zinc-400")}>
+                        {publicVisible ? "ACTIVO" : "INACTIVO"}
+                      </button>
+                    </div>
+                    {publicVisible && (
+                      <div className="flex items-center justify-between p-3 md:p-4 bg-zinc-50 rounded-xl md:rounded-2xl border border-zinc-100 gap-2">
+                        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                          <Bot className="w-4 h-4 md:w-5 md:h-5 text-zinc-400 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-[11px] md:text-xs font-black italic text-zinc-950 truncate">IA Pública</p>
+                            <p className="text-[7px] md:text-[8px] font-bold text-zinc-400 italic truncate">Chat IA visible en la página pública</p>
+                          </div>
+                        </div>
+                        <button onClick={async () => { const v = !publicAIEnabled; setPublicAIEnabled(v); try { await onEditStore?.(userStore?._id || userStore?.id, { publicAI: v }); } catch { setPublicAIEnabled(!v); } }} className={cn("px-3 md:px-4 py-1.5 md:py-2 rounded-xl font-black text-[8px] md:text-[9px] italic uppercase transition-all shrink-0", publicAIEnabled ? "bg-emerald-50 text-emerald-600" : "bg-zinc-200 text-zinc-400")}>
+                          {publicAIEnabled ? "ACTIVO" : "INACTIVO"}
+                        </button>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-3 md:gap-4">
                       <button onClick={() => setEditingStore(true)} className="w-full py-3 md:py-4 bg-red-600 text-white rounded-xl md:rounded-2xl font-black italic text-[11px] md:text-sm hover:bg-red-700 transition-all shadow-xl">
                         EDITAR
@@ -1593,8 +1626,9 @@ function GatewayToggle({ name, icon, desc, enabled, locked, onToggle }: { name: 
 
 const AI_WINDOW_MS = 2.5 * 60 * 60 * 1000;
 
-function BusinessAI({ agentName, products, setProducts, customers, setCustomers, orders, setOrders, totalSales, kbEntries, setKbEntries, automations, setAutomations, onPersist, onExecuteAutomations, maxMessages = 999 }: {
+function BusinessAI({ agentName, store, products, setProducts, customers, setCustomers, orders, setOrders, totalSales, kbEntries, setKbEntries, automations, setAutomations, onPersist, onExecuteAutomations, maxMessages = 999 }: {
   agentName: string;
+  store?: any;
   products: any[]; setProducts: any;
   customers: any[]; setCustomers: any;
   orders: any[]; setOrders: any;
@@ -1706,7 +1740,9 @@ function BusinessAI({ agentName, products, setProducts, customers, setCustomers,
 
   const autoStr = automations.filter((a: any) => a.enabled).map((a: any) => `"${a.name}" (trigger: ${a.trigger}, action: ${a.actionType})`).join(", ");
   const contactsStr = aiContacts.map((c: any) => `${c.contactName} (${c.contactEmail})`).join(", ");
-  const contextInfo = `DATOS ACTUALES:\nProductos (${products.length}): ${productsStr || "ninguno"}\nClientes (${customers.length}): ${customersStr || "ninguno"}\nPedidos (${orders.length}): ${ordersStr || "ninguno"}\nVentas totales: $${totalSales}\n\nBASE DE CONOCIMIENTO (${kbEntries.length} entradas):\n${kbStr || "No hay entradas en la base de conocimiento."}\n\nAUTOMATIZACIONES ACTIVAS (${automations.filter((a: any) => a.enabled).length}):\n${autoStr || "No hay automatizaciones activas."}\n\nCONTACTOS (${aiContacts.length}): ${contactsStr || "No hay contactos guardados. Puedes añadir contactos con la acción addContact."}\n\nCONVERSACIONES RECIENTES (${aiConversations.length}):\n${aiConversations.map((c: any) => {
+  const storeConfig = store ? `\n\nCONFIGURACIÓN DE LA TIENDA:\n- Tipo: ${store.type || "No definido"}\n- Industria: ${store.industry || "No definida"}\n- Descripción: ${store.desc || "Sin descripción"}\n- Slug: ${store.slug || "Sin slug"}\n- URL pública: ${store.slug ? window.location.origin + "/s/" + store.slug : "N/A"}\n- Tienda pública: ${store.isPublic ? "Sí" : "No"}\n- IA pública: ${store.publicAI ? "Sí" : "No"}\n- Imagen: ${store.image ? "Tiene imagen" : "Sin imagen"}\n- Moneda: ${store.currency || "USD"}\n- Stripe Connect: ${store.stripeAccountId ? "Conectado" : "No conectado"}\n- Pagos habilitados: ${store.paymentsEnabled ? "Sí" : "No"}\n- Comisión de plataforma: ${store.platformFeePercent ?? 5}%` : "";
+
+  const contextInfo = `DATOS ACTUALES:\nProductos (${products.length}): ${productsStr || "ninguno"}\nClientes (${customers.length}): ${customersStr || "ninguno"}\nPedidos (${orders.length}): ${ordersStr || "ninguno"}\nVentas totales: $${totalSales}${storeConfig}\n\nBASE DE CONOCIMIENTO (${kbEntries.length} entradas):\n${kbStr || "No hay entradas en la base de conocimiento."}\n\nAUTOMATIZACIONES ACTIVAS (${automations.filter((a: any) => a.enabled).length}):\n${autoStr || "No hay automatizaciones activas."}\n\nCONTACTOS (${aiContacts.length}): ${contactsStr || "No hay contactos guardados. Puedes añadir contactos con la acción addContact."}\n\nCONVERSACIONES RECIENTES (${aiConversations.length}):\n${aiConversations.map((c: any) => {
     const other = c.participants?.find((p: any) => p.email !== c.lastSenderId) || c.participants?.[0];
     return `- ${other?.name || "Usuario"}: ${c.lastMessage || "Sin mensajes"}`;
   }).join("\n") || "No hay conversaciones."}\n\nPuedes consultar la base de conocimiento, automatizaciones, contactos y conversaciones para responder preguntas del usuario. También puedes sugerir añadir, modificar o eliminar entradas de KB y automatizaciones usando los actions correspondientes. Puedes enviar mensajes a otros usuarios usando la acción sendMessage y añadir contactos con addContact.`;
@@ -1844,9 +1880,11 @@ function BusinessAI({ agentName, products, setProducts, customers, setCustomers,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [
-            { role: "system", content: `Eres un asistente IA experto en gestión de negocios. Ayudas al usuario a administrar su negocio "${agentName}".
+            { role: "system", content: `Eres un asistente IA experto en gestión de negocios y en la plataforma Jandosoft. Ayudas al usuario a administrar su negocio "${agentName}" dentro de Jandosoft.
 
 ${contextInfo}
+
+IMPORTANTE - ERES EXPERTO EN JANDOSOFT: Puedes dar sugerencias sobre cómo usar las funciones de Jandosoft para mejorar el negocio: configuración de tienda, productos, pagos (Stripe, cripto), integraciones (Telegram, Discord, Slack, WhatsApp, Twilio, redes sociales), automatizaciones, base de conocimiento, campañas de marketing, analíticas, equipo, facturación, planes (Free/Basic/Enterprise), y el builder visual. Usa la configuración de la tienda arriba para dar consejos personalizados.
 
 IMPORTANTE - SOLO PUEDES VER Y MODIFICAR los datos del negocio actual (${agentName}). NO tienes acceso a datos de otros usuarios, otras tiendas, ni información fuera del contexto proporcionado arriba. Si el usuario te pide datos de otros negocios o información que no está en el contexto, debes responder que no tienes acceso a esa información.
 
@@ -1877,6 +1915,7 @@ REGLAS:
 - No inventes datos que no existan en el contexto.
 - Si el usuario pide modificar datos, genera el JSON y explícale qué hiciste.
 - Responde en español profesional y amigable.
+- Si ves que falta configuración importante (Stripe no conectado, tienda no pública, etc.), sugiere amablemente cómo mejorarlo.
 
 LÍMITES ÉTICOS:
 - NO compartas, repitas ni expongas información personal de los clientes (emails, teléfonos, nombres completos) a menos que el usuario sea el dueño del negocio y esté consultando sus propios datos.

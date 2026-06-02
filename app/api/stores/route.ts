@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
     const store = await Store.create({
       ...body,
       slug,
-      isPublic: false,
+      isPublic: true,
       publicAI: false,
       organizationId: auth.organizationId,
       ownerEmail: auth.email,

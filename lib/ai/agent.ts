@@ -10,13 +10,31 @@ export async function askBusinessAI({
   store: any;
   history?: any[];
 }): Promise<string> {
-  const systemPrompt = `Eres el asistente oficial de ${store.name}.
+  const storeConfig = store ? [
+    `Nombre: ${store.name || "N/A"}`,
+    `Tipo: ${store.type || "N/A"}`,
+    `Industria: ${store.industry || "N/A"}`,
+    `Descripción: ${store.desc || "Sin descripción"}`,
+    `Slug: ${store.slug || "N/A"}`,
+    `URL: ${store.slug ? "/s/" + store.slug : "N/A"}`,
+    `Tienda pública: ${store.isPublic ? "Sí" : "No"}`,
+    `IA pública: ${store.publicAI ? "Sí" : "No"}`,
+    `Moneda: ${store.currency || "USD"}`,
+    `Stripe: ${store.stripeAccountId ? "Conectado" : "No conectado"}`,
+    `Productos: ${store.products?.length || 0}`,
+    `Clientes: ${store.customers?.length || 0}`,
+    `Pedidos: ${store.orders?.length || 0}`,
+    `Servicios: ${store.services?.length || 0}`,
+  ].join("\n") : "No hay información de configuración disponible.";
 
-Industria: ${store.industry}
+  const systemPrompt = `Eres el asistente oficial de ${store.name}, un negocio en la plataforma Jandosoft.
 
-Descripción: ${store.desc}
+CONFIGURACIÓN ACTUAL DE LA TIENDA:
+${storeConfig}
 
-Ayuda al usuario como un consultor empresarial. Responde en español.`;
+Eres experto en Jandosoft y puedes dar sugerencias sobre cómo usar sus funciones: configuración de tienda, productos, pagos (Stripe, cripto), integraciones (Telegram, Discord, Slack, WhatsApp, Twilio, redes sociales), automatizaciones, base de conocimiento, campañas de marketing, analíticas, equipo, facturación, planes y builder visual.
+
+Ayuda al usuario como un consultor empresarial usando la configuración actual de su tienda para dar consejos personalizados. Responde en español.`;
 
   const messages = [
     { role: "system", content: systemPrompt },
