@@ -62,7 +62,7 @@ import StoreView from "@/components/store/Store";
 import MessagesPanel from "@/components/messaging/MessagesPanel";
 import { Toast, useToast } from "@/components/ui/Toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn, slugify } from "@/lib/utils";
 
 function SafeUserDashboard(p: {
   user: any; userStores: any; transactions: any; onNavigate: any;
@@ -231,13 +231,16 @@ function SafeUserDashboard(p: {
                     {storeIndustry && <span className="text-[8px] md:text-[9px] text-zinc-400 font-black italic">{storeIndustry}</span>}
                   </div>
                 </div>
-                {store.slug && (
-                  <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                    <a href={`/s/${store.slug}`} target="_blank" className="p-2 hover:bg-zinc-50 rounded-xl transition-all group" title="Ver tienda pública">
-                      <ExternalLink className="w-4 h-4 text-zinc-300 group-hover:text-emerald-600 transition-colors" />
-                    </a>
-                  </div>
-                )}
+                {(() => {
+                  const storeSlug = store.slug || slugify(storeName) || undefined;
+                  return storeSlug && (
+                    <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                      <a href={`/s/${storeSlug}`} target="_blank" className="p-2.5 hover:bg-emerald-50 rounded-xl transition-all group" title="Ver tienda pública">
+                        <ExternalLink className="w-5 h-5 text-zinc-400 group-hover:text-emerald-600 transition-colors" />
+                      </a>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}

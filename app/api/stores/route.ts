@@ -3,22 +3,13 @@ import { connectDB } from "@/lib/mongodb";
 import { Store } from "@/lib/models/Store";
 import { User } from "@/lib/models/User";
 import { getAuthFromCookies, getAuthFromHeaders } from "@/lib/auth";
+import { slugify } from "@/lib/utils";
 
 const PLAN_LIMITS: Record<string, { maxStores: number; maxProductsPerStore: number }> = {
   free: { maxStores: 3, maxProductsPerStore: 20 },
   basic: { maxStores: 10, maxProductsPerStore: 100 },
   enterprise: { maxStores: 999, maxProductsPerStore: 9999 },
 };
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 async function generateUniqueSlug(name: string): Promise<string> {
   const base = slugify(name) || "tienda";
@@ -68,7 +59,26 @@ export async function GET(req: NextRequest) {
       filter.ownerEmail = email;
     }
 
-    const stores = await Store.find(filter).sort({ createdAt: -1 }).lean();
+    let stores = await Store.find(filter).sort({ createdAt: -1 }).lean();
+
+    // Auto-generate slugs for stores that don't have one
+    const bulkUpdates: any[] = [];
+    stores = stores.map((s: any) => {
+      if (!s.slug) {
+        const newSlug = slugify(s.name || "tienda");
+        if (newSlug) {
+          bulkUpdates.push({
+            updateOne: { filter: { _id: s._id }, update: { $set: { slug: newSlug } } }
+          });
+          return { ...s, slug: newSlug };
+        }
+      }
+      return s;
+    });
+    if (bulkUpdates.length > 0) {
+      await Store.bulkWrite(bulkUpdates).catch(() => {});
+    }
+
     return NextResponse.json({ stores });
   } catch (error) {
     console.error("GET stores error:", error);
