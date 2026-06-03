@@ -36,7 +36,11 @@ import {
   Building2,
   RefreshCw,
   Menu,
-  X
+  X,
+  Megaphone,
+  Ban,
+  CheckCircle,
+  ExternalLink
 } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/pdf-utils";
 
@@ -47,16 +51,14 @@ interface AdminProps {
   setCurrency: (c: any) => void;
   products: any[];
   setProducts: (p: any) => void;
-  isPremium: boolean;
-  setIsPremium: (p: boolean) => void;
   transactions: any[];
 }
 
-export default function Admin({ currency, setCurrency, products, setProducts, isPremium, setIsPremium, transactions }: AdminProps) {
-  const [newProduct, setNewProduct] = useState({ name: "", price: "", desc: "", images: [] });
+export default function Admin({ currency, setCurrency, products, setProducts, transactions, onLogout }: AdminProps & { onLogout?: () => void }) {
+  const [newProduct, setNewProduct] = useState<{ name: string; price: string; desc: string; images: string[] }>({ name: "", price: "", desc: "", images: [] });
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [mobileSidebar, setMobileSidebar] = useState(false);
-  const [liveActivity, setLiveActivity] = useState<{ action: string; time: string; detail?: string }[]>([]);
+  const [liveActivity, setLiveActivity] = useState<{ action: string; time: string; detail?: string; createdAt?: string }[]>([]);
+  const [viewingActivity, setViewingActivity] = useState<{ action: string; time: string; detail?: string; createdAt?: string } | null>(null);
 
   const [dashboardStats, setDashboardStats] = useState({
     totalUsers: 0,
@@ -70,15 +72,23 @@ export default function Admin({ currency, setCurrency, products, setProducts, is
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [allStores, setAllStores] = useState<any[]>([]);
   const [allInvoices, setAllInvoices] = useState<any[]>([]);
+  const [commercials, setCommercials] = useState<any[]>([]);
+  const [searchStores, setSearchStores] = useState("");
+  const [searchUsers, setSearchUsers] = useState("");
+  const [newCommercial, setNewCommercial] = useState({ title: "", imageUrl: "", linkUrl: "" });
+  const [suspendDuration, setSuspendDuration] = useState("permanent");
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [confirmingType, setConfirmingType] = useState<'user' | 'store'>('user');
   const [loading, setLoading] = useState(true);
 
   const fetchDashboard = async () => {
     try {
-      const [dashRes, usersRes, storesRes, invRes] = await Promise.all([
+      const [dashRes, usersRes, storesRes, invRes, commRes] = await Promise.all([
         fetch("/api/admin/dashboard"),
         fetch("/api/admin/users"),
         fetch("/api/admin/stores"),
         fetch("/api/invoices"),
+        fetch("/api/admin/commercials"),
       ]);
       if (dashRes.ok) {
         const data = await dashRes.json();
@@ -97,6 +107,10 @@ export default function Admin({ currency, setCurrency, products, setProducts, is
         const data = await invRes.json();
         setAllInvoices(data.invoices || []);
       }
+      if (commRes.ok) {
+        const data = await commRes.json();
+        setCommercials(data.commercials || []);
+      }
     } catch (e) {
       console.error("Error fetching admin data:", e);
     } finally {
@@ -104,11 +118,112 @@ export default function Admin({ currency, setCurrency, products, setProducts, is
     }
   };
 
+  const handleToggleSuspend = async (storeId: string, reason?: string, duration?: string) => {
+    try {
+      const res = await fetch(`/api/admin/stores/${storeId}/toggle-suspend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reason || "", duration: duration || suspendDuration }),
+      });
+      if (res.ok) {
+        fetchDashboard();
+      }
+    } catch (e) {
+      console.error("Error toggling suspend:", e);
+    }
+  };
+
+  const handleToggleUserSuspend = async (userId: string, duration?: string) => {
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/toggle-suspend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ duration: duration || suspendDuration }),
+      });
+      if (res.ok) {
+        fetchDashboard();
+      }
+    } catch (e) {
+      console.error("Error toggling user suspend:", e);
+    }
+  };
+
+  const handleCreateCommercial = async () => {
+    if (!newCommercial.title || !newCommercial.imageUrl) return;
+    try {
+      const res = await fetch("/api/admin/commercials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newCommercial),
+      });
+      if (res.ok) {
+        setNewCommercial({ title: "", imageUrl: "", linkUrl: "" });
+        fetchDashboard();
+      }
+    } catch (e) {
+      console.error("Error creating commercial:", e);
+    }
+  };
+
+  const handleDeleteCommercial = async (id: string) => {
+    try {
+      const res = await fetch("/api/admin/commercials", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) fetchDashboard();
+    } catch (e) {
+      console.error("Error deleting commercial:", e);
+    }
+  };
+
+  const filteredStores = allStores.filter((s) => {
+    if (!searchStores) return true;
+    const q = searchStores.toLowerCase();
+    return (
+      s.name?.toLowerCase().includes(q) ||
+      s.ownerEmail?.toLowerCase().includes(q) ||
+      s.slug?.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredUsers = allUsers.filter((u) => {
+    if (!searchUsers) return true;
+    const q = searchUsers.toLowerCase();
+    return (
+      u.name?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q)
+    );
+  });
+
   useEffect(() => {
     fetchDashboard();
   }, []);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {};
+  const [imageUrlInput, setImageUrlInput] = useState("");
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const remaining = 10 - newProduct.images.length;
+    const toUpload = files.slice(0, remaining);
+    for (const file of toUpload) {
+      const formData = new FormData();
+      formData.append("file", file);
+      try {
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        if (data.url) setNewProduct(prev => ({ ...prev, images: [...prev.images, data.url] }));
+      } catch {}
+    }
+  };
+
+  const addImageUrl = () => {
+    if (imageUrlInput && newProduct.images.length < 10) {
+      setNewProduct(prev => ({ ...prev, images: [...prev.images, imageUrlInput] }));
+      setImageUrlInput("");
+    }
+  };
 
   const publishProduct = () => {
     if (!newProduct.name || !newProduct.price) return;
@@ -127,7 +242,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, is
 
   return (
     <div className="flex flex-col min-h-[600px] md:h-[800px] w-full max-w-7xl mx-auto border-0 md:border border-zinc-200 rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl bg-white">
-      <header className="max-[400px]:px-3 px-4 md:px-10 max-[400px]:py-3 py-4 md:py-6 bg-white border-b border-zinc-100 flex items-center justify-between gap-2">
+      <header className="max-[340px]:px-2 max-[400px]:px-3 px-4 md:px-10 max-[340px]:py-2 max-[400px]:py-3 py-4 md:py-6 bg-white border-b border-zinc-100 flex items-center justify-between gap-1 md:gap-2">
          <div className="flex items-center gap-2 md:gap-4 min-w-0">
             <div className="p-2 md:p-3 bg-red-600 rounded-xl md:rounded-2xl shadow-xl shadow-red-100 text-white shrink-0">
                <ShieldCheck className="w-5 h-5 md:w-6 md:h-6" />
@@ -138,15 +253,6 @@ export default function Admin({ currency, setCurrency, products, setProducts, is
             </div>
          </div>
          <div className="hidden md:flex items-center gap-6">
-            <div className="flex items-center gap-2 px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl">
-               <span className="text-[10px] font-black text-zinc-400 uppercase italic">Premium:</span>
-               <button 
-                  onClick={() => setIsPremium(!isPremium)}
-                  className={cn("px-4 py-1.5 rounded-full text-[10px] font-black italic uppercase transition-all shadow-sm", isPremium ? "bg-emerald-500 text-white" : "bg-zinc-200 text-zinc-500 hover:bg-zinc-300")}
-               >
-                  {isPremium ? "ACTIVO" : "BÁSICO (FREE)"}
-               </button>
-            </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl">
                <span className="text-[10px] font-black text-zinc-400 uppercase italic">Moneda:</span>
                <select 
@@ -160,10 +266,13 @@ export default function Admin({ currency, setCurrency, products, setProducts, is
                   <option value="ARS">ARS ($)</option>
                </select>
             </div>
-            <button onClick={fetchDashboard} className="p-2.5 hover:bg-zinc-50 rounded-xl transition-all" title="Actualizar datos">
-              <RefreshCw className={cn("w-5 h-5 text-zinc-400", loading ? "animate-spin" : "")} />
-            </button>
-            <div className="flex items-center gap-3">
+             <button onClick={fetchDashboard} className="p-2.5 hover:bg-zinc-50 rounded-xl transition-all" title="Actualizar datos">
+               <RefreshCw className={cn("w-5 h-5 text-zinc-400", loading ? "animate-spin" : "")} />
+             </button>
+             <button onClick={onLogout} className="p-2.5 hover:bg-rose-50 rounded-xl transition-all" title="Cerrar sesión">
+               <LogOut className="w-5 h-5 text-zinc-400 hover:text-rose-600" />
+             </button>
+             <div className="flex items-center gap-3">
                <div className="text-right">
                   <p className="text-xs font-black text-zinc-950 italic">Admin@Jandosoft</p>
                   <p className="text-[9px] font-bold text-zinc-400 uppercase">Superuser</p>
@@ -171,57 +280,62 @@ export default function Admin({ currency, setCurrency, products, setProducts, is
                <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center font-black text-xs text-white shadow-lg">AD</div>
             </div>
          </div>
-         <div className="flex md:hidden items-center gap-2">
-           <motion.button whileTap={{ scale: 0.9 }} onClick={fetchDashboard} className="p-1.5 hover:bg-zinc-50 rounded-xl transition-all" title="Actualizar datos">
-             <RefreshCw className={cn("w-4 h-4 text-zinc-400", loading ? "animate-spin" : "")} />
-           </motion.button>
-           <motion.button whileTap={{ scale: 0.9 }} onClick={() => setActiveTab("settings")} className="p-1.5 hover:bg-zinc-50 rounded-xl transition-all">
-             <Settings className="w-4 h-4 text-zinc-400" />
-           </motion.button>
-         </div>
+          <div className="flex md:hidden items-center gap-1">
+            <motion.button whileTap={{ scale: 0.9 }} onClick={fetchDashboard} className="p-1.5 hover:bg-zinc-50 rounded-xl transition-all" title="Actualizar datos">
+              <RefreshCw className={cn("w-4 h-4 text-zinc-400", loading ? "animate-spin" : "")} />
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setActiveTab("settings")} className="p-1.5 hover:bg-zinc-50 rounded-xl transition-all">
+              <Settings className="w-4 h-4 text-zinc-400" />
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.9 }} onClick={onLogout} className="p-1.5 hover:bg-rose-50 rounded-xl transition-all" title="Cerrar sesión">
+              <LogOut className="w-4 h-4 text-zinc-400" />
+            </motion.button>
+          </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden relative">
-         <motion.button
-           whileTap={{ scale: 0.9 }}
-           onClick={() => setMobileSidebar(true)}
-           className="md:hidden absolute top-3 left-3 z-20 p-2 bg-white rounded-xl border border-zinc-100 shadow-md"
-         >
-           <Menu className="w-4 h-4 text-zinc-400" />
-         </motion.button>
-         <AnimatePresence>
-           {mobileSidebar && (
-             <motion.aside
-               initial={{ x: -300 }}
-               animate={{ x: 0 }}
-               exit={{ x: -300 }}
-               transition={{ type: "spring", stiffness: 400, damping: 30 }}
-               className="absolute md:relative z-30 inset-y-0 left-0 w-64 bg-zinc-50 border-r border-zinc-100 p-4 md:p-6 flex flex-col gap-6 md:gap-8 overflow-y-auto shadow-xl md:shadow-none"
-             >
-               <div className="flex items-center justify-between md:hidden mb-2">
-                 <h3 className="text-[9px] font-black text-zinc-400 uppercase tracking-widest italic">Navegación Admin</h3>
-                 <motion.button whileTap={{ scale: 0.9 }} onClick={() => setMobileSidebar(false)} className="p-1 hover:bg-zinc-100 rounded-lg"><X className="w-4 h-4 text-zinc-400" /></motion.button>
-               </div>
-               <div className="space-y-1">
-                  <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 md:mb-4 italic">General</h3>
-                  <MenuItem icon={<BarChart3 />} label="Dashboard" active={activeTab === "dashboard"} onClick={() => { setActiveTab("dashboard"); setMobileSidebar(false); }} />
-                  <MenuItem icon={<Users />} label="Usuarios" active={activeTab === "users"} onClick={() => { setActiveTab("users"); setMobileSidebar(false); }} />
-                  <MenuItem icon={<Store />} label="Tiendas" active={activeTab === "stores"} onClick={() => { setActiveTab("stores"); setMobileSidebar(false); }} />
-                  <MenuItem icon={<ShoppingBag />} label="Productos" active={activeTab === "store-admin"} onClick={() => { setActiveTab("store-admin"); setMobileSidebar(false); }} />
-                  <MenuItem icon={<DbIcon />} label="Database" active={activeTab === "database"} onClick={() => { setActiveTab("database"); setMobileSidebar(false); }} />
-               </div>
-               <div className="space-y-1">
-                  <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 md:mb-4 italic">Gestión</h3>
-                  <MenuItem icon={<BarChart3 />} label="Analytics" active={activeTab === 'analytics'} onClick={() => { setActiveTab('analytics'); setMobileSidebar(false); }} />
-                  <MenuItem icon={<DollarSign />} label="Ganancias" active={activeTab === 'revenue'} onClick={() => { setActiveTab('revenue'); setMobileSidebar(false); }} />
-                  <MenuItem icon={<FileText />} label="Historial" active={activeTab === 'history'} onClick={() => { setActiveTab('history'); setMobileSidebar(false); }} />
-                  <MenuItem icon={<Settings />} label="Ajustes" active={activeTab === 'settings'} onClick={() => { setActiveTab('settings'); setMobileSidebar(false); }} />
-               </div>
-             </motion.aside>
-           )}
-         </AnimatePresence>
+      <div className="md:hidden flex overflow-x-auto gap-1 px-2 py-2 bg-zinc-50 border-b border-zinc-100 sticky top-0 z-10">
+        {[
+          { id: "dashboard", icon: <BarChart3 className="w-3.5 h-3.5" />, label: "Dashboard" },
+          { id: "users", icon: <Users className="w-3.5 h-3.5" />, label: "Usuarios" },
+          { id: "stores", icon: <Store className="w-3.5 h-3.5" />, label: "Tiendas" },
+          { id: "store-admin", icon: <ShoppingBag className="w-3.5 h-3.5" />, label: "Productos" },
+          { id: "analytics", icon: <BarChart3 className="w-3.5 h-3.5" />, label: "Analytics" },
+          { id: "revenue", icon: <DollarSign className="w-3.5 h-3.5" />, label: "Ganancias" },
+          { id: "history", icon: <FileText className="w-3.5 h-3.5" />, label: "Historial" },
+          { id: "commercials", icon: <Megaphone className="w-3.5 h-3.5" />, label: "Comerciales" },
+          { id: "settings", icon: <Settings className="w-3.5 h-3.5" />, label: "Ajustes" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[8px] font-black italic whitespace-nowrap transition-all shrink-0", activeTab === tab.id ? "bg-red-600 text-white shadow-sm" : "text-zinc-500 hover:bg-zinc-100")}
+          >
+            {tab.icon} {tab.label}
+          </button>
+        ))}
+      </div>
 
-         <main className="flex-1 overflow-y-auto max-[400px]:p-3 p-4 md:p-10 bg-white relative">
+      <div className="flex flex-1 overflow-hidden relative">
+         <aside className="hidden md:flex flex-col w-56 lg:w-64 bg-zinc-50 border-r border-zinc-100 p-4 lg:p-6 gap-6 lg:gap-8 overflow-y-auto shrink-0">
+           <div className="space-y-1">
+             <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 lg:mb-4 italic">General</h3>
+             <MenuItem icon={<BarChart3 />} label="Dashboard" active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
+             <MenuItem icon={<Users />} label="Usuarios" active={activeTab === "users"} onClick={() => setActiveTab("users")} />
+             <MenuItem icon={<Store />} label="Tiendas" active={activeTab === "stores"} onClick={() => setActiveTab("stores")} />
+             <MenuItem icon={<ShoppingBag />} label="Productos" active={activeTab === "store-admin"} onClick={() => setActiveTab("store-admin")} />
+             <MenuItem icon={<DbIcon />} label="Database" active={activeTab === "database"} onClick={() => setActiveTab("database")} />
+           </div>
+           <div className="space-y-1">
+             <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 lg:mb-4 italic">Gestión</h3>
+             <MenuItem icon={<BarChart3 />} label="Analytics" active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} />
+             <MenuItem icon={<DollarSign />} label="Ganancias" active={activeTab === 'revenue'} onClick={() => setActiveTab('revenue')} />
+             <MenuItem icon={<FileText />} label="Historial" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
+             <MenuItem icon={<Megaphone />} label="Comerciales" active={activeTab === 'commercials'} onClick={() => setActiveTab('commercials')} />
+             <MenuItem icon={<Settings />} label="Ajustes" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
+           </div>
+         </aside>
+
+         <main className="flex-1 overflow-y-auto max-[340px]:p-2 max-[400px]:p-3 p-4 md:p-10 bg-white relative">
             <AnimatePresence mode="wait">
                {activeTab === "dashboard" && (
                   <motion.div key="dashboard" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-10">
@@ -244,15 +358,21 @@ export default function Admin({ currency, setCurrency, products, setProducts, is
                           <div className="bg-zinc-50/50 max-[400px]:p-5 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 space-y-4 md:space-y-6 shadow-sm">
                              <h3 className="max-[400px]:text-lg text-xl font-black italic text-zinc-950">Actividad Reciente</h3>
                              <div className="space-y-3 md:space-y-4">
-                                {liveActivity.map((act, i) => (
-                                   <motion.div key={i} initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex items-center justify-between max-[400px]:p-3 p-4 bg-white rounded-2xl border border-zinc-100 shadow-sm italic font-black text-[10px] md:text-xs group hover:border-red-600 transition-all">
-                                      <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                                         <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-red-600 rounded-full animate-pulse shrink-0" />
-                                         <span className="truncate">{act.action}</span>
-                                      </div>
-                                      <span className="text-[8px] md:text-[9px] text-zinc-400 shrink-0">{act.time}</span>
-                                   </motion.div>
-                                ))}
+                                 {liveActivity.map((act, i) => (
+                                    <motion.div
+                                      key={i}
+                                      initial={{ x: 20, opacity: 0 }}
+                                      animate={{ x: 0, opacity: 1 }}
+                                      onClick={() => setViewingActivity(act)}
+                                      className="flex items-center justify-between max-[400px]:p-3 p-4 bg-white rounded-2xl border border-zinc-100 shadow-sm italic font-black text-[10px] md:text-xs group hover:border-red-600 hover:bg-red-50/30 transition-all cursor-pointer"
+                                    >
+                                       <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                                          <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-red-600 rounded-full animate-pulse shrink-0" />
+                                          <span className="truncate">{act.action}</span>
+                                       </div>
+                                       <span className="text-[8px] md:text-[9px] text-zinc-400 shrink-0">{act.time}</span>
+                                    </motion.div>
+                                 ))}
                                 {liveActivity.length === 0 && (
                                   <div className="py-6 md:py-8 text-center italic font-black text-zinc-200 text-[10px] md:text-xs">Sin actividad reciente</div>
                                 )}
@@ -274,35 +394,78 @@ export default function Admin({ currency, setCurrency, products, setProducts, is
 
                 {activeTab === "users" && (
                   <motion.div key="users" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 md:space-y-8">
-                    <div className="flex items-center justify-between flex-wrap gap-3">
-                      <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">Usuarios <span className="text-red-600">({allUsers.length})</span></h3>
-                      <span className="text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest italic">Todos los registros</span>
-                    </div>
+                     <div className="flex items-center justify-between flex-wrap gap-3">
+                       <h3 className="max-[340px]:text-xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">Usuarios <span className="text-red-600">({filteredUsers.length})</span></h3>
+                       <div className="flex items-center gap-2 flex-wrap">
+                         <div className="flex items-center gap-1 px-2 py-1.5 bg-zinc-50 border border-zinc-100 rounded-xl">
+                           <span className="text-[7px] md:text-[8px] font-black text-zinc-400 uppercase italic hidden sm:inline">Dur:</span>
+                           <select
+                             value={suspendDuration}
+                             onChange={(e) => setSuspendDuration(e.target.value)}
+                             className="bg-transparent text-[8px] md:text-[9px] font-black italic text-red-600 outline-none cursor-pointer"
+                           >
+                             <option value="24h">24h</option>
+                             <option value="7d">7d</option>
+                             <option value="30d">30d</option>
+                             <option value="permanent">Perm.</option>
+                           </select>
+                         </div>
+                         <div className="relative w-full max-w-[160px] md:max-w-none">
+                           <Search className="absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 w-3 h-3.5 md:w-3.5 md:h-3.5 text-zinc-400" />
+                           <input
+                             type="text"
+                             value={searchUsers}
+                             onChange={(e) => setSearchUsers(e.target.value)}
+                             placeholder="Buscar usuarios..."
+                             className="w-full pl-8 md:pl-9 pr-2.5 md:pr-3 py-1.5 md:py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-[9px] md:text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50"
+                           />
+                         </div>
+                       </div>
+                     </div>
                     <div className="space-y-2 md:space-y-3">
-                      {allUsers.map((u) => (
-                        <div key={u._id} className="flex items-center justify-between max-[400px]:p-3.5 p-5 bg-zinc-50 rounded-2xl border border-zinc-100 hover:border-red-200 transition-all">
-                          <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
-                            <div className="w-8 h-8 md:w-12 md:h-12 bg-white rounded-xl md:rounded-2xl flex items-center justify-center text-red-600 shadow-sm font-black italic text-xs md:text-base shrink-0">
+                      {filteredUsers.map((u) => (
+                        <div key={u._id} className={cn("flex items-center justify-between max-[340px]:p-2.5 max-[400px]:p-3.5 p-5 rounded-2xl border transition-all", u.isSuspended ? "bg-rose-50 border-rose-200" : "bg-zinc-50 border-zinc-100 hover:border-red-200")}>
+                          <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
+                            <div className={cn("w-7 h-7 md:w-12 md:h-12 rounded-lg md:rounded-2xl flex items-center justify-center shadow-sm font-black italic text-[9px] md:text-base shrink-0", u.isSuspended ? "bg-rose-100 text-rose-600" : "bg-white text-red-600")}>
                               {u.name?.[0]?.toUpperCase() || "?"}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-black italic text-zinc-950 text-sm md:text-base truncate">{u.name}</p>
-                              <p className="text-[9px] md:text-[10px] text-zinc-400 font-bold italic truncate">{u.email}</p>
+                              <div className="flex items-center gap-1.5 md:gap-2">
+                                <p className={cn("font-black italic text-[10px] md:text-base truncate", u.isSuspended ? "text-rose-700" : "text-zinc-950")}>{u.name}</p>
+                                {u.isSuspended && (
+                                  <span className="px-1 py-0.5 bg-rose-200 text-rose-700 rounded-full text-[6px] md:text-[7px] font-black uppercase italic leading-none">Suspendido</span>
+                                )}
+                              </div>
+                              <p className="text-[8px] md:text-[10px] text-zinc-400 font-bold italic truncate">{u.email}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3 md:gap-6 shrink-0">
-                            <div className="text-right">
+                          <div className="flex items-center gap-1.5 md:gap-4 shrink-0">
+                            <div className="text-right hidden md:block">
                               <p className="text-[9px] md:text-[10px] font-black italic text-zinc-950">{u.storeCount || 0} tiendas</p>
                               <p className={cn("text-[8px] md:text-[9px] font-bold uppercase italic", u.subscription ? "text-emerald-600" : "text-zinc-400")}>
                                 {u.subscription || "Free"}
                               </p>
                             </div>
-                            <div className={cn("w-1.5 h-1.5 md:w-2 md:h-2 rounded-full", u.isSuspended ? "bg-rose-500" : "bg-emerald-500")} />
+                            <motion.button
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => {
+                                if (u.isSuspended) {
+                                  handleToggleUserSuspend(u._id);
+                                } else {
+                                  setConfirmingId(u._id);
+                                  setConfirmingType('user');
+                                }
+                              }}
+                              className={cn("p-1.5 md:p-2 rounded-lg md:rounded-xl transition-all", u.isSuspended ? "bg-emerald-100 text-emerald-600 hover:bg-emerald-200" : "bg-rose-100 text-rose-500 hover:bg-rose-200")}
+                              title={u.isSuspended ? "Activar usuario" : "Suspender usuario"}
+                            >
+                              {u.isSuspended ? <CheckCircle className="w-3 h-3 md:w-3.5 md:h-3.5" /> : <Ban className="w-3 h-3 md:w-3.5 md:h-3.5" />}
+                            </motion.button>
                           </div>
                         </div>
                       ))}
-                      {allUsers.length === 0 && (
-                        <div className="py-12 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200">No hay usuarios registrados</div>
+                      {filteredUsers.length === 0 && (
+                        <div className="py-12 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200">{searchUsers ? "Sin resultados" : "No hay usuarios registrados"}</div>
                       )}
                     </div>
                   </motion.div>
@@ -310,32 +473,77 @@ export default function Admin({ currency, setCurrency, products, setProducts, is
 
                 {activeTab === "stores" && (
                   <motion.div key="stores" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 md:space-y-8">
-                    <div className="flex items-center justify-between">
-                      <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">Tiendas <span className="text-red-600">({allStores.length})</span></h3>
-                    </div>
+                     <div className="flex items-center justify-between flex-wrap gap-3">
+                       <h3 className="max-[340px]:text-xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">Tiendas <span className="text-red-600">({filteredStores.length})</span></h3>
+                       <div className="flex items-center gap-2 flex-wrap">
+                         <div className="flex items-center gap-1 px-2 py-1.5 bg-zinc-50 border border-zinc-100 rounded-xl">
+                           <span className="text-[7px] md:text-[8px] font-black text-zinc-400 uppercase italic hidden sm:inline">Dur:</span>
+                           <select
+                             value={suspendDuration}
+                             onChange={(e) => setSuspendDuration(e.target.value)}
+                             className="bg-transparent text-[8px] md:text-[9px] font-black italic text-red-600 outline-none cursor-pointer"
+                           >
+                             <option value="24h">24h</option>
+                             <option value="7d">7d</option>
+                             <option value="30d">30d</option>
+                             <option value="permanent">Perm.</option>
+                           </select>
+                         </div>
+                         <div className="relative w-full max-w-[160px] md:max-w-none">
+                           <Search className="absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 w-3 h-3.5 md:w-3.5 md:h-3.5 text-zinc-400" />
+                           <input
+                             type="text"
+                             value={searchStores}
+                             onChange={(e) => setSearchStores(e.target.value)}
+                             placeholder="Buscar tiendas..."
+                             className="w-full pl-8 md:pl-9 pr-2.5 md:pr-3 py-1.5 md:py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-[9px] md:text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50"
+                           />
+                         </div>
+                       </div>
+                     </div>
                     <div className="space-y-2 md:space-y-3">
-                      {allStores.map((s) => (
-                        <div key={s._id} className="flex items-center justify-between max-[400px]:p-3.5 p-5 bg-zinc-50 rounded-2xl border border-zinc-100 hover:border-red-200 transition-all">
-                          <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
-                            <div className="w-8 h-8 md:w-12 md:h-12 bg-white rounded-xl md:rounded-2xl flex items-center justify-center text-red-600 shadow-sm shrink-0">
-                              <Store className="w-4 h-4 md:w-6 md:h-6" />
+                      {filteredStores.map((s) => (
+                        <div key={s._id} className={cn("flex items-center justify-between max-[340px]:p-2.5 max-[400px]:p-3.5 p-5 rounded-2xl border transition-all", s.isSuspended ? "bg-rose-50 border-rose-200" : "bg-zinc-50 border-zinc-100 hover:border-red-200")}>
+                          <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
+                            <div className={cn("w-7 h-7 md:w-12 md:h-12 rounded-lg md:rounded-2xl flex items-center justify-center shadow-sm shrink-0", s.isSuspended ? "bg-rose-100 text-rose-600" : "bg-white text-red-600")}>
+                              <Store className="w-3.5 h-3.5 md:w-6 md:h-6" />
                             </div>
                             <div className="min-w-0">
-                              <p className="font-black italic text-zinc-950 text-sm md:text-base truncate">{s.name}</p>
-                              <p className="text-[9px] md:text-[10px] text-zinc-400 font-bold italic truncate">{s.ownerEmail} · {s.typeLabel || s.type}</p>
+                              <div className="flex items-center gap-1.5 md:gap-2">
+                                <p className={cn("font-black italic text-[10px] md:text-base truncate", s.isSuspended ? "text-rose-700" : "text-zinc-950")}>{s.name}</p>
+                                {s.isSuspended && (
+                                  <span className="px-1 py-0.5 bg-rose-200 text-rose-700 rounded-full text-[6px] md:text-[7px] font-black uppercase italic leading-none">Suspendida</span>
+                                )}
+                              </div>
+                              <p className="text-[8px] md:text-[10px] text-zinc-400 font-bold italic truncate">{s.ownerEmail} · {s.typeLabel || s.type}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 md:gap-6 shrink-0">
-                            <div className="flex gap-2 md:gap-4 text-[8px] md:text-[10px] font-black italic text-zinc-500">
+                          <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
+                            <div className="flex gap-1.5 md:gap-4 text-[7px] md:text-[10px] font-black italic text-zinc-500">
                               <span>{s.productCount} prod.</span>
                               <span className="hidden md:inline">{s.customerCount} clientes</span>
-                              <span>{s.orderCount} ped.</span>
+                              <span className="max-[340px]:hidden">{s.orderCount} ped.</span>
                             </div>
+                            <motion.button
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => {
+                                if (s.isSuspended) {
+                                  handleToggleSuspend(s._id);
+                                } else {
+                                  setConfirmingId(s._id);
+                                  setConfirmingType('store');
+                                }
+                              }}
+                              className={cn("p-1.5 md:p-2 rounded-lg md:rounded-xl transition-all", s.isSuspended ? "bg-emerald-100 text-emerald-600 hover:bg-emerald-200" : "bg-rose-100 text-rose-500 hover:bg-rose-200")}
+                              title={s.isSuspended ? "Activar tienda" : "Suspender tienda"}
+                            >
+                              {s.isSuspended ? <CheckCircle className="w-3 h-3 md:w-3.5 md:h-3.5" /> : <Ban className="w-3 h-3 md:w-3.5 md:h-3.5" />}
+                            </motion.button>
                           </div>
                         </div>
                       ))}
-                      {allStores.length === 0 && (
-                        <div className="py-12 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200">No hay tiendas creadas</div>
+                      {filteredStores.length === 0 && (
+                        <div className="py-12 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200">{searchStores ? "Sin resultados" : "No hay tiendas creadas"}</div>
                       )}
                     </div>
                   </motion.div>
@@ -383,11 +591,30 @@ export default function Admin({ currency, setCurrency, products, setProducts, is
                                            <Plus className="w-6 h-6" />
                                         </label>
                                      )}
-                                  </div>
-                               </div>
-                               
-                               <motion.button whileTap={{ scale: 0.95 }}
-                                  onClick={publishProduct}
+                                   </div>
+                                   <div className="flex gap-2">
+                                     <div className="relative flex-1">
+                                       <input
+                                         type="text"
+                                         placeholder="O pega una URL de imagen..."
+                                         value={imageUrlInput}
+                                         onChange={e => setImageUrlInput(e.target.value)}
+                                         onKeyDown={e => e.key === "Enter" && addImageUrl()}
+                                         className="w-full bg-white h-10 px-3 rounded-xl border border-zinc-200 outline-none text-[10px] font-medium focus:border-red-200 transition-all"
+                                       />
+                                     </div>
+                                     <button
+                                       onClick={addImageUrl}
+                                       disabled={!imageUrlInput || newProduct.images.length >= 10}
+                                       className="px-4 py-2 bg-zinc-800 text-white rounded-xl text-[8px] font-black italic hover:bg-zinc-700 transition-all disabled:opacity-50 shrink-0"
+                                     >
+                                       AÑADIR
+                                     </button>
+                                   </div>
+                                </div>
+                                
+                                <motion.button whileTap={{ scale: 0.95 }}
+                                   onClick={publishProduct}
                                   className="w-full py-4 md:py-5 bg-red-600 text-white rounded-2xl font-black italic shadow-xl shadow-red-100 hover:bg-red-700 transition-all flex items-center justify-center gap-3 uppercase text-xs md:text-sm"
                                >
                                   PUBLICAR PRODUCTO <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
@@ -508,9 +735,197 @@ export default function Admin({ currency, setCurrency, products, setProducts, is
                 {activeTab === "revenue" && (
                   <AdminRevenuePanel />
                 )}
+
+                {activeTab === "commercials" && (
+                  <motion.div key="commercials" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 md:space-y-10">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                      <h3 className="max-[340px]:text-xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">Comerciales <span className="text-red-600">({commercials.length})</span></h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
+                      <div className="bg-zinc-50 max-[400px]:p-5 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 space-y-5 md:space-y-6 shadow-sm">
+                        <h4 className="text-[10px] font-black text-zinc-400 uppercase italic tracking-widest">Nuevo Comercial</h4>
+                        <div className="space-y-3 md:space-y-4">
+                          <AdminInput label="Título" placeholder="Ej. Nueva Promoción" value={newCommercial.title} onChange={(v: string) => setNewCommercial({...newCommercial, title: v})} />
+                          <AdminInput label="URL de Imagen" placeholder="https://ejemplo.com/imagen.jpg" value={newCommercial.imageUrl} onChange={(v: string) => setNewCommercial({...newCommercial, imageUrl: v})} />
+                          <AdminInput label="URL de Destino (opcional)" placeholder="https://ejemplo.com" value={newCommercial.linkUrl} onChange={(v: string) => setNewCommercial({...newCommercial, linkUrl: v})} />
+                          <motion.button whileTap={{ scale: 0.95 }}
+                            onClick={handleCreateCommercial}
+                            className="w-full py-4 md:py-5 bg-red-600 text-white rounded-2xl font-black italic shadow-xl shadow-red-100 hover:bg-red-700 transition-all flex items-center justify-center gap-3 uppercase text-xs md:text-sm"
+                          >
+                            PUBLICAR COMERCIAL <Megaphone className="w-4 h-4 md:w-5 md:h-5" />
+                          </motion.button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 md:space-y-4">
+                        <h4 className="text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest italic">Comerciales Activos</h4>
+                        <div className="grid grid-cols-1 gap-3 md:gap-4">
+                          {commercials.map((c: any) => (
+                            <div key={c._id} className="bg-white max-[400px]:p-3 p-4 rounded-2xl md:rounded-3xl border border-zinc-100 shadow-sm flex items-center justify-between group hover:border-red-600/20 transition-all">
+                              <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
+                                <div className="w-10 h-10 md:w-14 md:h-14 bg-zinc-50 rounded-xl md:rounded-2xl overflow-hidden shadow-inner shrink-0">
+                                  {c.imageUrl ? (
+                                    <img src={c.imageUrl} alt={c.title} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-zinc-300"><ImageIcon className="w-4 h-4" /></div>
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-black italic text-xs md:text-sm text-zinc-950 truncate">{c.title}</p>
+                                  {c.linkUrl && (
+                                    <p className="text-[8px] md:text-[9px] text-zinc-400 font-bold italic truncate flex items-center gap-1">
+                                      <ExternalLink className="w-2.5 h-2.5" /> {c.linkUrl}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <motion.button whileTap={{ scale: 0.9 }}
+                                onClick={() => handleDeleteCommercial(c._id)}
+                                className="p-2 md:p-3 text-zinc-300 hover:text-rose-500 transition-colors shrink-0"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                              </motion.button>
+                            </div>
+                          ))}
+                          {commercials.length === 0 && (
+                            <div className="py-12 text-center italic font-black uppercase tracking-widest text-zinc-200 text-[10px]">Sin comerciales publicados</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
             </AnimatePresence>
          </main>
       </div>
+      {/* Activity detail modal */}
+      <AnimatePresence>
+        {viewingActivity && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setViewingActivity(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[2rem] p-6 md:p-8 max-w-md w-full shadow-2xl border border-zinc-100 space-y-5"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="text-center space-y-3">
+                <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto">
+                  <FileText className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg md:text-xl font-black italic text-zinc-950 uppercase">Detalle de Actividad</h3>
+                  <p className="text-[9px] font-medium text-zinc-400 italic mt-1">Información completa del evento</p>
+                </div>
+              </div>
+              <div className="bg-zinc-50 rounded-2xl p-4 md:p-5 space-y-3 border border-zinc-100">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest shrink-0">Acción</span>
+                  <span className="text-xs md:text-sm font-black italic text-zinc-950 text-right">{viewingActivity.action}</span>
+                </div>
+                <div className="w-full h-px bg-zinc-200" />
+                {viewingActivity.detail && (
+                  <>
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest shrink-0">Detalle</span>
+                      <span className="text-xs md:text-sm font-black italic text-zinc-950 text-right">{viewingActivity.detail}</span>
+                    </div>
+                    <div className="w-full h-px bg-zinc-200" />
+                  </>
+                )}
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest shrink-0">Ocurrió</span>
+                  <span className="text-xs md:text-sm font-black italic text-zinc-950 text-right">
+                    {viewingActivity.createdAt
+                      ? new Date(viewingActivity.createdAt).toLocaleString("es", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : viewingActivity.time}
+                  </span>
+                </div>
+              </div>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setViewingActivity(null)}
+                className="w-full py-3 bg-zinc-50 text-zinc-500 rounded-xl font-black italic text-[10px] hover:bg-zinc-100 transition-all"
+              >
+                CERRAR
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirm suspension popup */}
+      <AnimatePresence>
+        {confirmingId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setConfirmingId(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl border border-zinc-100 space-y-5"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="text-center space-y-2">
+                <div className="w-12 h-12 bg-rose-100 rounded-2xl flex items-center justify-center mx-auto">
+                  <Ban className="w-6 h-6 text-rose-600" />
+                </div>
+                <h3 className="text-lg font-black italic text-zinc-950 uppercase">Suspender {confirmingType === 'user' ? 'Usuario' : 'Tienda'}</h3>
+                <p className="text-[10px] font-medium text-zinc-400 italic">Selecciona la duración de la suspensión</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: "24h", label: "24 Horas" },
+                  { value: "7d", label: "7 Días" },
+                  { value: "30d", label: "30 Días" },
+                  { value: "permanent", label: "Permanente" },
+                ].map((opt) => (
+                  <motion.button
+                    key={opt.value}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      if (confirmingType === 'user') {
+                        handleToggleUserSuspend(confirmingId, opt.value);
+                      } else {
+                        handleToggleSuspend(confirmingId, "", opt.value);
+                      }
+                      setConfirmingId(null);
+                    }}
+                    className="py-3 md:py-4 rounded-xl md:rounded-2xl font-black italic text-[10px] md:text-xs transition-all bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
+                  >
+                    {opt.label}
+                  </motion.button>
+                ))}
+              </div>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setConfirmingId(null)}
+                className="w-full py-3 bg-zinc-50 text-zinc-500 rounded-xl font-black italic text-[10px] hover:bg-zinc-100 transition-all"
+              >
+                CANCELAR
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -19,8 +19,15 @@ export async function POST(req: Request) {
     if (!valid) {
       return NextResponse.json({ error: "Contraseña incorrecta" }, { status: 400 });
     }
+    const now = new Date();
+    if (user.suspendedUntil && user.suspendedUntil < now) {
+      user.isSuspended = false;
+      user.suspendedUntil = null;
+      await user.save();
+    }
     if (user.isSuspended) {
-      return NextResponse.json({ error: "Cuenta suspendida" }, { status: 403 });
+      const until = user.suspendedUntil ? ` hasta ${new Date(user.suspendedUntil).toLocaleDateString("es")}` : "";
+      return NextResponse.json({ error: `Cuenta suspendida${until}` }, { status: 403 });
     }
 
     const orgId = user.organizationId?.toString() || "";

@@ -5,12 +5,27 @@ import { stripe } from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
   try {
-    const { storeId, amount, currency, customerEmail, customerName, description } = await req.json();
-    if (!amount || !customerEmail) {
-      return NextResponse.json({ error: "amount and customerEmail required" }, { status: 400 });
+    const { storeId, items, amount, currency, customerEmail, customerName, description } = await req.json();
+    if (!customerEmail) {
+      return NextResponse.json({ error: "customerEmail required" }, { status: 400 });
     }
 
-    const amountInCents = Math.round(amount * 100);
+    // Support both single-item (legacy) and multi-item (cart) checkout
+    let totalAmount = amount;
+    let itemsList = items;
+    let desc = description;
+
+    if (items && Array.isArray(items) && items.length > 0) {
+      totalAmount = items.reduce((sum: number, i: any) => sum + (i.price * i.quantity), 0);
+      itemsList = items;
+      desc = items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
+    }
+
+    if (!totalAmount) {
+      return NextResponse.json({ error: "amount or items required" }, { status: 400 });
+    }
+
+    const amountInCents = Math.round(totalAmount * 100);
 
     // If storeId provided, use Stripe Connect (transfer to store)
     if (storeId) {
@@ -30,7 +45,7 @@ export async function POST(req: NextRequest) {
         amount: amountInCents,
         currency: (currency || "usd").toLowerCase(),
         application_fee_amount: applicationFee,
-        description: description || `Pago a ${store.name}`,
+        description: (desc || `Pago a ${store.name}`).substring(0, 250),
         metadata: {
           storeId: store._id.toString(),
           storeName: store.name,
@@ -38,6 +53,7 @@ export async function POST(req: NextRequest) {
           customerEmail,
           customerName: customerName || "",
           platformFeePercent: feePercent.toString(),
+          items: itemsList ? JSON.stringify(itemsList) : "",
         },
         transfer_data: {
           destination: store.stripeAccountId,
@@ -59,10 +75,11 @@ export async function POST(req: NextRequest) {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: (currency || "usd").toLowerCase(),
-      description: description || "Pago a Jandosoft",
+      description: (desc || "Pago a Jandosoft").substring(0, 250),
       metadata: {
         customerEmail,
         customerName: customerName || "",
+        items: itemsList ? JSON.stringify(itemsList) : "",
       },
       automatic_payment_methods: {
         enabled: true,

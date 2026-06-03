@@ -9,8 +9,6 @@ import { readFileAsText, formatFileMessage } from "@/lib/utils/readFile";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { useConversations, type StoredMessage } from "@/lib/hooks/useConversations";
 
-const WINDOW_MS = 2.5 * 60 * 60 * 1000;
-
 const SUGGESTED_ACTIONS = [
   { label: "Configurar mi tienda", icon: <Store className="w-3.5 h-3.5" /> },
   { label: "Crear un producto", icon: <ShoppingCart className="w-3.5 h-3.5" /> },
@@ -33,6 +31,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [serverRemaining, setServerRemaining] = useState<number | null>(null);
 
   useEffect(() => {
     if (activeId) {
@@ -63,9 +62,8 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
     }
   }, [messages, convLoaded, activeId, convos, updateTitle]);
 
-  const now = Date.now();
-  const recentUserMessages = messages.filter(m => m.role === "user" && now - m.timestamp < WINDOW_MS).length;
-  const canSend = recentUserMessages < maxMessages;
+  const canSend = serverRemaining === null || serverRemaining > 0;
+  const displayRemaining = serverRemaining ?? maxMessages;
   const voice = useVoiceInput();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -134,6 +132,9 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
       });
 
       const data = await response.json();
+      if (data.remaining !== undefined) {
+        setServerRemaining(data.remaining);
+      }
       if (data.text) {
         setMessages(prev => [...prev, { role: "bot", content: data.text, timestamp: Date.now() }]);
       } else if (data.error) {
@@ -254,7 +255,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
             <div className="flex items-center gap-1">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[8px] max-[340px]:text-[7.5px] font-black text-zinc-400 uppercase tracking-widest max-[340px]:tracking-wider italic whitespace-nowrap">
-                {maxMessages - recentUserMessages} Mensajes restantes
+                {displayRemaining} Mensajes restantes
               </span>
             </div>
           </div>
@@ -406,7 +407,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
           <input
             ref={inputRef}
             type="text"
-            placeholder={!canSend ? "Límite de mensajes alcanzado (vuelve en 2.5h)" : "Pregunta algo sobre Jandosoft..."}
+            placeholder={!canSend ? "Límite de 10 preguntas alcanzado (vuelve en 24h)" : "Pregunta algo sobre Jandosoft..."}
             disabled={!canSend}
             className={cn(
               "w-full bg-zinc-50 max-[400px]:p-3 max-[340px]:p-2.5 max-[400px]:text-xs text-sm p-4 md:p-5 pr-20 md:pr-24 rounded-xl md:rounded-2xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 focus:ring-2 focus:ring-red-600/5 transition-all shadow-sm disabled:opacity-50 disabled:bg-zinc-100",

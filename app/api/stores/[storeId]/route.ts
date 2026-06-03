@@ -63,6 +63,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ stor
     const { storeId } = await params;
     const body = await req.json();
 
+    const storeCheck = await Store.findOne({ _id: storeId, organizationId: auth.organizationId }).lean();
+    if (storeCheck?.isSuspended) {
+      return NextResponse.json({ error: "Esta tienda está suspendida. No puedes modificarla." }, { status: 403 });
+    }
+
     if (body.slug) {
       const existing = await Store.findOne({ slug: body.slug, _id: { $ne: storeId } }).lean();
       if (existing) {
@@ -110,6 +115,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ st
     }
     const { storeId } = await params;
     const body = await req.json();
+
+    const storeCheck = await Store.findOne({ _id: storeId, organizationId: auth.organizationId }).lean();
+    if (storeCheck?.isSuspended) {
+      return NextResponse.json({ error: "Esta tienda está suspendida. No puedes modificarla." }, { status: 403 });
+    }
 
     if (body.slug) {
       const existing = await Store.findOne({ slug: body.slug, _id: { $ne: storeId } }).lean();

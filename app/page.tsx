@@ -53,9 +53,9 @@ import {
   UserCircle,
   Receipt,
   Menu,
-  ExternalLink
+  ExternalLink,
+  Copy
 } from "lucide-react";
-import AdminView from "@/components/admin/Admin";
 import ChatView from "@/components/chat/Chat";
 import BusinessDashboard from "@/components/business/BusinessDashboard";
 import StoreView from "@/components/store/Store";
@@ -235,7 +235,10 @@ function SafeUserDashboard(p: {
                   const storeSlug = store.slug || slugify(storeName) || undefined;
                   return storeSlug && (
                     <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                      <a href={`/s/${storeSlug}`} target="_blank" className="p-2.5 hover:bg-emerald-50 rounded-xl transition-all group" title="Ver tienda pública">
+                      <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/s/${storeSlug}`); showToast("✅ Link copiado al portapapeles", "success"); }} className="p-2.5 hover:bg-zinc-50 rounded-xl transition-all group" title="Copiar link de la tienda">
+                        <Copy className="w-5 h-5 text-zinc-400 group-hover:text-zinc-700 transition-colors" />
+                      </button>
+                      <a href={`/s/${storeSlug}`} className="p-2.5 hover:bg-emerald-50 rounded-xl transition-all group" title="Ver tienda pública">
                         <ExternalLink className="w-5 h-5 text-zinc-400 group-hover:text-emerald-600 transition-colors" />
                       </a>
                     </div>
@@ -325,8 +328,8 @@ const SESS_DURATION = 7 * 24 * 60 * 60 * 1000;
 
 const PLAN_LIMITS: Record<string, { maxStores: number; maxProductsPerStore: number; maxMessages: number; maxAutomations: number; label: string }> = {
   free: { maxStores: 3, maxProductsPerStore: 20, maxMessages: 10, maxAutomations: 5, label: "Gratis" },
-  basic: { maxStores: 10, maxProductsPerStore: 100, maxMessages: 999, maxAutomations: 20, label: "Básico" },
-  enterprise: { maxStores: 999, maxProductsPerStore: 9999, maxMessages: 999, maxAutomations: 999, label: "Enterprise" },
+  basic: { maxStores: 10, maxProductsPerStore: 100, maxMessages: 10, maxAutomations: 20, label: "Básico" },
+  enterprise: { maxStores: 999, maxProductsPerStore: 9999, maxMessages: 10, maxAutomations: 999, label: "Enterprise" },
 };
 
 function getPlanLimits(subscription: string | null) {
@@ -346,22 +349,19 @@ function getDaysLeft(expiry: Date | string | null): number | null {
 interface Session {
   token: string;
   email: string;
-  isAdmin: boolean;
   organizationId: string;
   loggedAt: number;
 }
 
 export default function Page() {
-  const [activeTab, setActiveTab] = useState<"home" | "admin" | "register" | "admin-login" | "chat" | "dashboard" | "business" | "pricing" | "messages">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "register" | "chat" | "dashboard" | "business" | "pricing" | "messages">("home");
   const [businessSection, setBusinessSection] = useState<string>("overview");
   const [isLogged, setIsLogged] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
-  const [adminLoginForm, setAdminLoginForm] = useState({ email: "", password: "" });
   const [registerForm, setRegisterForm] = useState({ name: "", phone: "", email: "", password: "" });
   const [user, setUser] = useState({
     email: "",
@@ -444,7 +444,6 @@ export default function Page() {
     const sessionClean = {
       token: typeof session.token === "string" ? session.token : "",
       email: typeof session.email === "string" ? session.email : "",
-      isAdmin: !!session.isAdmin,
       organizationId: typeof session.organizationId === "string" ? session.organizationId : "",
       loggedAt: typeof session.loggedAt === "number" ? session.loggedAt : 0,
     };
@@ -452,7 +451,6 @@ export default function Page() {
 
     syncToken(sessionClean.token);
     setIsLogged(true);
-    setIsAdmin(sessionClean.isAdmin);
     setUser(prev => ({ ...prev, email: sessionClean.email, organizationId: sessionClean.organizationId }));
 
     const orgId = sessionClean.organizationId && sessionClean.organizationId !== "undefined" ? sessionClean.organizationId : "";
@@ -503,11 +501,10 @@ export default function Page() {
     } catch {}
   }, []);
 
-  const saveSession = (email: string, admin = false, sessionToken: string, orgId: string) => {
+  const saveSession = (email: string, sessionToken: string, orgId: string) => {
     const session: Session = {
       token: sessionToken || "",
       email: email || "",
-      isAdmin: admin || false,
       organizationId: orgId || "",
       loggedAt: Date.now(),
     };
@@ -534,10 +531,9 @@ export default function Page() {
       if (data.success) {
         showToast("Registro exitoso", "success");
         setIsLogged(true);
-        setIsAdmin(false);
         setUser(prev => ({ ...prev, email: data.user.email, name: data.user.name, organizationId: data.user.organizationId, role: data.user.role }));
         setOrg(data.organization);
-        saveSession(data.user.email, false, data.token, data.user.organizationId);
+        saveSession(data.user.email, data.token, data.user.organizationId);
         setActiveTab("dashboard");
         loadFromAPI(data.user.email);
         setRegisterForm({ name: "", phone: "", email: "", password: "" });
@@ -546,30 +542,6 @@ export default function Page() {
       }
     } catch {
       showToast("Error de conexión al registrar", "error");
-    }
-  };
-
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch("/api/auth/admin-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(adminLoginForm)
-      });
-      const data = await res.json();
-      if (data.success) {
-        setIsAdmin(true);
-        setIsLogged(true);
-        setShowLogin(false);
-        setActiveTab("admin");
-        showToast("Bienvenido Administrador", "success");
-        saveSession(adminLoginForm.email, true, "", "");
-      } else {
-        showToast(data.error || "Credenciales incorrectas", "error");
-      }
-    } catch {
-      showToast("Error de conexión", "error");
     }
   };
 
@@ -589,11 +561,10 @@ export default function Page() {
       if (data.success) {
         setUser(prev => ({ ...prev, ...data.user }));
         setIsLogged(true);
-        setIsAdmin(false);
         setShowLogin(false);
         setActiveTab("dashboard");
         showToast(`Sesión iniciada: ${loginForm.email}`, "success");
-        saveSession(data.user.email, false, data.token, data.user.organizationId || "");
+        saveSession(data.user.email, data.token, data.user.organizationId || "");
         loadFromAPI(loginForm.email);
         setLoginForm({ email: "", password: "" });
       } else {
@@ -605,14 +576,31 @@ export default function Page() {
   };
 
   useEffect(() => {
-    if (!isLogged && !["home", "register", "admin-login"].includes(activeTab)) {
+    if (!isLogged && !["home", "register"].includes(activeTab)) {
       setActiveTab("home");
     }
   }, [isLogged, activeTab]);
 
+  useEffect(() => {
+    if (!isLogged || !token) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/user", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) {
+            setUser((prev) => ({ ...prev, isSuspended: data.user.isSuspended }));
+          }
+        }
+      } catch {}
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [isLogged, token]);
+
   const handleLogout = () => {
     setIsLogged(false);
-    setIsAdmin(false);
     syncToken(null);
     setOrg(null);
     setUserStores([]);
@@ -640,6 +628,30 @@ export default function Page() {
     setActiveStoreId(storeId);
     setActiveTab("business");
   };
+
+  if (isLogged && user.isSuspended) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-6">
+        <div className="max-w-md mx-auto text-center space-y-6">
+          <div className="w-20 h-20 bg-rose-100 rounded-[2rem] flex items-center justify-center mx-auto">
+            <svg className="w-10 h-10 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-black italic text-zinc-950 uppercase">Cuenta Suspendida</h1>
+          <p className="text-zinc-500 font-medium text-sm md:text-base">
+            Tu cuenta ha sido suspendida por el administrador de la plataforma.
+          </p>
+          <button
+            onClick={handleLogout}
+            className="px-6 py-3 bg-zinc-950 text-white rounded-xl text-xs font-black italic uppercase hover:bg-zinc-800 transition-all"
+          >
+            Cerrar Sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-red-600 flex font-sans text-zinc-950 overflow-x-hidden overflow-y-hidden relative">
@@ -696,13 +708,10 @@ export default function Page() {
             )}
          </nav>
 
-         <div className="flex flex-col px-3 mt-4 pt-4 border-t border-red-800/20">
-            {isLogged && (
-              <>
-                {isAdmin && <SideNavItem2 icon={<ShieldCheck className="w-4 h-4" />} label="Admin" active={activeTab === "admin"} onClick={() => setActiveTab("admin")} />}
-                <SideNavItem2 icon={<LogOut className="w-4 h-4" />} label="Salir" active={false} onClick={handleLogout} />
-              </>
-            )}
+          <div className="flex flex-col px-3 mt-4 pt-4 border-t border-red-800/20">
+             {isLogged && (
+               <SideNavItem2 icon={<LogOut className="w-4 h-4" />} label="Salir" active={false} onClick={handleLogout} />
+             )}
             {!isLogged && (
               <SideNavItem2 icon={<UserPlus className="w-4 h-4" />} label="Acceder" active={false} onClick={() => setShowLogin(true)} />
             )}
@@ -804,14 +813,11 @@ export default function Page() {
               </nav>
 
               <div className="border-t border-zinc-100 px-3 py-4 shrink-0">
-                {isLogged ? (
-                  <div className="space-y-1">
-                    {isAdmin && (
-                      <MobileDrawerItem icon={<ShieldCheck className="w-4 h-4" />} label="Admin" active={activeTab === "admin"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("admin"); }} />
-                    )}
-                    <MobileDrawerItem icon={<LogOut className="w-4 h-4" />} label="Cerrar Sesión" active={false} onClick={() => { setMobileDrawerOpen(false); handleLogout(); }} />
-                  </div>
-                ) : (
+                 {isLogged ? (
+                   <div className="space-y-1">
+                     <MobileDrawerItem icon={<LogOut className="w-4 h-4" />} label="Cerrar Sesión" active={false} onClick={() => { setMobileDrawerOpen(false); handleLogout(); }} />
+                   </div>
+                 ) : (
                   <MobileDrawerItem icon={<UserPlus className="w-4 h-4" />} label="Iniciar Sesión" active={false} onClick={() => { setMobileDrawerOpen(false); setShowLogin(true); }} />
                 )}
               </div>
@@ -1143,7 +1149,6 @@ export default function Page() {
 {activeTab === "chat" && isLogged && <motion.div key="chat" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="max-[400px]:py-2 py-4 md:py-10"><ChatView maxMessages={getPlanLimits(user.subscription).maxMessages} context={{ email: user.email, plan: user.subscription ?? undefined, storeName: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].name : undefined, industry: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].industry : undefined, storeType: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].type : undefined, description: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].description : undefined }} /></motion.div>}
                   {activeTab === "messages" && isLogged && <motion.div key="messages" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="max-w-4xl mx-auto py-4 md:py-10"><MessagesPanel /></motion.div>}
                   {activeTab === "pricing" && isLogged && <motion.div key="pricing" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="py-10"><StoreView currency={currency} products={products} isPremium={isPremium} isLogged={isLogged} userEmail={user.email} onPaymentSuccess={handlePaymentSuccess} /></motion.div>}
-                  {activeTab === "admin" && isAdmin && isLogged && <motion.div key="admin" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }}><AdminView currency={currency} setCurrency={setCurrency} products={products} setProducts={setProducts} isPremium={isPremium} setIsPremium={setIsPremium} transactions={transactions} /></motion.div>}
                  {activeTab === "business" && isLogged && activeStore && (
                     <motion.div key="business" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="py-10">
                          <BusinessDashboard userStore={activeStore} userEmail={user.email} storeId={activeStoreId as string | number} planLimits={getPlanLimits(user.subscription)} planExpired={!!(user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date())} onNavigateToPricing={() => setActiveTab("pricing")} initialSection={businessSection}
@@ -1168,49 +1173,7 @@ export default function Page() {
                 )}
 
 
-               
-                {activeTab === "admin-login" && (
-                   <motion.div 
-                      key="admin-login" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                      className="max-w-md mx-auto max-[400px]:py-10 py-20"
-                    >
-                       <div className="bg-white max-[400px]:p-4 p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border-2 md:border-4 border-red-600 shadow-3xl text-center space-y-6 md:space-y-8 relative overflow-hidden">
-                         <div className="absolute top-0 left-0 w-full h-1 bg-red-600" />
-                         <div className="w-16 h-16 md:w-20 md:h-20 bg-red-600 rounded-2xl md:rounded-3xl mx-auto flex items-center justify-center text-white shadow-xl shadow-red-100">
-                            <ShieldCheck className="w-8 h-8 md:w-10 md:h-10" />
-                         </div>
-                         <div>
-                            <h3 className="text-2xl md:text-3xl font-black italic text-zinc-950">Acceso Administrador</h3>
-                            <p className="text-[9px] md:text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1 md:mt-2 italic">Panel de Control Corporativo</p>
-                         </div>
-                         <form onSubmit={handleAdminLogin} className="space-y-3 md:space-y-5">
-                            <div className="relative group">
-                               <ArrowRight className="absolute left-3 md:left-4 top-3 md:top-4 w-4 h-4 md:w-5 md:h-5 text-zinc-300 group-focus-within:text-red-500 transition-colors" />
-                               <input 
-                                  type="email" placeholder="admin@jandosoft.com" 
-                                  className="w-full bg-zinc-50 p-3 md:p-4 pl-10 md:pl-12 rounded-xl border border-zinc-100 outline-none font-medium text-sm focus:bg-white focus:border-red-200 transition-all" 
-                                  value={adminLoginForm.email}
-                                  onChange={e => setAdminLoginForm({...adminLoginForm, email: e.target.value})}
-                               />
-                            </div>
-                            <div className="relative group">
-                               <Lock className="absolute left-3 md:left-4 top-3 md:top-4 w-4 h-4 md:w-5 md:h-5 text-zinc-300 group-focus-within:text-red-500 transition-colors" />
-                               <input 
-                                  type="password" placeholder="••••••••" 
-                                  className="w-full bg-zinc-50 p-3 md:p-4 pl-10 md:pl-12 rounded-xl border border-zinc-100 outline-none font-medium text-sm focus:bg-white focus:border-red-200 transition-all" 
-                                  value={adminLoginForm.password}
-                                  onChange={e => setAdminLoginForm({...adminLoginForm, password: e.target.value})}
-                               />
-                            </div>
-                              <motion.button whileTap={{ scale: 0.97 }} type="submit" className="w-full py-4 md:py-5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-2xl font-black text-sm md:text-lg flex items-center justify-center gap-2 md:gap-3 hover:scale-[1.02] transition-all shadow-2xl shadow-red-200 italic tracking-wider">
-                                 <ShieldCheck className="w-4 h-4 md:w-5 md:h-5" /> VERIFICAR CREDENCIALES
-                              </motion.button>
-                         </form>
-                         <p className="text-[8px] md:text-[9px] text-zinc-400 font-bold italic">Solo personal autorizado · Jandosoft Enterprise</p>
-                      </div>
-                   </motion.div>
-                )}
-            </AnimatePresence>
+             </AnimatePresence>
          </div>
 
           {/* Bottom Status Bar */}
@@ -1220,8 +1183,8 @@ export default function Page() {
                <span className="flex items-center gap-1.5 cursor-pointer hover:text-red-600" onClick={() => isLogged ? setActiveTab("dashboard") : setShowLogin(true)}><Lock className="w-3 h-3" /> {isLogged ? "PANEL" : "LOGIN"}</span>
             </div>
              <Link href="/terminos" className="hover:text-red-600 cursor-pointer">TÉRMINOS</Link>
-             <p className="hover:text-red-600 cursor-pointer" onClick={() => setActiveTab("admin-login")}>ADMIN SYSTEM © 2026 JANDOSOFT</p>
-         </footer>
+              <Link href="/admin" className="hover:text-red-600">ADMIN SYSTEM © 2026 JANDOSOFT</Link>
+          </footer>
 
          {ToastComponent}
       </main>

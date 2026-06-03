@@ -8,8 +8,14 @@ export async function GET(req: NextRequest) {
     const auth = getAuthFromHeaders(req) || await getAuthFromCookies();
     if (auth) {
       await connectDB();
-      const user = await User.findById(auth.userId).lean();
+      const user = await User.findById(auth.userId);
       if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+      const now = new Date();
+      if (user.suspendedUntil && user.suspendedUntil < now) {
+        user.isSuspended = false;
+        user.suspendedUntil = null;
+        await user.save();
+      }
       return NextResponse.json({
         user: {
           email: user.email,

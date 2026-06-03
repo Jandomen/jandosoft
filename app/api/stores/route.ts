@@ -94,6 +94,10 @@ export async function POST(req: NextRequest) {
     }
 
     await connectDB();
+    const user = await User.findOne({ email: auth.email }).lean();
+    if (user?.isSuspended) {
+      return NextResponse.json({ error: "Cuenta suspendida. No puedes crear tiendas." }, { status: 403 });
+    }
     const limitError = await checkPlanLimit(auth.organizationId, auth.email);
     if (limitError) {
       return NextResponse.json({ error: limitError }, { status: 403 });

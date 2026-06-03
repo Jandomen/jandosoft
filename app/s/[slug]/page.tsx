@@ -52,6 +52,29 @@ export default async function StoreMainPage({ params }: Props) {
   const store = await getStore(slug);
   if (!store) notFound();
 
+  if (store.isSuspended) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center px-6 space-y-6">
+          <div className="w-20 h-20 bg-rose-100 rounded-[2rem] flex items-center justify-center mx-auto">
+            <svg className="w-10 h-10 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-black italic text-zinc-950 uppercase">Tienda Suspendida</h1>
+          <p className="text-zinc-500 font-medium text-base">
+            {store.suspensionReason || "Esta tienda ha sido suspendida por violar nuestros términos de servicio."}
+          </p>
+          <div className="pt-4">
+            <a href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-950 text-white rounded-xl text-xs font-black italic uppercase hover:bg-zinc-800 transition-all">
+              Volver al inicio
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <header className="border-b border-zinc-100 bg-white sticky top-0 z-50">

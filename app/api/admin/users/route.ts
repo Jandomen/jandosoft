@@ -4,11 +4,24 @@ import { Store } from "@/lib/models/Store";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     await connectDB();
 
-    const users = await User.find({}, "-password")
+    const url = new URL(req.url);
+    const search = url.searchParams.get("search") || "";
+
+    let query: any = {};
+    if (search) {
+      query = {
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      };
+    }
+
+    const users = await User.find(query, "-password")
       .sort({ createdAt: -1 })
       .lean();
 

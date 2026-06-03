@@ -47,6 +47,9 @@ export interface IStore extends Document {
   organizationId?: mongoose.Types.ObjectId;
   isPublic?: boolean;
   publicAI?: boolean;
+  isSuspended?: boolean;
+  suspensionReason?: string;
+  suspendedUntil?: Date | null;
 }
 
 const ProductSchema = new Schema<IProduct>({
@@ -96,6 +99,9 @@ const StoreSchema = new Schema<IStore>({
   organizationId: { type: Schema.Types.ObjectId, ref: "Organization", index: true },
   isPublic: { type: Boolean, default: false },
   publicAI: { type: Boolean, default: false },
+  isSuspended: { type: Boolean, default: false },
+  suspensionReason: { type: String, default: "" },
+  suspendedUntil: { type: Date, default: null },
 }, { timestamps: true });
 
 export const Store = mongoose.models.Store || mongoose.model<IStore>("Store", StoreSchema);

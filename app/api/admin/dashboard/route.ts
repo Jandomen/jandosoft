@@ -64,6 +64,7 @@ export async function GET() {
         action: a.action,
         time: formatRelativeTime(a.time),
         detail: a.detail,
+        createdAt: a.time,
       })),
     });
   } catch (error) {
