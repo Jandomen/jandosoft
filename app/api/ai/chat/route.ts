@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
 
   const auth = getAuthFromHeaders(req) || await getAuthFromCookies();
 
-  if (auth && body.store && !body.store._generic) {
+  if (auth) {
     const { response, actions } = await askBusinessAIWithTools({
       message: body.message,
       store: body.store,

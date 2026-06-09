@@ -46,6 +46,37 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "delete_store",
+      description: "Delete a store by its name",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Exact name of the store to delete" },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_store",
+      description: "Update a store's name, description, or industry",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Current exact name of the store to update" },
+          newName: { type: "string", description: "New name for the store (optional)" },
+          description: { type: "string", description: "New description (optional)" },
+          industry: { type: "string", description: "New industry (optional)" },
+        },
+        required: ["name"],
+      },
+    },
+  },
 ];
 
 async function callLLM(messages: any[], tools?: any[]) {
@@ -132,6 +163,38 @@ async function executeTool(toolCall: any, store: any, userId: string) {
       services: [],
     });
     return { success: true, message: `Tienda "${args.name}" creada con éxito`, storeId: store._id };
+  }
+
+  if (name === "delete_store") {
+    const { connectDB } = await import("@/lib/mongodb");
+    const { Store } = await import("@/lib/models/Store");
+    const { User } = await import("@/lib/models/User");
+    await connectDB();
+    const user = await User.findById(userId);
+    if (!user) return { error: "User not found" };
+    const store = await Store.findOneAndDelete({ name: args.name, organizationId: user.organizationId });
+    if (!store) return { error: `Tienda "${args.name}" no encontrada` };
+    return { success: true, message: `Tienda "${args.name}" eliminada con éxito` };
+  }
+
+  if (name === "update_store") {
+    const { connectDB } = await import("@/lib/mongodb");
+    const { Store } = await import("@/lib/models/Store");
+    const { User } = await import("@/lib/models/User");
+    await connectDB();
+    const user = await User.findById(userId);
+    if (!user) return { error: "User not found" };
+    const update: any = {};
+    if (args.newName) update.name = args.newName;
+    if (args.description) update.desc = args.description;
+    if (args.industry) update.industry = args.industry;
+    const store = await Store.findOneAndUpdate(
+      { name: args.name, organizationId: user.organizationId },
+      { $set: update },
+      { new: true },
+    );
+    if (!store) return { error: `Tienda "${args.name}" no encontrada` };
+    return { success: true, message: `Tienda "${args.name}" actualizada con éxito` };
   }
 
   return { error: `Unknown tool: ${name}` };
@@ -284,7 +347,13 @@ export async function askBusinessAIWithTools({
   else if (nearProductLimit) limitWarnings.push("⚠️ ADVERTENCIA: Estás usando más del 80% de tu límite de productos.");
   if (sub?.expiry && new Date(sub.expiry) < new Date()) limitWarnings.push("⚠️ TU SUSCRIPCIÓN ESTÁ VENCIDA. Renueva para seguir usando funciones premium.");
 
-  const storeConfig = storeExists ? [
+  const userStoresList = store?._stores?.length
+    ? (store._stores || []).map((s: any) =>
+        `  - ${s.name}${s.slug ? ` (${s.slug})` : ""} — ${s.productsCount} productos`
+      ).join("\n")
+    : null;
+
+  const storeConfig = storeExists && !store._generic ? [
     `Nombre: ${store.name || "N/A"}`,
     `Tipo: ${store.type || "N/A"}`,
     `Industria: ${store.industry || "N/A"}`,
@@ -314,7 +383,16 @@ export async function askBusinessAIWithTools({
     ``,
     `SERVICIOS (${servicesCount}):`,
     servicesList || "  (ninguno)",
-  ].join("\n") : "No hay información de configuración disponible.";
+  ].join("\n") : (store?._generic ? [
+    `SUSCRIPCIÓN: ${(sub?.plan || "free").toUpperCase()}`,
+    `Límite de tiendas: ${sub?.maxStores || "—"}`,
+    `Límite de productos por tienda: ${maxProducts}`,
+    ...(sub?.expiry ? [`Vencimiento: ${new Date(sub.expiry).toLocaleDateString()}`] : []),
+    ...(limitWarnings.length ? [``, ...limitWarnings] : []),
+    ``,
+    `MIS TIENDAS (${store?._stores?.length || 0}):`,
+    userStoresList || "  (ninguna, puedes crear una con create_store)",
+  ].join("\n") : "No hay información de configuración disponible.");
 
   const role = store?._generic
     ? "Eres el asistente oficial de Jandosoft, una plataforma para crear y gestionar tiendas en línea."
@@ -327,11 +405,11 @@ export async function askBusinessAIWithTools({
 CONFIGURACIÓN ACTUAL DE LA TIENDA:
 ${storeConfig}
 
-Tienes acceso a herramientas para ejecutar acciones directamente en la tienda del usuario: crear productos, eliminar productos y crear tiendas.
+Tienes acceso a herramientas para ejecutar acciones directamente: crear productos, eliminar productos, crear tiendas, eliminar tiendas y modificar tiendas.
 
-El usuario está usando la interfaz de línea de comandos (CLI) de Jandosoft. Cuando te pida hacer algo como agregar un producto, USA LA HERRAMIENTA correspondiente para hacerlo realidad. NO te limites a sugerir — EJECUTA la acción.
+El usuario está usando la interfaz de línea de comandos (CLI) de Jandosoft. Cuando te pida hacer algo, USA LA HERRAMIENTA correspondiente para hacerlo realidad. NO te limites a sugerir — EJECUTA la acción directamente.
 
-IMPORTANTE: Después de ejecutar una herramienta, informa al usuario del resultado concreto: qué se creó, eliminó o modificó.
+IMPORTANTE: Después de ejecutar una herramienta, informa al usuario del resultado concreto: qué se creó, eliminó o modificó. Si algo falla, dile exactamente qué pasó.
 
 Responde en español.`;
 
