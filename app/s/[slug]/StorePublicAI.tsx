@@ -45,7 +45,7 @@ export function StorePublicAI({ storeId, storeName, industry }: { storeId: strin
   if (messages.length === 0) {
     return (
       <div className="text-center">
-        <button onClick={start} className="px-8 py-4 bg-zinc-950 text-white rounded-2xl font-black italic hover:bg-zinc-800 transition-all shadow-xl active:scale-95 inline-flex items-center gap-3">
+        <button onClick={start} className="px-8 py-4 bg-zinc-950 dark:bg-zinc-100 text-white dark:text-zinc-950 rounded-2xl font-black italic hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all shadow-xl active:scale-95 inline-flex items-center gap-3">
           <Bot className="w-5 h-5" /> PREGUNTAR AL ASISTENTE IA
         </button>
       </div>
@@ -53,26 +53,26 @@ export function StorePublicAI({ storeId, storeName, industry }: { storeId: strin
   }
 
   return (
-    <div className="w-full mx-auto bg-white rounded-[1.5rem] max-[340px]:rounded-xl md:rounded-[2.5rem] border border-zinc-100 shadow-3xl overflow-hidden">
+    <div className="w-full mx-auto bg-zinc-50 rounded-[1.5rem] max-[340px]:rounded-xl md:rounded-[2.5rem] border border-zinc-100 shadow-3xl overflow-hidden">
       <div className="px-4 max-[340px]:px-2.5 py-3.5 border-b border-zinc-100 flex items-center gap-2.5 max-[340px]:gap-2">
-        <div className="w-9 h-9 max-[340px]:w-7 max-[340px]:h-7 md:w-10 md:h-10 bg-red-50 rounded-xl flex items-center justify-center text-red-600"><Sparkles className="w-4 h-4 max-[340px]:w-3.5 max-[340px]:h-3.5 md:w-5 md:h-5" /></div>
-        <p className="font-black italic text-sm max-[340px]:text-xs text-zinc-950">Asistente de {storeName}</p>
+        <div className="w-9 h-9 max-[340px]:w-7 max-[340px]:h-7 md:w-10 md:h-10 bg-cyan-500/20 dark:bg-cyan-400/20 rounded-xl flex items-center justify-center text-cyan-700 dark:text-cyan-300"><Sparkles className="w-4 h-4 max-[340px]:w-3.5 max-[340px]:h-3.5 md:w-5 md:h-5" /></div>
+        <p className="font-black italic text-sm max-[340px]:text-xs text-zinc-950 dark:text-cyan-100">Asistente de {storeName}</p>
       </div>
       <div className="h-80 overflow-y-auto px-3 max-[340px]:px-2 py-4 md:py-6 space-y-3.5 no-scrollbar">
         {messages.map((m, i) => (
           <div key={i} className={`flex items-start gap-1.5 md:gap-3 w-full ${m.role === "user" ? "flex-row-reverse" : ""}`}>
-            <div className={`w-7 h-7 max-[340px]:w-6 max-[340px]:h-6 md:w-8 md:h-8 rounded-xl flex items-center justify-center shrink-0 ${m.role === "user" ? "bg-zinc-200" : "bg-red-50 text-red-600"}`}>
+            <div className={`w-7 h-7 max-[340px]:w-6 max-[340px]:h-6 md:w-8 md:h-8 rounded-xl flex items-center justify-center shrink-0 ${m.role === "user" ? "bg-zinc-200 dark:bg-white/15 text-zinc-600 dark:text-white/70" : "bg-cyan-500/20 dark:bg-cyan-400/20 text-cyan-700 dark:text-cyan-300"}`}>
               {m.role === "user" ? <User className="w-3.5 h-3.5 max-[340px]:w-3 max-[340px]:h-3 md:w-4 md:h-4" /> : <Bot className="w-3.5 h-3.5 max-[340px]:w-3 max-[340px]:h-3 md:w-4 md:h-4" />}
             </div>
-            <div className={`rounded-2xl text-xs md:text-sm font-medium leading-relaxed overflow-wrap-anywhere min-w-0 ${m.role === "user" ? "bg-zinc-950 text-white rounded-tr-none px-3.5 py-2.5 max-[340px]:px-2.5 max-[340px]:py-2 md:px-4 md:py-3 max-w-[85%] md:max-w-[75%]" : "bg-white border border-zinc-100 text-zinc-700 rounded-tl-none shadow-sm px-4 py-3 max-[340px]:px-2.5 max-[340px]:py-2 md:px-5 md:py-4 w-full md:max-w-[85%]"}`}>
+            <div className={`rounded-2xl text-xs md:text-sm font-medium leading-relaxed overflow-wrap-anywhere min-w-0 ${m.role === "user" ? "bg-zinc-950 text-white dark:bg-white/10 dark:text-white dark:backdrop-blur-md rounded-tr-none px-3.5 py-2.5 max-[340px]:px-2.5 max-[340px]:py-2 md:px-4 md:py-3 max-w-[85%] md:max-w-[75%]" : "bg-cyan-50 border border-cyan-200 text-cyan-800 dark:bg-cyan-500/10 dark:border-cyan-400/20 dark:text-cyan-100 rounded-tl-none shadow-sm px-4 py-3 max-[340px]:px-2.5 max-[340px]:py-2 md:px-5 md:py-4 w-full md:max-w-[85%]"}`}>
               {m.role === "user" ? m.content : <MarkdownRenderer content={m.content} />}
             </div>
           </div>
         ))}
         {loading && (
           <div className="flex items-start gap-1.5 md:gap-3">
-            <div className="w-7 h-7 max-[340px]:w-6 max-[340px]:h-6 rounded-xl bg-red-50 flex items-center justify-center text-red-600"><Loader2 className="w-3.5 h-3.5 max-[340px]:w-3 max-[340px]:h-3 md:w-4 md:h-4 animate-spin" /></div>
-            <div className="px-4 py-3 max-[340px]:px-2.5 max-[340px]:py-2 rounded-2xl bg-white border border-zinc-100 text-zinc-400 text-sm italic">Escribiendo...</div>
+            <div className="w-7 h-7 max-[340px]:w-6 max-[340px]:h-6 rounded-xl bg-cyan-500/20 dark:bg-cyan-400/20 flex items-center justify-center text-cyan-700 dark:text-cyan-300"><Loader2 className="w-3.5 h-3.5 max-[340px]:w-3 max-[340px]:h-3 md:w-4 md:h-4 animate-spin" /></div>
+            <div className="px-4 py-3 max-[340px]:px-2.5 max-[340px]:py-2 rounded-2xl bg-cyan-50 border border-cyan-200 text-cyan-800 dark:bg-cyan-500/10 dark:border-cyan-400/20 dark:text-cyan-100 text-sm italic">Escribiendo...</div>
           </div>
         )}
       </div>

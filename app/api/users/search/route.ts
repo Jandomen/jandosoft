@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthFromCookies } from "@/lib/auth";
+import { getAuthFromCookies, getAuthFromHeaders } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 
 export async function GET(req: NextRequest) {
-  const auth = await getAuthFromCookies();
+  const auth = getAuthFromHeaders(req) || await getAuthFromCookies();
   if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);

@@ -10,7 +10,22 @@ export async function askBusinessAI({
   store: any;
   history?: any[];
 }): Promise<string> {
-  const storeConfig = store ? [
+  const storeExists = store && store.name;
+
+  const productsList = storeExists ? (store.products || []).map((p: any) =>
+    `  - ${p.name} | $${p.price} | Stock: ${p.stock}`
+  ).join("\n") : "";
+  const customersList = storeExists ? (store.customers || []).map((c: any) =>
+    `  - ${c.name} | ${c.email} | ${c.phone}`
+  ).join("\n") : "";
+  const ordersList = storeExists ? (store.orders || []).map((o: any) =>
+    `  - ${o.product} | $${o.amount} | ${o.status}`
+  ).join("\n") : "";
+  const servicesList = storeExists ? (store.services || []).map((s: any) =>
+    `  - ${s.name} | $${s.price} | ${s.desc}`
+  ).join("\n") : "";
+
+  const storeConfig = storeExists ? [
     `Nombre: ${store.name || "N/A"}`,
     `Tipo: ${store.type || "N/A"}`,
     `Industria: ${store.industry || "N/A"}`,
@@ -21,13 +36,25 @@ export async function askBusinessAI({
     `IA pública: ${store.publicAI ? "Sí" : "No"}`,
     `Moneda: ${store.currency || "USD"}`,
     `Stripe: ${store.stripeAccountId ? "Conectado" : "No conectado"}`,
-    `Productos: ${store.products?.length || 0}`,
-    `Clientes: ${store.customers?.length || 0}`,
-    `Pedidos: ${store.orders?.length || 0}`,
-    `Servicios: ${store.services?.length || 0}`,
+    ``,
+    `PRODUCTOS (${store.products?.length || 0}):`,
+    productsList || "  (ninguno)",
+    ``,
+    `CLIENTES (${store.customers?.length || 0}):`,
+    customersList || "  (ninguno)",
+    ``,
+    `ÓRDENES (${store.orders?.length || 0}):`,
+    ordersList || "  (ninguna)",
+    ``,
+    `SERVICIOS (${store.services?.length || 0}):`,
+    servicesList || "  (ninguno)",
   ].join("\n") : "No hay información de configuración disponible.";
 
-  const systemPrompt = `Eres el asistente oficial de ${store.name}, un negocio en la plataforma Jandosoft.
+  const role = storeExists
+    ? `Eres el asistente oficial de ${store.name}, un negocio en la plataforma Jandosoft.`
+    : "Eres el asistente oficial de Jandosoft, una plataforma para crear y gestionar tiendas en línea.";
+
+  const systemPrompt = `${role}
 
 CONFIGURACIÓN ACTUAL DE LA TIENDA:
 ${storeConfig}
@@ -42,7 +69,6 @@ Ayuda al usuario como un consultor empresarial usando la configuración actual d
     { role: "user", content: message },
   ];
 
-  // Prefer OpenAI, fallback to OpenRouter
   if (OPENAI_KEY) {
     const { default: OpenAI } = await import("openai");
     const client = new OpenAI({ apiKey: OPENAI_KEY });

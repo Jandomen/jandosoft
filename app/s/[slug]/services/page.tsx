@@ -5,6 +5,7 @@ import { Store } from "@/lib/models/Store";
 import { slugify } from "@/lib/utils";
 import { Briefcase } from "lucide-react";
 import TrackingWrapper from "@/components/TrackingWrapper";
+import { ThemeProvider } from "@/components/public/ThemeProvider";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -51,6 +52,7 @@ export default async function ServicesPage({ params }: Props) {
   const services = (store as any).services || [];
 
   return (
+    <ThemeProvider>
     <div className="min-h-screen bg-white">
       <header className="border-b border-zinc-100 bg-white sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 max-[340px]:px-2.5 h-16 flex items-center justify-between gap-2">
@@ -74,19 +76,19 @@ export default async function ServicesPage({ params }: Props) {
       <main className="max-w-6xl mx-auto px-4 max-[340px]:px-2.5 py-12">
         <div className="text-center space-y-4 mb-16">
           <h1 className="text-4xl md:text-5xl font-black italic text-zinc-950 uppercase tracking-tighter">Nuestros <span className="text-red-600">Servicios</span></h1>
-          <p className="text-zinc-400 font-bold text-xs uppercase tracking-widest italic">Conoce lo que ofrecemos</p>
+          <p className="text-zinc-500 font-bold text-xs uppercase tracking-widest italic">Conoce lo que ofrecemos</p>
         </div>
 
         {services.length === 0 ? (
           <div className="py-24 text-center">
-            <div className="w-20 h-20 bg-zinc-50 rounded-3xl flex items-center justify-center mx-auto mb-6"><Briefcase className="w-10 h-10 text-zinc-300" /></div>
-            <p className="text-lg font-black italic text-zinc-300 uppercase tracking-wider">Próximamente</p>
-            <p className="text-xs text-zinc-200 font-bold italic mt-2">Este negocio aún no ha publicado servicios.</p>
+            <div className="w-20 h-20 bg-zinc-50 rounded-3xl flex items-center justify-center mx-auto mb-6"><Briefcase className="w-10 h-10 text-zinc-300 dark:text-zinc-600" /></div>
+            <p className="text-lg font-black italic text-zinc-300 dark:text-zinc-600 uppercase tracking-wider">Próximamente</p>
+            <p className="text-xs text-zinc-200 dark:text-zinc-600 font-bold italic mt-2">Este negocio aún no ha publicado servicios.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {services.map((s: any) => (
-              <div key={s.id} className="bg-white rounded-[2rem] max-[340px]:rounded-[1.5rem] border border-zinc-100 shadow-sm p-6 max-[340px]:p-4 space-y-4 hover:shadow-xl hover:border-red-600/20 transition-all group">
+              <div key={s.id} className="bg-zinc-50 rounded-[2rem] max-[340px]:rounded-[1.5rem] border border-zinc-100 shadow-sm p-6 max-[340px]:p-4 space-y-4 hover:shadow-xl hover:border-red-600/20 transition-all group">
                 <div className="w-12 h-12 bg-zinc-50 rounded-xl flex items-center justify-center text-red-600 group-hover:bg-red-600 group-hover:text-white transition-all shadow-md">
                   <Briefcase className="w-5 h-5" />
                 </div>
@@ -101,12 +103,13 @@ export default async function ServicesPage({ params }: Props) {
 
       <footer className="border-t border-zinc-100 py-10">
         <div className="max-w-6xl mx-auto px-6 text-center">
-          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest italic">
+          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest italic">
             {store.name} &mdash; Potenciado por <span className="text-red-600">Jandosoft</span>
           </p>
         </div>
       </footer>
       <TrackingWrapper slug={slug} />
     </div>
+    </ThemeProvider>
   );
 }

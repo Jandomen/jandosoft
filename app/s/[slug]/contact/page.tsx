@@ -5,6 +5,7 @@ import { Store } from "@/lib/models/Store";
 import { slugify } from "@/lib/utils";
 import { Mail, MapPin } from "lucide-react";
 import TrackingWrapper from "@/components/TrackingWrapper";
+import { ThemeProvider } from "@/components/public/ThemeProvider";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -49,6 +50,7 @@ export default async function ContactPage({ params }: Props) {
   if (!store) notFound();
 
   return (
+    <ThemeProvider>
     <div className="min-h-screen bg-white">
       <header className="border-b border-zinc-100 bg-white sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 max-[340px]:px-2.5 h-16 flex items-center justify-between gap-2">
@@ -72,20 +74,20 @@ export default async function ContactPage({ params }: Props) {
       <main className="max-w-4xl mx-auto px-4 max-[340px]:px-2.5 py-12">
         <div className="text-center space-y-4 mb-16">
           <h1 className="text-4xl md:text-5xl font-black italic text-zinc-950 uppercase tracking-tighter">Contacta con <span className="text-red-600">{store.name}</span></h1>
-          <p className="text-zinc-400 font-bold text-xs uppercase tracking-widest italic">Estamos aqui para ayudarte</p>
+          <p className="text-zinc-500 font-bold text-xs uppercase tracking-widest italic">Estamos aqui para ayudarte</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
-          <div className="bg-white rounded-[2rem] max-[340px]:rounded-[1.5rem] border border-zinc-100 shadow-sm p-6 max-[340px]:p-4 space-y-4 text-center hover:shadow-lg transition-all">
-            <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center mx-auto text-red-600">
+          <div className="bg-zinc-50 rounded-[2rem] max-[340px]:rounded-[1.5rem] border border-zinc-100 shadow-sm p-6 max-[340px]:p-4 space-y-4 text-center hover:shadow-lg transition-all">
+            <div className="w-12 h-12 bg-red-50 dark:bg-red-900/30 rounded-xl flex items-center justify-center mx-auto text-red-600">
               <Mail className="w-5 h-5" />
             </div>
             <p className="font-black italic text-zinc-950">Email</p>
             <p className="text-xs sm:text-sm text-zinc-500 font-medium">{store.ownerEmail || "No disponible"}</p>
           </div>
 
-          <div className="bg-white rounded-[2rem] max-[340px]:rounded-[1.5rem] border border-zinc-100 shadow-sm p-6 max-[340px]:p-4 space-y-4 text-center hover:shadow-lg transition-all">
-            <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center mx-auto text-red-600">
+          <div className="bg-zinc-50 rounded-[2rem] max-[340px]:rounded-[1.5rem] border border-zinc-100 shadow-sm p-6 max-[340px]:p-4 space-y-4 text-center hover:shadow-lg transition-all">
+            <div className="w-12 h-12 bg-red-50 dark:bg-red-900/30 rounded-xl flex items-center justify-center mx-auto text-red-600">
               <MapPin className="w-5 h-5" />
             </div>
             <p className="font-black italic text-zinc-950">Industria</p>
@@ -95,11 +97,12 @@ export default async function ContactPage({ params }: Props) {
       </main>
 
       <footer className="border-t border-zinc-100 py-10">
-        <div className="max-w-6xl mx-auto px-6 text-center text-[10px] font-bold text-zinc-400 uppercase tracking-widest italic">
+        <div className="max-w-6xl mx-auto px-6 text-center text-[10px] font-bold text-zinc-500 uppercase tracking-widest italic">
           {store.name} &mdash; Potenciado por <span className="text-red-600">Jandosoft</span>
         </div>
       </footer>
       <TrackingWrapper slug={slug} />
     </div>
+    </ThemeProvider>
   );
 }

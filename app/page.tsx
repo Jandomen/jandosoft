@@ -63,6 +63,7 @@ import MessagesPanel from "@/components/messaging/MessagesPanel";
 import { Toast, useToast } from "@/components/ui/Toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn, slugify } from "@/lib/utils";
+import { ThemeProvider } from "@/components/public/ThemeProvider";
 
 function SafeUserDashboard(p: {
   user: any; userStores: any; transactions: any; onNavigate: any;
@@ -631,6 +632,7 @@ export default function Page() {
 
   if (isLogged && user.isSuspended) {
     return (
+      <ThemeProvider>
       <div className="min-h-screen bg-white flex items-center justify-center p-6">
         <div className="max-w-md mx-auto text-center space-y-6">
           <div className="w-20 h-20 bg-rose-100 rounded-[2rem] flex items-center justify-center mx-auto">
@@ -650,10 +652,12 @@ export default function Page() {
           </button>
         </div>
       </div>
+      </ThemeProvider>
     );
   }
 
   return (
+    <ThemeProvider>
     <div className="min-h-screen bg-red-600 flex font-sans text-zinc-950 overflow-x-hidden overflow-y-hidden relative">
       
       <aside className="w-56 hidden md:flex bg-red-700 flex-col py-6 border-r border-red-800/20 z-50 overflow-y-auto">
@@ -1239,6 +1243,7 @@ export default function Page() {
          )}
       </AnimatePresence>
     </div>
+    </ThemeProvider>
   );
 }
 

@@ -48,10 +48,10 @@ export default function StoreProductFeed({
     return (
       <div className="py-24 text-center">
         <div className="w-20 h-20 bg-zinc-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
-          <Package className="w-10 h-10 text-zinc-300" />
+          <Package className="w-10 h-10 text-zinc-500" />
         </div>
-        <p className="text-lg font-black italic text-zinc-300 uppercase tracking-wider">Próximamente</p>
-        <p className="text-xs text-zinc-200 font-bold italic mt-2">Este negocio aún no ha publicado productos.</p>
+        <p className="text-lg font-black italic text-zinc-500 uppercase tracking-wider">Próximamente</p>
+        <p className="text-xs text-zinc-500 font-bold italic mt-2">Este negocio aún no ha publicado productos.</p>
       </div>
     );
   }
@@ -66,7 +66,7 @@ export default function StoreProductFeed({
             key={p.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl md:rounded-[2rem] border border-zinc-100 shadow-sm overflow-hidden hover:shadow-lg hover:border-zinc-200 transition-all"
+            className="bg-zinc-50 rounded-2xl md:rounded-[2rem] border border-zinc-100 shadow-sm overflow-hidden hover:shadow-lg hover:border-zinc-100 transition-all"
           >
             <div className="aspect-[16/10] md:aspect-[16/9] bg-zinc-50 relative overflow-hidden group">
               {images[0] ? (
@@ -91,7 +91,7 @@ export default function StoreProductFeed({
                 <span className="text-xl md:text-2xl font-black italic text-red-600 shrink-0 whitespace-nowrap">${(p.priceUSD || p.price)?.toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 text-[9px] md:text-[10px] font-bold text-zinc-400 uppercase italic tracking-wider">
+                <div className="flex items-center gap-3 text-[9px] md:text-[10px] font-bold text-zinc-500 uppercase italic tracking-wider">
                   {p.stock !== undefined && (
                     <span className={p.stock > 0 ? "text-emerald-600" : "text-rose-600"}>
                       {p.stock > 0 ? `${p.stock} en stock` : "Agotado"}
@@ -106,7 +106,7 @@ export default function StoreProductFeed({
                     className={`px-4 md:px-5 py-2.5 rounded-xl font-black italic text-[10px] md:text-xs flex items-center gap-2 transition-all ${
                       isAdded
                         ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200"
-                        : "bg-zinc-950 text-white hover:bg-zinc-800 shadow-lg"
+                        : "bg-zinc-950 dark:bg-zinc-100 text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-lg"
                     }`}
                   >
                     {isAdded ? (

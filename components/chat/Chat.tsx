@@ -364,15 +364,15 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
               >
                 <div className={cn(
                   "w-7 h-7 max-[340px]:w-6 max-[340px]:h-6 md:w-10 md:h-10 rounded-xl flex items-center justify-center shrink-0",
-                  m.role === "user" ? "bg-zinc-200 text-zinc-600" : "bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-200"
+                  m.role === "user" ? "bg-zinc-200 dark:bg-white/15 text-zinc-600 dark:text-white/70" : "bg-cyan-500/20 dark:bg-cyan-400/20 text-cyan-700 dark:text-cyan-300"
                 )}>
                   {m.role === "user" ? <User className="w-3.5 h-3.5 max-[340px]:w-3 max-[340px]:h-3 md:w-5 md:h-5" /> : <Sparkles className="w-3.5 h-3.5 max-[340px]:w-3 max-[340px]:h-3 md:w-5 md:h-5" />}
                 </div>
                 <div className={cn(
                   "rounded-2xl text-xs md:text-sm font-medium leading-relaxed overflow-wrap-anywhere min-w-0",
                   m.role === "user"
-                    ? "bg-zinc-950 text-white rounded-tr-none px-3.5 py-2.5 max-[340px]:px-2.5 max-[340px]:py-2 md:px-4 md:py-3"
-                    : "bg-gradient-to-br from-white to-red-50/40 border border-red-100/60 text-zinc-700 rounded-tl-none shadow-lg shadow-red-100/30 px-4 py-3 max-[340px]:px-2.5 max-[340px]:py-2 md:px-5 md:py-4"
+                    ? "bg-zinc-950 text-white dark:bg-white/10 dark:text-white dark:backdrop-blur-md rounded-tr-none px-3.5 py-2.5 max-[340px]:px-2.5 max-[340px]:py-2 md:px-4 md:py-3"
+                    : "bg-cyan-50 border border-cyan-200 text-cyan-800 dark:bg-cyan-500/10 dark:border-cyan-400/20 dark:text-cyan-100 rounded-tl-none shadow-sm px-4 py-3 max-[340px]:px-2.5 max-[340px]:py-2 md:px-5 md:py-4"
                 )}>
                   {m.role === "user" ? m.content : <MarkdownRenderer content={m.content} />}
                 </div>
@@ -384,10 +384,10 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
                 animate={{ opacity: 1, y: 0 }}
                 className="flex items-start gap-1.5 md:gap-4 w-full md:max-w-[85%]"
               >
-                <div className="w-7 h-7 max-[340px]:w-6 max-[340px]:h-6 md:w-10 md:h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                <div className="w-7 h-7 max-[340px]:w-6 max-[340px]:h-6 md:w-10 md:h-10 rounded-xl bg-cyan-500/20 dark:bg-cyan-400/20 text-cyan-700 dark:text-cyan-300 flex items-center justify-center shrink-0">
                   <Loader2 className="w-3.5 h-3.5 max-[340px]:w-3 max-[340px]:h-3 md:w-5 md:h-5 animate-spin" />
                 </div>
-                <div className="px-4 py-3 max-[340px]:px-2.5 max-[340px]:py-2 md:px-5 md:py-4 rounded-2xl bg-white border border-zinc-100 text-zinc-400 text-xs md:text-sm italic font-medium">
+                <div className="px-4 py-3 max-[340px]:px-2.5 max-[340px]:py-2 md:px-5 md:py-4 rounded-2xl bg-cyan-50 border border-cyan-200 text-cyan-800 dark:bg-cyan-500/10 dark:border-cyan-400/20 dark:text-cyan-100 text-xs md:text-sm italic font-medium shadow-sm">
                   <span className="inline-flex items-center gap-1">
                     Pensando
                     <span className="animate-pulse">.</span>

@@ -5,6 +5,7 @@ import { Store } from "@/lib/models/Store";
 import { slugify } from "@/lib/utils";
 import TrackingWrapper from "@/components/TrackingWrapper";
 import StoreProductClient from "@/components/public/StoreProductClient";
+import { ThemeProvider } from "@/components/public/ThemeProvider";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -51,6 +52,7 @@ export default async function ProductsPage({ params }: Props) {
   const products = store.products || [];
 
   return (
+    <ThemeProvider>
     <div className="min-h-screen bg-white">
       <header className="border-b border-zinc-100 bg-white sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 max-[340px]:px-2.5 h-16 flex items-center justify-between gap-2">
@@ -76,7 +78,7 @@ export default async function ProductsPage({ params }: Props) {
           <h1 className="text-3xl md:text-5xl font-black italic text-zinc-950 uppercase tracking-tighter">
             {store.name} <span className="text-red-600">Productos</span>
           </h1>
-          <p className="text-[10px] md:text-xs text-zinc-400 font-bold uppercase tracking-widest italic">
+          <p className="text-[10px] md:text-xs text-zinc-500 font-bold uppercase tracking-widest italic">
             {products.length} {products.length === 1 ? "producto disponible" : "productos disponibles"}
           </p>
         </div>
@@ -86,12 +88,13 @@ export default async function ProductsPage({ params }: Props) {
 
       <footer className="border-t border-zinc-100 py-10">
         <div className="max-w-6xl mx-auto px-6 text-center">
-          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest italic">
+          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest italic">
             {store.name} &mdash; Potenciado por <span className="text-red-600">Jandosoft</span>
           </p>
         </div>
       </footer>
       <TrackingWrapper slug={slug} />
     </div>
+    </ThemeProvider>
   );
 }

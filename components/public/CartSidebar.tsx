@@ -77,7 +77,7 @@ export default function CartSidebar({
           <motion.span
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="absolute -top-1 -right-1 w-6 h-6 bg-zinc-950 text-white text-[10px] font-black rounded-full flex items-center justify-center"
+            className="absolute -top-1 -right-1 w-6 h-6 bg-zinc-950 dark:bg-zinc-100 text-white dark:text-zinc-950 text-[10px] font-black rounded-full flex items-center justify-center"
           >
             {totalItems > 99 ? "99+" : totalItems}
           </motion.span>
@@ -108,7 +108,7 @@ export default function CartSidebar({
           >
             <div className="flex items-center justify-between p-4 border-b border-zinc-100 shrink-0">
               {view === "checkout" ? (
-                <button onClick={resetCheckout} className="flex items-center gap-1.5 text-[10px] font-black text-zinc-400 italic hover:text-zinc-600 transition-all">
+                <button onClick={resetCheckout} className="flex items-center gap-1.5 text-[10px] font-black text-zinc-500 italic hover:text-zinc-950 transition-all">
                   <ChevronLeft className="w-3.5 h-3.5" /> VOLVER
                 </button>
               ) : (
@@ -116,26 +116,26 @@ export default function CartSidebar({
                   Carrito {totalItems > 0 && `(${totalItems})`}
                 </h2>
               )}
-              <button onClick={() => { setIsOpen(false); resetCheckout(); }} className="p-1.5 hover:bg-zinc-100 rounded-xl transition-all">
-                <X className="w-5 h-5 text-zinc-400" />
+              <button onClick={() => { setIsOpen(false); resetCheckout(); }} className="p-1.5 hover:bg-zinc-50 rounded-xl transition-all">
+                <X className="w-5 h-5 text-zinc-500" />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {view === "success" ? (
-                <div className="text-center space-y-6 py-12">
-                  <div className="w-16 h-16 bg-emerald-100 rounded-[2rem] flex items-center justify-center mx-auto">
+                  <div className="text-center space-y-6 py-12">
+                  <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-[2rem] flex items-center justify-center mx-auto">
                     <CheckCircle2 className="w-8 h-8 text-emerald-600" />
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-xl font-black italic text-zinc-950 uppercase tracking-tighter">Pago Exitoso</h3>
                     <p className="text-xs text-zinc-500 font-medium">Tu pedido se ha procesado correctamente.</p>
-                    <p className="text-[10px] font-mono text-zinc-400">ID: {paymentId}</p>
+                    <p className="text-[10px] font-mono text-zinc-500">ID: {paymentId}</p>
                   </div>
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={() => { setIsOpen(false); resetCheckout(); }}
-                    className="px-8 py-3 bg-zinc-950 text-white rounded-2xl font-black italic text-xs hover:bg-zinc-800 transition-all"
+                    className="px-8 py-3 bg-zinc-950 dark:bg-zinc-100 text-white dark:text-zinc-950 rounded-2xl font-black italic text-xs hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all"
                   >
                     CERRAR
                   </motion.button>
@@ -143,16 +143,16 @@ export default function CartSidebar({
               ) : view === "checkout" ? (
                 <div className="space-y-4">
                   <div className="bg-zinc-50 rounded-2xl p-4 space-y-2">
-                    <h4 className="text-[9px] font-black italic text-zinc-400 uppercase tracking-widest">Resumen del Pedido</h4>
+                    <h4 className="text-[9px] font-black italic text-zinc-500 uppercase tracking-widest">Resumen del Pedido</h4>
                     <div className="space-y-1.5">
                       {items.map(item => (
                         <div key={item.id} className="flex justify-between text-xs font-medium">
-                          <span className="text-zinc-600">{item.quantity}x {item.name}</span>
+                          <span className="text-zinc-500">{item.quantity}x {item.name}</span>
                           <span className="font-black text-zinc-950">${(item.price * item.quantity).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
-                    <div className="border-t border-zinc-200 pt-2 flex justify-between text-sm font-black italic">
+                    <div className="border-t border-zinc-100 pt-2 flex justify-between text-sm font-black italic">
                       <span className="text-zinc-950">Total</span>
                       <span className="text-red-600">${totalPrice.toFixed(2)}</span>
                     </div>
@@ -160,7 +160,7 @@ export default function CartSidebar({
 
                   <div className="space-y-3">
                     <div>
-                      <label className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest ml-1">Nombre completo</label>
+                      <label className="text-[9px] font-black text-zinc-500 uppercase italic tracking-widest ml-1">Nombre completo</label>
                       <input
                         type="text"
                         value={customerName}
@@ -170,7 +170,7 @@ export default function CartSidebar({
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest ml-1">Correo electrónico</label>
+                      <label className="text-[9px] font-black text-zinc-500 uppercase italic tracking-widest ml-1">Correo electrónico</label>
                       <input
                         type="email"
                         value={customerEmail}
@@ -218,9 +218,9 @@ export default function CartSidebar({
               ) : (
                 items.length === 0 ? (
                   <div className="text-center py-16 space-y-4">
-                    <ShoppingCart className="w-12 h-12 text-zinc-200 mx-auto" />
-                    <p className="text-sm font-bold text-zinc-400 italic">Tu carrito está vacío</p>
-                    <p className="text-[10px] text-zinc-300 font-medium">Agrega productos para comenzar.</p>
+                    <ShoppingCart className="w-12 h-12 text-zinc-500 mx-auto" />
+                    <p className="text-sm font-bold text-zinc-500 italic">Tu carrito está vacío</p>
+                    <p className="text-[10px] text-zinc-500 font-medium">Agrega productos para comenzar.</p>
                   </div>
                 ) : (
                   items.map(item => (
@@ -238,19 +238,19 @@ export default function CartSidebar({
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="w-7 h-7 bg-white rounded-lg flex items-center justify-center shadow-sm hover:bg-zinc-100 transition-all"
+                          className="w-7 h-7 bg-white rounded-lg flex items-center justify-center shadow-sm hover:bg-zinc-50 transition-all"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
                         <span className="w-7 text-center text-xs font-black text-zinc-950">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="w-7 h-7 bg-white rounded-lg flex items-center justify-center shadow-sm hover:bg-zinc-100 transition-all"
+                          className="w-7 h-7 bg-white rounded-lg flex items-center justify-center shadow-sm hover:bg-zinc-50 transition-all"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
-                      <button onClick={() => removeItem(item.id)} className="p-1.5 text-zinc-300 hover:text-rose-600 transition-all">
+                      <button onClick={() => removeItem(item.id)} className="p-1.5 text-zinc-500 hover:text-rose-600 transition-all">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </motion.div>
@@ -275,7 +275,7 @@ export default function CartSidebar({
                     IR A PAGAR
                   </motion.button>
                 ) : (
-                  <p className="text-[10px] text-zinc-400 font-bold italic text-center">
+                  <p className="text-[10px] text-zinc-500 font-bold italic text-center">
                     El pago no está habilitado para esta tienda.
                   </p>
                 )}

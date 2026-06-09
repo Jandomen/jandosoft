@@ -1,0 +1,21 @@
+{
+  "name": "jandosoft-cli",
+  "version": "1.0.0",
+  "description": "CLI oficial de Jandosoft - Gestiona tu plataforma desde la terminal",
+  "bin": {
+    "jandosoft": "./bin/jandosoft.js"
+  },
+  "scripts": {},
+  "keywords": [
+    "jandosoft",
+    "cli"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "inquirer": "^9.3.7"
+  }
+}

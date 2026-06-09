@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthFromCookies } from "@/lib/auth";
+import { getAuthFromCookies, getAuthFromHeaders } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import Conversation from "@/lib/models/Conversation";
 import Message from "@/lib/models/Message";
 import { messageEvents, MESSAGE_NEW, type SSEEvent } from "@/lib/messaging/events";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await getAuthFromCookies();
+  const auth = getAuthFromHeaders(req) || await getAuthFromCookies();
   if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const { id } = await params;
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await getAuthFromCookies();
+  const auth = getAuthFromHeaders(req) || await getAuthFromCookies();
   if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const { id } = await params;

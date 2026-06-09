@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { Organization } from "@/lib/models/Organization";
-import { getAuthFromCookies } from "@/lib/auth";
+import { getAuthFromCookies, getAuthFromHeaders } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const auth = await getAuthFromCookies();
+    const auth = getAuthFromHeaders(req) || await getAuthFromCookies();
     if (!auth) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
