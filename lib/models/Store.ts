@@ -86,7 +86,7 @@ const StoreSchema = new Schema<IStore>({
   slug: { type: String, unique: true, sparse: true, index: true },
   desc: { type: String, default: "" },
   industry: { type: String, default: "tecnologia" },
-  type: { type: String, required: true },
+  type: { type: String, default: "general" },
   typeLabel: { type: String, default: "" },
   createdAt: { type: String, default: () => new Date().toISOString() },
   products: [ProductSchema],

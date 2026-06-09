@@ -51,7 +51,8 @@ async function showMenu() {
     choices.push({ name: `${chalk.green('●')}  ${chalk.bold('Organización')}`, value: 'org', short: 'Org' });
     choices.push(new inquirer.Separator());
     choices.push({ name: `${chalk.magenta('◆')}  ${chalk.bold('AI Chat')}            ${chalk.dim('IA de Jandosoft')}`, value: 'chat', short: 'Chat' });
-    choices.push({ name: `${chalk.magenta('◆')}  ${chalk.bold('Conversaciones')}    ${chalk.dim('historial')}`, value: 'conversations', short: 'Convos' });
+    choices.push({ name: `${chalk.magenta('◆')}  ${chalk.bold('Conversaciones')}    ${chalk.dim('mensajes en vivo')}`, value: 'conversations', short: 'Convos' });
+    choices.push({ name: `${chalk.magenta('◆')}  ${chalk.bold('Historial de Chat')}  ${chalk.dim('IA guardado')}`, value: 'chathistory', short: 'Historial' });
     choices.push(new inquirer.Separator());
     choices.push({ name: `${chalk.cyan('◆')}  ${chalk.bold('Estado del Servidor')}`, value: 'status', short: 'Status' });
     choices.push({ name: `${chalk.cyan('◆')}  ${chalk.bold('Configuración')}`, value: 'config', short: 'Config' });
@@ -96,6 +97,9 @@ async function handleAction(action) {
       break;
     case 'conversations':
       await conversations.handler(args);
+      break;
+    case 'chathistory':
+      await conversations.handler(['history']);
       break;
     case 'status':
       await status.handler(args);

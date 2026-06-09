@@ -4,12 +4,38 @@ const inquirer = require('inquirer').default;
 const { request } = require('../lib/api');
 const { selectStore } = require('../lib/store-picker');
 
+const PLAN_LIMITS = { free: { maxStores: 3, maxProducts: 20 }, basic: { maxStores: 10, maxProducts: 100 }, enterprise: { maxStores: 999, maxProducts: 9999 } };
+
+function showLimitWarnings(plan, productCount) {
+  const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+  let hasWarning = false;
+
+  if (productCount >= limits.maxProducts) {
+    console.log(`   ${chalk.red('🚫')} ${chalk.red.bold(`Límite de productos alcanzado (${productCount}/${limits.maxProducts})`)}`);
+    console.log(`   ${chalk.dim('    Haz upgrade para agregar más productos.')}`);
+    hasWarning = true;
+  } else if (productCount >= limits.maxProducts * 0.8) {
+    console.log(`   ${chalk.yellow('⚠️')} ${chalk.yellow(`Estás usando ${productCount}/${limits.maxProducts} productos — cerca del límite.`)}`);
+    hasWarning = true;
+  }
+
+  return hasWarning;
+}
+
 async function showStoreDashboard(store) {
+  const [userData] = await Promise.all([
+    request('GET', '/api/auth/me').catch(() => ({ user: {} })),
+  ]);
+  const plan = (userData.user?.subscription || 'free').toLowerCase();
+
   while (true) {
     const full = await request('GET', `/api/stores/${store._id || store.id}`);
     const s = full.store || full;
 
-    console.log(`\n ${chalk.bold(`🏪 ${s.name}`)}${s.slug ? chalk.dim(`  (${s.slug})`) : ''}\n`);
+    console.log(`\n ${chalk.bold(`🏪 ${s.name}`)}${s.slug ? chalk.dim(`  (${s.slug})`) : ''}`);
+    console.log(`   ${chalk.dim(`Suscripción:`)} ${chalk.cyan(plan.toUpperCase())}  ${chalk.dim(`— ${PLAN_LIMITS[plan]?.maxProducts || 20} productos máx`)}`);
+    showLimitWarnings(plan, (s.products || []).length);
+    console.log('');
 
     const choices = [
       { name: `  ${chalk.cyan('📋')}  ${chalk.bold('Información')}`, value: 'info', short: 'Info' },
@@ -38,7 +64,7 @@ async function showStoreDashboard(store) {
 
     switch (option) {
       case 'info':
-        showStoreInfo(s);
+        showStoreInfo(s, plan);
         break;
       case 'products':
         showProducts(s.products || []);
@@ -61,7 +87,7 @@ async function showStoreDashboard(store) {
   }
 }
 
-function showStoreInfo(s) {
+function showStoreInfo(s, plan) {
   console.log(`\n ${chalk.bold('📋 Información de la tienda')}\n`);
   console.log(`   ${chalk.dim('🏪 Nombre:')}     ${chalk.bold(s.name)}`);
   console.log(`   ${chalk.dim('🔗 Slug:')}      ${s.slug || '—'}`);
@@ -70,7 +96,8 @@ function showStoreInfo(s) {
   console.log(`   ${chalk.dim('📂 Tipo:')}       ${s.type || '—'} ${s.typeLabel ? chalk.dim(`(${s.typeLabel})`) : ''}`);
   console.log(`   ${chalk.dim('🌐 URL:')}       ${chalk.cyan(`https://jandosoft.vercel.app/s/${s.slug}`)}`);
   console.log(`   ${chalk.dim('📅 Creado:')}    ${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—'}`);
-  console.log(`   ${chalk.dim('📦 Productos:')}  ${(s.products || []).length}`);
+  console.log(`   ${chalk.dim('💳 Plan:')}       ${chalk.cyan(plan.toUpperCase())}  ${chalk.dim(`(máx ${PLAN_LIMITS[plan]?.maxProducts || 20} productos)`)}`);
+  console.log(`   ${chalk.dim('📦 Productos:')}  ${(s.products || []).length} / ${PLAN_LIMITS[plan]?.maxProducts || 20}`);
   console.log(`   ${chalk.dim('👥 Clientes:')}   ${(s.customers || []).length}`);
   console.log(`   ${chalk.dim('📑 Órdenes:')}    ${(s.orders || []).length}`);
   console.log(`   ${chalk.dim('🔧 Servicios:')}  ${(s.services || []).length}`);
@@ -80,6 +107,7 @@ function showStoreInfo(s) {
     console.log(`   ${chalk.dim('⚠ Razón:')}      ${s.suspensionReason || '—'}`);
     if (s.suspendedUntil) console.log(`   ${chalk.dim('⏳ Hasta:')}      ${new Date(s.suspendedUntil).toLocaleDateString()}`);
   }
+  showLimitWarnings(plan, (s.products || []).length);
 }
 
 function showProducts(products) {
