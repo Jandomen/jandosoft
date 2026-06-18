@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Invoice } from "@/lib/models/Invoice";
+import { Customer } from "@/lib/models/Customer";
 import { getAuthFromCookies, getAuthFromHeaders } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -25,8 +26,19 @@ export async function GET(req: NextRequest) {
       filter.userEmail = email;
     }
 
-    const invoices = await Invoice.find(filter).sort({ createdAt: -1 }).lean();
-    return NextResponse.json({ invoices });
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20")));
+    const skip = (page - 1) * limit;
+
+    const [total, invoices] = await Promise.all([
+      Invoice.countDocuments(filter),
+      Invoice.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+    return NextResponse.json({ invoices, total, page, totalPages: Math.ceil(total / limit) });
   } catch (error) {
     console.error("GET invoices error:", error);
     return NextResponse.json({ error: "Error loading invoices" }, { status: 500 });
@@ -52,6 +64,7 @@ export async function POST(req: NextRequest) {
       invoiceNumber,
       organizationId: auth?.organizationId || null,
     });
+
     return NextResponse.json({ invoice });
   } catch (error) {
     console.error("POST invoice error:", error);

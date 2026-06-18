@@ -135,7 +135,7 @@ export default async function StoreMainPage({ params }: Props) {
 
         {store.publicAI && (
           <section className="max-w-6xl mx-auto px-4 max-[340px]:px-2.5 pb-20">
-            <StorePublicAI storeId={store._id} storeName={store.name} industry={store.industry} />
+            <StorePublicAI storeId={store._id} storeName={store.name} industry={store.industry} agentConfig={(store as any).agentConfig} />
           </section>
         )}
       </main>

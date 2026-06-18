@@ -239,13 +239,17 @@ async function createStore(args) {
 
   console.log(` ${chalk.dim(` Creando tienda "${name}"...`)}`);
 
-  const data = await request('POST', '/api/stores', { name });
-  const store = data.store || data;
+  try {
+    const data = await request('POST', '/api/stores', { name });
+    const store = data.store || data;
 
-  console.log(`\n ${chalk.green.bold('✓ Tienda creada exitosamente')}`);
-  console.log(`   ${chalk.dim('🏪 Nombre:')} ${chalk.bold(store.name)}`);
-  console.log(`   ${chalk.dim('🔗 Slug:')}   ${store.slug}`);
-  console.log(`   ${chalk.dim('🌐 URL:')}    ${chalk.cyan(`https://jandosoft.vercel.app/s/${store.slug}`)}\n`);
+    console.log(`\n ${chalk.green.bold('✓ Tienda creada exitosamente')}`);
+    console.log(`   ${chalk.dim('🏪 Nombre:')} ${chalk.bold(store.name)}`);
+    console.log(`   ${chalk.dim('🔗 Slug:')}   ${store.slug}`);
+    console.log(`   ${chalk.dim('🌐 URL:')}    ${chalk.cyan(`https://jandosoft.vercel.app/s/${store.slug}`)}\n`);
+  } catch (err) {
+    console.log(`\n${chalk.red.bold(' ✖ Error')} ${err.message}\n`);
+  }
 }
 
 module.exports = { handler };

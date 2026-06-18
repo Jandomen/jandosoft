@@ -1,0 +1,42 @@
+import { connectDB } from "@/lib/mongodb";
+import { PlanConfig, DEFAULT_PLANS, DEFAULT_FREE_PLAN, type IPlan, type IFreePlan } from "@/lib/models/PlanConfig";
+
+export interface PlanConfigResult {
+  plans: IPlan[];
+  freePlan: IFreePlan;
+}
+
+let cached: PlanConfigResult | null = null;
+let lastFetch = 0;
+const CACHE_TTL = 60000;
+
+export async function getPlanConfig(): Promise<PlanConfigResult> {
+  if (cached && Date.now() - lastFetch < CACHE_TTL) return cached;
+
+  try {
+    await connectDB();
+    const doc = await PlanConfig.findOne().lean();
+    if (doc && (doc as any).plans?.length > 0) {
+      cached = {
+        plans: (doc as any).plans as IPlan[],
+        freePlan: (doc as any).freePlan as IFreePlan || DEFAULT_FREE_PLAN,
+      };
+      lastFetch = Date.now();
+      return cached!;
+    }
+  } catch {}
+
+  return { plans: DEFAULT_PLANS, freePlan: DEFAULT_FREE_PLAN };
+}
+
+export function getPlanLimitsFromConfig(config: PlanConfigResult, subscription: string | null) {
+  const sub = subscription || "free";
+  if (sub === "free") return config.freePlan.limits;
+  const plan = config.plans.find((p) => p.id === sub);
+  return plan?.limits || config.freePlan.limits;
+}
+
+export function invalidatePlanCache() {
+  cached = null;
+  lastFetch = 0;
+}

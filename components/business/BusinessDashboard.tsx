@@ -6,10 +6,12 @@ import {
   Bot, ChevronRight, ChevronLeft, ArrowLeft, Plus, Trash2, BarChart3,
   TrendingUp, Clock, Edit3, X, Send, Loader2, Sparkles, User,
   Settings, CheckCircle2, Layers, CreditCard, Download, ExternalLink,
-  Wallet, Percent, ToggleLeft, ToggleRight, Bitcoin, Lock, ImageIcon, Upload, Link, Mic, MicOff, Paperclip, Search, BookOpen, Zap, Copy, Globe, Megaphone, FileText, Menu
+  Wallet, Percent, ToggleLeft, ToggleRight, Bitcoin, Lock, ImageIcon, Upload, Link, Mic, MicOff, Paperclip, Search, BookOpen, Zap, Copy, Globe, Megaphone,   FileText, Menu, MessageSquare, FileSpreadsheet, AlertTriangle, HelpCircle, Code, ChevronUp, ChevronDown
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useToast } from "@/components/ui/Toast";
 import { useVoiceInput } from "@/lib/hooks/useVoiceInput";
 import { readFileAsText, formatFileMessage } from "@/lib/utils/readFile";
@@ -17,10 +19,8 @@ import MarkdownRenderer from "@/components/chat/MarkdownRenderer";
 import AnalyticsPanel from "./AnalyticsPanel";
 import TeamPanel from "./TeamPanel";
 import OrgSettingsPanel from "./OrgSettingsPanel";
-import IntegrationsPanel from "./IntegrationsPanel";
 import CampaignsPanel from "./CampaignsPanel";
 import InvoicesPanel from "./InvoicesPanel";
-import { executeIntegrationAction } from "@/lib/integration-actions";
 
 const CURRENCIES: { code: string; symbol: string; name: string; rate: number }[] = [
   { code: "USD", symbol: "$", name: "Dólar estadounidense", rate: 1 },
@@ -88,7 +88,8 @@ interface BusinessDashboardProps {
 }
 
 export default function BusinessDashboard({ userStore, userEmail, storeId, planLimits, planExpired, onNavigateToPricing, onBack, onEditStore, onDeleteStore, onSaveStore, initialSection }: BusinessDashboardProps) {
-  const [section, setSection] = useState<"dashboard" | "products" | "customers" | "orders" | "payments" | "analytics" | "team" | "orgsettings" | "integrations" | "campaigns" | "invoices" | "ai" | "knowledgebase" | "automations">((initialSection as any) || "dashboard");
+  const { t } = useLanguage();
+  const [section, setSection] = useState<"dashboard" | "products" | "customers" | "orders" | "payments" | "analytics" | "team" | "orgsettings" | "campaigns" | "invoices" | "ai" | "knowledgebase" | "automations" | "agentconfig" | "agentinstall" | "smartforms">((initialSection as any) || "dashboard");
 
   useEffect(() => {
     if (initialSection) setSection(initialSection as any);
@@ -101,22 +102,49 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
   const [productForm, setProductForm] = useState({ name: "", price: "", stock: "", currency: "USD" });
   const [productImages, setProductImages] = useState<string[]>([]);
   const [imageUrlInput, setImageUrlInput] = useState("");
-  const [kbEntries, setKbEntries] = useState<{ id: number; title: string; content: string; category: string; createdAt: string }[]>([]);
+  const [kbEntries, setKbEntries] = useState<{ id: number; title: string; content: string; category: string; question?: string; createdAt: string }[]>([]);
   const [showAddKb, setShowAddKb] = useState(false);
   const [editingKb, setEditingKb] = useState<any | null>(null);
-  const [kbForm, setKbForm] = useState({ title: "", content: "", category: "general" });
+  const [kbForm, setKbForm] = useState({ title: "", content: "", category: "general", question: "" });
   const [searchKb, setSearchKb] = useState("");
+  const [kbCategories, setKbCategories] = useState<string[]>(["general", "productos", "clientes", "pedidos", "politicas", "faq", "manual"]);
+  const [showManageCategories, setShowManageCategories] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [showConfirmClearKb, setShowConfirmClearKb] = useState(false);
+  const [kbImporting, setKbImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [agentConfig, setAgentConfig] = useState({
+    systemPrompt: "",
+    temperature: 0.7,
+    model: "gpt-4o-mini",
+    logo: "",
+    primaryColor: "#dc2626",
+    secondaryColor: "#f5f5f5",
+    textColor: "#09090b",
+    widgetWelcome: "",
+    widgetPlaceholder: "",
+    widgetHeader: "",
+  });
+  const [agentConfigTab, setAgentConfigTab] = useState<"general" | "widget">("general");
+  const [installTab, setInstallTab] = useState<"html" | "shopify" | "woocommerce" | "wix" | "wordpress">("html");
+  const [agentConfigSaving, setAgentConfigSaving] = useState(false);
+  const [smartForms, setSmartForms] = useState<any[]>([]);
+  const [showAddSmartForm, setShowAddSmartForm] = useState(false);
+  const [editingSmartForm, setEditingSmartForm] = useState<any | null>(null);
+  const [smartFormName, setSmartFormName] = useState("");
+  const [smartFormDesc, setSmartFormDesc] = useState("");
+  const [smartFormFields, setSmartFormFields] = useState<any[]>([]);
+  const [editingSFormField, setEditingSFormField] = useState<any | null>(null);
+  const [sformFieldType, setSformFieldType] = useState("text");
+  const [sformFieldLabel, setSformFieldLabel] = useState("");
+  const [sformFieldPlaceholder, setSformFieldPlaceholder] = useState("");
+  const [sformFieldRequired, setSformFieldRequired] = useState(false);
+  const [sformFieldOptions, setSformFieldOptions] = useState("");
+  const [showFormSubmissions, setShowFormSubmissions] = useState<any | null>(null);
+  const [showFormEmbed, setShowFormEmbed] = useState<any | null>(null);
+  const [confirmDeleteForm, setConfirmDeleteForm] = useState<any | null>(null);
   const [automations, setAutomations] = useState<{ id: number; name: string; trigger: string; actionType: string; actionConfig: Record<string, string>; triggerConfig: Record<string, any>; enabled: boolean; createdAt: string }[]>([]);
   const [campaigns, setCampaigns] = useState<{ id: number; name: string; type: "email" | "sms"; status: "draft" | "scheduled" | "sending" | "sent" | "paused" | "cancelled"; audience: string; subject: string; body: string; scheduledAt: string | null; sentAt: string | null; stats: { sent: number; opened: number; clicked: number; bounced: number; unsubscribed: number }; createdAt: string }[]>([]);
-  const [integrations, setIntegrations] = useState<{ platform: string; apiKey: string; status: string; _id: string }[]>([]);
-
-  useEffect(() => {
-    if (!storeId) return;
-    fetch(`/api/integrations/${storeId}`)
-      .then(r => r.json())
-      .then(d => { if (d.integrations) setIntegrations(d.integrations); })
-      .catch(() => {});
-  }, [storeId]);
   const [showAddAutomation, setShowAddAutomation] = useState(false);
   const [editingAutomation, setEditingAutomation] = useState<any | null>(null);
   const [automationForm, setAutomationForm] = useState({ name: "", trigger: "new_order", actionType: "send_notification", actionConfig: {} as Record<string, string>, triggerConfig: {} as Record<string, any> });
@@ -143,10 +171,26 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
       setKbEntries(userStore.knowledgebase || []);
       setAutomations(userStore.automations || []);
       setCampaigns(userStore.campaigns || []);
+      setSmartForms((userStore as any)?.smartForms || []);
+      const ac = (userStore as any)?.agentConfig;
+      if (ac) {
+        setAgentConfig({
+          systemPrompt: ac.systemPrompt || "",
+          temperature: ac.temperature ?? 0.7,
+          model: ac.model || "gpt-4o-mini",
+          logo: ac.logo || "",
+          primaryColor: ac.primaryColor || "#dc2626",
+          secondaryColor: ac.secondaryColor || "#f5f5f5",
+          textColor: ac.textColor || "#09090b",
+          widgetWelcome: ac.widgetWelcome || "",
+          widgetPlaceholder: ac.widgetPlaceholder || "",
+          widgetHeader: ac.widgetHeader || "",
+        });
+      }
     }
   }, [userStore]);
 
-  const persistStore = (productsData?: any[], customersData?: any[], ordersData?: any[], knowledgebaseData?: any[], automationsData?: any[], campaignsData?: any[]) => {
+  const persistStore = (productsData?: any[], customersData?: any[], ordersData?: any[], knowledgebaseData?: any[], automationsData?: any[], campaignsData?: any[], smartFormsData?: any[]) => {
     const data: any = {};
     if (productsData !== undefined) data.products = productsData;
     if (customersData !== undefined) data.customers = customersData;
@@ -154,9 +198,72 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
     if (knowledgebaseData !== undefined) data.knowledgebase = knowledgebaseData;
     if (automationsData !== undefined) data.automations = automationsData;
     if (campaignsData !== undefined) data.campaigns = campaignsData;
+    if (smartFormsData !== undefined) data.smartForms = smartFormsData;
     if (Object.keys(data).length > 0 && onSaveStore && storeId) {
       Promise.resolve(onSaveStore(storeId, data)).catch(e => console.error("Persist failed:", e));
     }
+  };
+
+  const handleKbExport = () => {
+    if (kbEntries.length === 0) { showToast("No hay entradas para exportar", "info"); return; }
+    const ws = XLSX.utils.json_to_sheet(kbEntries.map(e => ({
+      Pregunta: e.question || "",
+      Título: e.question ? "" : e.title,
+      Respuesta: e.content,
+      Categoría: e.category,
+      Creado: e.createdAt,
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Conocimiento");
+    XLSX.writeFile(wb, `conocimiento_${storeId}.xlsx`);
+    showToast("Excel exportado correctamente", "success");
+  };
+
+  const handleDownloadKbTemplate = () => {
+    const ws = XLSX.utils.json_to_sheet([
+      { Pregunta: "¿Cómo hago una devolución?", Título: "", Respuesta: "El cliente tiene 30 días para devolver...", Categoría: "faq" },
+      { Pregunta: "", Título: "Política de envíos", Respuesta: "Los envíos se realizan en 24-48 hrs...", Categoría: "politicas" },
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Conocimiento");
+    XLSX.writeFile(wb, "plantilla_conocimiento.xlsx");
+    showToast("Plantilla descargada", "success");
+  };
+
+  const handleKbImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setKbImporting(true);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = new Uint8Array(ev.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows: any[] = XLSX.utils.sheet_to_json(ws);
+        const now = new Date().toISOString();
+        const imported = rows.map((r: any, i: number) => ({
+          id: Date.now() + i,
+          title: (r.Título || r.título || r.titulo || "").trim(),
+          content: (r.Respuesta || r.respuesta || r.Contenido || r.contenido || "").trim(),
+          category: (r.Categoría || r.categoria || r.Category || r.category || "general").trim().toLowerCase(),
+          question: (r.Pregunta || r.pregunta || "").trim() || undefined,
+          createdAt: now,
+        })).filter((r: any) => r.content);
+        if (imported.length === 0) { showToast("No se encontraron datos válidos en el archivo", "error"); setKbImporting(false); return; }
+        const newCats = [...new Set([...kbCategories, ...imported.map((r: any) => r.category)])];
+        setKbCategories(newCats);
+        const merged = [...kbEntries, ...imported];
+        setKbEntries(merged);
+        persistStore(undefined, undefined, undefined, merged);
+        showToast(`${imported.length} entradas importadas correctamente`, "success");
+      } catch (err) {
+        showToast("Error al leer el archivo. Verifica el formato.", "error");
+      }
+      setKbImporting(false);
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
   };
 
   const addProduct = () => {
@@ -196,17 +303,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
           body: JSON.stringify({ trigger, automation: auto.name, ...context }),
         }).catch(() => {});
       }
-      const integrationActions = ["ai_generate", "send_telegram", "send_discord", "send_slack", "send_whatsapp", "send_sms", "post_to_social"];
-      if (integrationActions.includes(auto.actionType)) {
-        const ctx = typeof context === "object" ? context : {};
-        const cfg = { ...ctx, ...auto.actionConfig };
-        const result = await executeIntegrationAction(auto.actionType, cfg, integrations);
-        if (result.success) {
-          showToast(`✅ ${auto.name}: ${result.message}`, "success");
-        } else {
-          showToast(`❌ ${auto.name}: ${result.message}`, "error");
-        }
-      }
+
     }
   };
 
@@ -242,20 +339,20 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
               <div className="hidden md:flex items-center gap-1.5 px-3 py-2 bg-zinc-50 rounded-xl border border-zinc-100 shadow-sm group">
                 <span className={cn("w-2 h-2 rounded-full animate-pulse", (userStore as any)?.isPublic ? "bg-emerald-500" : "bg-zinc-300")} />
                 <span className="text-[9px] font-bold text-zinc-400 italic tracking-tight">/s/{userStore.slug}</span>
-                <button onClick={() => { navigator.clipboard.writeText(window.location.origin + "/s/" + userStore.slug); showToast("URL copiada al portapapeles", "success"); }} className="p-1 hover:bg-zinc-100 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Copiar URL">
+                <button onClick={() => { navigator.clipboard.writeText(window.location.origin + "/s/" + userStore.slug); showToast(t("biz.url_copied"), "success"); }} className="p-1 hover:bg-zinc-100 rounded-lg transition-all opacity-0 group-hover:opacity-100" title={t("biz.copied")}>
                   <Copy className="w-3.5 h-3.5 text-zinc-400 hover:text-zinc-950" />
                 </button>
-                <a href={"/s/" + userStore.slug} target="_blank" className={cn("p-1 hover:bg-zinc-100 rounded-lg transition-all opacity-0 group-hover:opacity-100", (userStore as any)?.isPublic ? "text-emerald-600 hover:text-emerald-700" : "text-zinc-300 hover:text-zinc-500")} title="Abrir sitio público">
+                <a href={"/s/" + userStore.slug} target="_blank" className={cn("p-1 hover:bg-zinc-100 rounded-lg transition-all opacity-0 group-hover:opacity-100", (userStore as any)?.isPublic ? "text-emerald-600 hover:text-emerald-700" : "text-zinc-300 hover:text-zinc-500")} title={t("biz.open_site")}>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </div>
             )}
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingStore(false); setConfirmDelete(false); setSettingsForm({ name: userStore?.name || "", desc: userStore?.desc || "", industry: userStore?.industry || "", slug: userStore?.slug || "", image: userStore?.image || "" }); setPublicVisible(!!(userStore as any)?.isPublic); setPublicAIEnabled(!!(userStore as any)?.publicAI); setShowSettings(true); }} className="p-1.5 md:p-2 hover:bg-zinc-50 rounded-xl transition-all" title="Configuración de la tienda">
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingStore(false); setConfirmDelete(false); setSettingsForm({ name: userStore?.name || "", desc: userStore?.desc || "", industry: userStore?.industry || "", slug: userStore?.slug || "", image: userStore?.image || "" }); setPublicVisible(!!(userStore as any)?.isPublic); setPublicAIEnabled(!!(userStore as any)?.publicAI); setShowSettings(true); }} className="p-1.5 md:p-2 hover:bg-zinc-50 rounded-xl transition-all" title={t("biz.store_settings")}>
               <Settings className="w-4 h-4 md:w-5 md:h-5 text-zinc-400 hover:text-zinc-950 transition-colors" />
             </motion.button>
             <div className="hidden md:block text-right">
               <p className="text-xs font-black text-zinc-950 italic">{userEmail?.split('@')[0]}</p>
-              <p className="text-[9px] font-bold text-zinc-400 uppercase">Propietario</p>
+              <p className="text-[9px] font-bold text-zinc-400 uppercase">{t("biz.owner")}</p>
             </div>
             <div className="w-8 h-8 md:w-10 md:h-10 bg-zinc-800 rounded-xl flex items-center justify-center font-black text-[10px] md:text-xs text-white shadow-lg uppercase">
               {userEmail?.[0] || "U"}
@@ -269,8 +366,8 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
             <div className="flex items-center gap-2 md:gap-3">
               <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse shrink-0" />
               <p className="text-[10px] md:text-xs font-bold text-rose-800 italic">
-                {(userStore as any)?.suspensionReason || "Esta tienda ha sido suspendida."}
-                {(userStore as any)?.suspendedUntil && ` La suspensión vence el ${new Date((userStore as any).suspendedUntil).toLocaleDateString()}.`}
+                {(userStore as any)?.suspensionReason || t("biz.suspended_reason")}
+                {(userStore as any)?.suspendedUntil && ` ${t("biz.suspended_until")} ${new Date((userStore as any).suspendedUntil).toLocaleDateString()}.`}
               </p>
             </div>
           </div>
@@ -280,17 +377,19 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
         <div className="md:hidden overflow-x-auto no-scrollbar border-b border-zinc-100 bg-white">
           <div className="flex gap-1.5 px-3 py-2.5 min-w-max">
             {[
-              { icon: <BarChart3 className="w-3.5 h-3.5" />, label: "Dashboard", key: "dashboard" },
-              { icon: <Package className="w-3.5 h-3.5" />, label: "Productos", key: "products" },
-              { icon: <Users className="w-3.5 h-3.5" />, label: "Clientes", key: "customers" },
-              { icon: <ShoppingCart className="w-3.5 h-3.5" />, label: "Pedidos", key: "orders" },
-              { icon: <Wallet className="w-3.5 h-3.5" />, label: "Pagos", key: "payments" },
-              { icon: <TrendingUp className="w-3.5 h-3.5" />, label: "Analytics", key: "analytics" },
-              { icon: <FileText className="w-3.5 h-3.5" />, label: "Facturas", key: "invoices" },
-              { icon: <Megaphone className="w-3.5 h-3.5" />, label: "Campañas", key: "campaigns" },
-              { icon: <Zap className="w-3.5 h-3.5" />, label: "Auto.", key: "automations" },
-              { icon: <Bot className="w-3.5 h-3.5" />, label: "IA", key: "ai" },
-              { icon: <BookOpen className="w-3.5 h-3.5" />, label: "Base Conoc.", key: "knowledgebase" },
+              { icon: <BarChart3 className="w-3.5 h-3.5" />, label: t("nav.dashboard"), key: "dashboard" },
+              { icon: <Package className="w-3.5 h-3.5" />, label: t("nav.products"), key: "products" },
+              { icon: <Users className="w-3.5 h-3.5" />, label: t("nav.customers"), key: "customers" },
+              { icon: <ShoppingCart className="w-3.5 h-3.5" />, label: t("nav.orders"), key: "orders" },
+              { icon: <Wallet className="w-3.5 h-3.5" />, label: t("nav.payments"), key: "payments" },
+              { icon: <TrendingUp className="w-3.5 h-3.5" />, label: t("nav.analytics"), key: "analytics" },
+              { icon: <FileText className="w-3.5 h-3.5" />, label: t("nav.invoices"), key: "invoices" },
+              { icon: <Megaphone className="w-3.5 h-3.5" />, label: t("nav.campaigns"), key: "campaigns" },
+              { icon: <Zap className="w-3.5 h-3.5" />, label: t("nav.automations"), key: "automations" },
+              { icon: <Bot className="w-3.5 h-3.5" />, label: t("nav.ai"), key: "ai" },
+              { icon: <BookOpen className="w-3.5 h-3.5" />, label: t("nav.knowledgebase"), key: "knowledgebase" },
+              { icon: <Settings className="w-3.5 h-3.5" />, label: "Config", key: "agentconfig" },
+              { icon: <Code className="w-3.5 h-3.5" />, label: "Instalar", key: "agentinstall" },
             ].map((tab) => (
               <motion.button
                 key={tab.key}
@@ -314,24 +413,29 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
           {showSidebar && (
             <aside className="hidden md:flex flex-col w-56 bg-zinc-50 border-r border-zinc-100 p-6 gap-6 overflow-y-auto shrink-0">
               <div className="space-y-1">
-                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 italic">Gestión</h3>
-                <SideBtn icon={<BarChart3 />} label="Dashboard" active={section === "dashboard"} onClick={() => setSection("dashboard")} />
-                <SideBtn icon={<Package />} label="Productos" active={section === "products"} onClick={() => setSection("products")} />
-                <SideBtn icon={<Users />} label="Clientes" active={section === "customers"} onClick={() => setSection("customers")} />
-                <SideBtn icon={<ShoppingCart />} label="Pedidos" active={section === "orders"} onClick={() => setSection("orders")} />
-                <SideBtn icon={<Wallet />} label="Pagos" active={section === "payments"} onClick={() => setSection("payments")} />
-                <SideBtn icon={<TrendingUp />} label="Analytics" active={section === "analytics"} onClick={() => setSection("analytics")} />
-                <SideBtn icon={<FileText />} label="Facturas" active={section === "invoices"} onClick={() => setSection("invoices")} />
-                <SideBtn icon={<Megaphone />} label="Campañas" active={section === "campaigns"} onClick={() => setSection("campaigns")} />
+                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 italic">{t("biz.management")}</h3>
+                <SideBtn icon={<BarChart3 />} label={t("nav.dashboard")} active={section === "dashboard"} onClick={() => setSection("dashboard")} />
+                <SideBtn icon={<Package />} label={t("nav.products")} active={section === "products"} onClick={() => setSection("products")} />
+                <SideBtn icon={<Users />} label={t("nav.customers")} active={section === "customers"} onClick={() => setSection("customers")} />
+                <SideBtn icon={<ShoppingCart />} label={t("nav.orders")} active={section === "orders"} onClick={() => setSection("orders")} />
+                <SideBtn icon={<TrendingUp />} label={t("nav.analytics")} active={section === "analytics"} onClick={() => setSection("analytics")} />
+                <SideBtn icon={<FileText />} label={t("nav.invoices")} active={section === "invoices"} onClick={() => setSection("invoices")} />
+                <SideBtn icon={<Megaphone />} label={t("nav.campaigns")} active={section === "campaigns"} onClick={() => setSection("campaigns")} />
               </div>
               <div className="space-y-1">
-                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 italic">Automatización</h3>
-                <SideBtn icon={<Zap />} label="Automatizaciones" active={section === "automations"} onClick={() => setSection("automations")} />
+                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 italic">{t("biz.automation")}</h3>
+                <SideBtn icon={<Zap />} label={t("nav.automations")} active={section === "automations"} onClick={() => setSection("automations")} />
               </div>
               <div className="space-y-1">
-                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 italic">Asistencia</h3>
-                <SideBtn icon={<Bot />} label="IA Agente" active={section === "ai"} onClick={() => setSection("ai")} />
-                <SideBtn icon={<BookOpen />} label="Base de Conocimiento" active={section === "knowledgebase"} onClick={() => setSection("knowledgebase")} />
+                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 italic">{t("biz.assistance")}</h3>
+                <SideBtn icon={<Bot />} label={t("biz.ai_agent")} active={section === "ai"} onClick={() => setSection("ai")} />
+                <SideBtn icon={<BookOpen />} label={t("biz.knowledge_base")} active={section === "knowledgebase"} onClick={() => setSection("knowledgebase")} />
+                <SideBtn icon={<Settings />} label="Config. Agente" active={section === "agentconfig"} onClick={() => setSection("agentconfig")} />
+                <SideBtn icon={<Code />} label="Instalación" active={section === "agentinstall"} onClick={() => setSection("agentinstall")} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 italic">Herramientas</h3>
+                <SideBtn icon={<FileSpreadsheet />} label="Smart Forms" active={section === "smartforms"} onClick={() => setSection("smartforms")} />
               </div>
             </aside>
           )}
@@ -341,22 +445,22 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
                   <div className="bg-white max-[400px]:p-4 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
                     <div className="p-2 md:p-3 bg-red-50 rounded-xl w-fit"><Package className="w-4 h-4 md:w-5 md:h-5 text-red-600" /></div>
-                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">Productos</p>
+                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">{t("biz.products_metric")}</p>
                     <p className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">{totalProducts}</p>
                   </div>
                   <div className="bg-white max-[400px]:p-4 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
                     <div className="p-2 md:p-3 bg-blue-50 rounded-xl w-fit"><Users className="w-4 h-4 md:w-5 md:h-5 text-blue-600" /></div>
-                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">Clientes</p>
+                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">{t("biz.customers_metric")}</p>
                     <p className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">{customers.length}</p>
                   </div>
                   <div className="bg-white max-[400px]:p-4 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
                     <div className="p-2 md:p-3 bg-amber-50 rounded-xl w-fit"><ShoppingCart className="w-4 h-4 md:w-5 md:h-5 text-amber-600" /></div>
-                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">Pedidos</p>
+                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">{t("biz.orders_metric")}</p>
                     <p className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">{orders.length}</p>
                   </div>
                   <div className="bg-white max-[400px]:p-4 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
                     <div className="p-2 md:p-3 bg-emerald-50 rounded-xl w-fit"><DollarSign className="w-4 h-4 md:w-5 md:h-5 text-emerald-600" /></div>
-                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">Ventas</p>
+                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">{t("biz.sales_metric")}</p>
                     <p className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">${totalSales}</p>
                   </div>
                 </div>
@@ -364,13 +468,13 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                   <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 rounded-full blur-[80px] -mr-32 -mt-32" />
                   <div className="relative z-10 space-y-3 md:space-y-4">
                     <Bot className="w-8 h-8 md:w-10 md:h-10 text-red-500" />
-                    <h3 className="max-[400px]:text-2xl text-3xl font-black italic">Tu agente IA está listo</h3>
-                    <p className="text-zinc-400 font-medium max-w-lg max-[400px]:text-sm">El asistente conoce tu negocio. Úsalo para resolver dudas, analizar datos o gestionar tu tienda.</p>
+                    <h3 className="max-[400px]:text-2xl text-3xl font-black italic">{t("biz.ai_ready_title")}</h3>
+                    <p className="text-zinc-400 font-medium max-w-lg max-[400px]:text-sm">{t("biz.ai_ready_desc")}</p>
                       <div className={cn("px-3 py-1 rounded-full text-[9px] font-black italic w-fit", planExpired ? "bg-red-500/20 text-red-300" : "bg-emerald-500/20 text-emerald-300")}>
-                        {planLimits?.maxMessages ?? 999} msgs
+                        {t("biz.msgs").replace("{n}", String(planLimits?.maxMessages ?? 999))}
                       </div>
                       <motion.button whileTap={{ scale: 0.95 }} onClick={() => setSection("ai")} className="px-6 md:px-8 py-3 md:py-4 bg-red-600 text-white rounded-2xl font-black italic text-xs md:text-sm hover:bg-red-700 transition-all shadow-xl inline-flex items-center gap-3">
-                      HABLAR CON IA <ChevronRight className="w-4 h-4" />
+                      {t("biz.talk_to_ai")} <ChevronRight className="w-4 h-4" />
                     </motion.button>
                   </div>
                 </div>
@@ -749,16 +853,12 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
               <OrgSettingsPanel />
             )}
 
-            {section === "integrations" && (
-              <IntegrationsPanel storeId={storeId} />
-            )}
-
             {section === "invoices" && (
               <InvoicesPanel storeId={storeId} userEmail={userEmail} />
             )}
 
             {section === "campaigns" && (
-              <CampaignsPanel campaigns={campaigns} setCampaigns={setCampaigns} onPersist={(d) => persistStore(undefined, undefined, undefined, undefined, undefined, d)} />
+              <CampaignsPanel campaigns={campaigns} setCampaigns={setCampaigns} onPersist={(d) => persistStore(undefined, undefined, undefined, undefined, undefined, d)} storeId={String(storeId)} />
             )}
 
             {section === "ai" && (
@@ -777,34 +877,61 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       <input type="text" placeholder="Buscar entrada..." value={searchKb} onChange={e => setSearchKb(e.target.value)} className="w-36 md:w-44 bg-zinc-50 pl-10 pr-4 py-2.5 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-red-200 transition-all" />
                     </div>
                   </div>
-                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setEditingKb(null); setKbForm({ title: "", content: "", category: "general" }); setShowAddKb(true); }} className="px-5 md:px-6 py-2.5 md:py-3 bg-red-600 text-white rounded-2xl font-black text-[10px] md:text-xs italic hover:bg-red-700 transition-all shadow-xl flex items-center gap-2">
-                    <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /> AÑADIR
-                  </motion.button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleKbImport} />
+                    <motion.button whileTap={{ scale: 0.95 }} disabled={kbImporting} onClick={() => fileInputRef.current?.click()} className={cn("px-3 md:px-4 py-2.5 md:py-3 rounded-2xl font-black text-[9px] md:text-[10px] italic transition-all shadow-md flex items-center gap-1.5", kbImporting ? "bg-zinc-300 text-zinc-500 cursor-not-allowed" : "bg-emerald-600 text-white hover:bg-emerald-700")}>
+                      {kbImporting ? <Loader2 className="w-3.5 h-3.5 md:w-4 md:h-4 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5 md:w-4 md:h-4" />} {kbImporting ? "IMPORTANDO..." : "IMPORTAR"}
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={handleKbExport} className="px-3 md:px-4 py-2.5 md:py-3 bg-blue-600 text-white rounded-2xl font-black text-[9px] md:text-[10px] italic hover:bg-blue-700 transition-all shadow-md flex items-center gap-1.5">
+                      <Download className="w-3.5 h-3.5 md:w-4 md:h-4" /> EXPORTAR
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setEditingKb(null); setKbForm({ title: "", content: "", category: kbCategories[0], question: "" }); setShowAddKb(true); }} className="px-4 md:px-5 py-2.5 md:py-3 bg-red-600 text-white rounded-2xl font-black text-[10px] md:text-xs italic hover:bg-red-700 transition-all shadow-xl flex items-center gap-2">
+                      <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /> AÑADIR
+                    </motion.button>
+                  </div>
                 </div>
 
-                {kbEntries.filter(e => !searchKb || e.title.toLowerCase().includes(searchKb.toLowerCase()) || e.content.toLowerCase().includes(searchKb.toLowerCase()) || e.category.toLowerCase().includes(searchKb.toLowerCase())).length === 0 ? (
+                {/* Action bar */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={handleDownloadKbTemplate} className="px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl font-black text-[9px] italic hover:bg-zinc-200 transition-all flex items-center gap-1.5">
+                    <Download className="w-3 h-3" /> PLANTILLA EXCEL
+                  </motion.button>
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowManageCategories(true)} className="px-4 py-2 bg-zinc-100 text-zinc-600 rounded-xl font-black text-[9px] italic hover:bg-zinc-200 transition-all flex items-center gap-1.5">
+                    <Layers className="w-3 h-3" /> GESTIONAR CATEGORÍAS
+                  </motion.button>
+                  {kbEntries.length > 0 && (
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowConfirmClearKb(true)} className="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl font-black text-[9px] italic hover:bg-rose-100 transition-all flex items-center gap-1.5">
+                      <AlertTriangle className="w-3 h-3" /> BORRAR TODO
+                    </motion.button>
+                  )}
+                </div>
+
+                {kbEntries.filter(e => !searchKb || e.title.toLowerCase().includes(searchKb.toLowerCase()) || e.content.toLowerCase().includes(searchKb.toLowerCase()) || e.category.toLowerCase().includes(searchKb.toLowerCase()) || (e.question && e.question.toLowerCase().includes(searchKb.toLowerCase()))).length === 0 ? (
                   <div className="py-12 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200">
                     {searchKb ? `Sin resultados para "${searchKb}"` : "No hay entradas en la base de conocimiento. Añade información para que el IA Agente la use."}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                    {kbEntries.filter(e => !searchKb || e.title.toLowerCase().includes(searchKb.toLowerCase()) || e.content.toLowerCase().includes(searchKb.toLowerCase()) || e.category.toLowerCase().includes(searchKb.toLowerCase())).map((entry) => (
+                    {kbEntries.filter(e => !searchKb || e.title.toLowerCase().includes(searchKb.toLowerCase()) || e.content.toLowerCase().includes(searchKb.toLowerCase()) || e.category.toLowerCase().includes(searchKb.toLowerCase()) || (e.question && e.question.toLowerCase().includes(searchKb.toLowerCase()))).map((entry) => (
                       <div key={entry.id} className="bg-white max-[400px]:p-4 rounded-[1.5rem] md:rounded-[2rem] border border-zinc-100 p-6 space-y-3 md:space-y-4 group hover:border-red-200 transition-all shadow-sm">
                         <div className="flex items-start justify-between gap-3 md:gap-4">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-8 h-8 md:w-10 md:h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 shrink-0">
-                              <BookOpen className="w-4 h-4 md:w-5 md:h-5" />
+                              {entry.question ? <HelpCircle className="w-4 h-4 md:w-5 md:h-5" /> : <BookOpen className="w-4 h-4 md:w-5 md:h-5" />}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-black italic text-zinc-950 text-sm md:text-base truncate">{entry.title}</p>
+                              <p className="font-black italic text-zinc-950 text-sm md:text-base truncate">{entry.question ? entry.question : entry.title}</p>
                               <span className="px-2 py-0.5 bg-zinc-100 text-zinc-500 rounded-full text-[8px] font-black uppercase italic">{entry.category}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
-                            <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingKb(entry); setKbForm({ title: entry.title, content: entry.content, category: entry.category }); setShowAddKb(true); }} className="p-1.5 md:p-2 text-zinc-300 hover:text-blue-500 transition-all"><Edit3 className="w-3.5 h-3.5 md:w-4 md:h-4" /></motion.button>
+                            <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingKb(entry); setKbForm({ title: entry.title, content: entry.content, category: entry.category, question: entry.question || "" }); setShowAddKb(true); }} className="p-1.5 md:p-2 text-zinc-300 hover:text-blue-500 transition-all"><Edit3 className="w-3.5 h-3.5 md:w-4 md:h-4" /></motion.button>
                             <motion.button whileTap={{ scale: 0.9 }} onClick={() => { const nk = kbEntries.filter(x => x.id !== entry.id); setKbEntries(nk); persistStore(undefined, undefined, undefined, nk); }} className="p-1.5 md:p-2 text-zinc-300 hover:text-rose-500 transition-all"><Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" /></motion.button>
                           </div>
                         </div>
+                        {entry.question && (
+                          <p className="text-xs md:text-sm text-zinc-950 font-bold italic leading-relaxed whitespace-pre-wrap">{entry.title}</p>
+                        )}
                         <p className="text-xs md:text-sm text-zinc-600 font-medium leading-relaxed line-clamp-3 whitespace-pre-wrap">{entry.content}</p>
                         <p className="text-[9px] text-zinc-400 font-bold italic">{new Date(entry.createdAt).toLocaleDateString()}</p>
                       </div>
@@ -812,6 +939,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                   </div>
                 )}
 
+                {/* Add / Edit KB modal */}
                 <AnimatePresence>
                   {showAddKb && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => { setShowAddKb(false); setEditingKb(null); }}>
@@ -819,42 +947,970 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                         <button onClick={() => { setShowAddKb(false); setEditingKb(null); }} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
                         <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editingKb ? "Editar Entrada" : "Nueva Entrada"}</h3>
                         <div className="space-y-3 md:space-y-5">
-                          <div>
-                            <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Título</label>
-                            <input type="text" placeholder="Ej. Política de devoluciones" value={kbForm.title} onChange={e => setKbForm({...kbForm, title: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                          <div className="flex items-center gap-2">
+                            <motion.button whileTap={{ scale: 0.95 }}
+                              onClick={() => setKbForm({...kbForm, question: kbForm.question ? "" : "¿?" })}
+                              className={cn("px-3 py-1.5 rounded-xl font-black text-[9px] italic transition-all flex items-center gap-1.5", kbForm.question ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-400")}
+                            >
+                              <HelpCircle className="w-3 h-3" /> {kbForm.question ? "MODO PREGUNTA" : "MODO ARTÍCULO"}
+                            </motion.button>
                           </div>
+                          {kbForm.question ? (
+                            <div>
+                              <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Pregunta</label>
+                              <input type="text" placeholder="Ej. ¿Cómo hago una devolución?" value={kbForm.question} onChange={e => setKbForm({...kbForm, question: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                            </div>
+                          ) : (
+                            <div>
+                              <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Título</label>
+                              <input type="text" placeholder="Ej. Política de devoluciones" value={kbForm.title} onChange={e => setKbForm({...kbForm, title: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                            </div>
+                          )}
                           <div>
                             <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Categoría</label>
                             <select value={kbForm.category} onChange={e => setKbForm({...kbForm, category: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 italic text-sm">
-                              <option value="general">General</option>
-                              <option value="productos">Productos</option>
-                              <option value="clientes">Clientes</option>
-                              <option value="pedidos">Pedidos</option>
-                              <option value="politicas">Políticas</option>
-                              <option value="faq">FAQ</option>
-                              <option value="manual">Manual</option>
+                              {kbCategories.map(cat => (
+                                <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+                              ))}
                             </select>
                           </div>
                           <div>
-                            <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Contenido</label>
+                            <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Respuesta</label>
                             <textarea placeholder="Describe la información que el IA Agente debe conocer..." value={kbForm.content} onChange={e => setKbForm({...kbForm, content: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-32 md:h-40 mt-1 text-sm" />
                           </div>
                           <button onClick={() => {
-                            if (!kbForm.title || !kbForm.content) return;
+                            const title = kbForm.question || kbForm.title;
+                            if (!title || !kbForm.content) return;
                             let newEntries;
                             if (editingKb) {
-                              newEntries = kbEntries.map(e => e.id === editingKb.id ? { ...e, title: kbForm.title, content: kbForm.content, category: kbForm.category } : e);
+                              newEntries = kbEntries.map(e => e.id === editingKb.id ? { ...e, title: kbForm.title, content: kbForm.content, category: kbForm.category, question: kbForm.question || undefined } : e);
                             } else {
-                              newEntries = [...kbEntries, { id: Date.now(), title: kbForm.title, content: kbForm.content, category: kbForm.category, createdAt: new Date().toISOString() }];
+                              newEntries = [...kbEntries, { id: Date.now(), title: kbForm.title, content: kbForm.content, category: kbForm.category, question: kbForm.question || undefined, createdAt: new Date().toISOString() }];
                             }
                             setKbEntries(newEntries);
                             persistStore(undefined, undefined, undefined, newEntries);
                             setShowAddKb(false);
                             setEditingKb(null);
-                            setKbForm({ title: "", content: "", category: "general" });
-                          }} disabled={!kbForm.title || !kbForm.content} className="w-full py-4 md:py-5 bg-red-600 text-white rounded-2xl font-black italic text-sm md:text-base hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
+                            setKbForm({ title: "", content: "", category: kbCategories[0], question: "" });
+                          }} disabled={!(kbForm.question || kbForm.title) || !kbForm.content} className="w-full py-4 md:py-5 bg-red-600 text-white rounded-2xl font-black italic text-sm md:text-base hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
                             {editingKb ? "ACTUALIZAR ENTRADA" : "GUARDAR ENTRADA"}
                           </button>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Manage Categories modal */}
+                <AnimatePresence>
+                  {showManageCategories && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setShowManageCategories(false)}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setShowManageCategories(false)} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
+                        <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">Gestionar Categorías</h3>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <input type="text" placeholder="Nueva categoría..." value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="flex-1 bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => {
+                              const name = newCategoryName.trim().toLowerCase();
+                              if (!name || kbCategories.includes(name)) return;
+                              setKbCategories(prev => [...prev, name]);
+                              setNewCategoryName("");
+                            }} disabled={!newCategoryName.trim()} className="px-4 py-3 bg-red-600 text-white rounded-xl font-black text-[10px] italic hover:bg-red-700 transition-all shadow-md disabled:opacity-50">
+                              AGREGAR
+                            </motion.button>
+                          </div>
+                          <div className="space-y-1 max-h-60 overflow-y-auto">
+                            {kbCategories.map(cat => {
+                              const usedCount = kbEntries.filter(e => e.category === cat).length;
+                              const canDelete = cat !== kbCategories[0] || kbCategories.length > 1;
+                              return (
+                                <div key={cat} className="flex items-center justify-between p-3 bg-zinc-50 rounded-xl">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-bold italic text-zinc-700 capitalize">{cat}</span>
+                                    <span className="text-[9px] font-bold text-zinc-400 italic">({usedCount})</span>
+                                  </div>
+                                  {canDelete && (
+                                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                                      const newCats = kbCategories.filter(c => c !== cat);
+                                      setKbCategories(newCats);
+                                      const updated = kbEntries.map(e => e.category === cat ? { ...e, category: newCats[0] } : e);
+                                      setKbEntries(updated);
+                                      persistStore(undefined, undefined, undefined, updated);
+                                    }} className="p-1.5 text-zinc-400 hover:text-rose-500 transition-all">
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </motion.button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Clear all confirmation modal */}
+                <AnimatePresence>
+                  {showConfirmClearKb && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setShowConfirmClearKb(false)}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-sm bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setShowConfirmClearKb(false)} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
+                        <div className="text-center space-y-4">
+                          <div className="w-14 h-14 mx-auto bg-rose-100 rounded-2xl flex items-center justify-center text-rose-600">
+                            <AlertTriangle className="w-7 h-7" />
+                          </div>
+                          <h3 className="text-xl font-black italic text-zinc-950 uppercase tracking-tighter">¿Borrar todo?</h3>
+                          <p className="text-sm text-zinc-500 font-medium">Se eliminarán las {kbEntries.length} entradas de la base de conocimiento. Esta acción no se puede deshacer.</p>
+                          <div className="flex gap-3 pt-2">
+                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowConfirmClearKb(false)} className="flex-1 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-black text-xs italic hover:bg-zinc-200 transition-all">
+                              CANCELAR
+                            </motion.button>
+                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => {
+                              setKbEntries([]);
+                              persistStore(undefined, undefined, undefined, []);
+                              setShowConfirmClearKb(false);
+                            }} className="flex-1 py-3 bg-rose-600 text-white rounded-xl font-black text-xs italic hover:bg-rose-700 transition-all shadow-md">
+                              BORRAR TODO
+                            </motion.button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
+            {section === "agentconfig" && (
+              <div className="space-y-6 md:space-y-8 max-w-3xl">
+                <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
+                  <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">Configuración <span className="text-red-600">del Agente</span></h3>
+                  <motion.button whileTap={{ scale: 0.95 }} disabled={agentConfigSaving} onClick={async () => {
+                    setAgentConfigSaving(true);
+                    try {
+                      await onSaveStore?.(storeId, { agentConfig });
+                      showToast("Configuración guardada", "success");
+                    } catch { showToast("Error al guardar", "error"); }
+                    setAgentConfigSaving(false);
+                  }} className={cn("px-5 md:px-6 py-2.5 md:py-3 rounded-2xl font-black text-[10px] md:text-xs italic transition-all shadow-xl flex items-center gap-2", agentConfigSaving ? "bg-zinc-300 text-zinc-500 cursor-not-allowed" : "bg-red-600 text-white hover:bg-red-700")}>
+                    {agentConfigSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null} GUARDAR CONFIG
+                  </motion.button>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex gap-1.5">
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => setAgentConfigTab("general")} className={cn("px-5 py-2.5 rounded-xl font-black text-[10px] italic transition-all", agentConfigTab === "general" ? "bg-red-600 text-white shadow-md" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200")}>
+                    GENERAL
+                  </motion.button>
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => setAgentConfigTab("widget")} className={cn("px-5 py-2.5 rounded-xl font-black text-[10px] italic transition-all", agentConfigTab === "widget" ? "bg-red-600 text-white shadow-md" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200")}>
+                    TEXTOS DEL WIDGET
+                  </motion.button>
+                </div>
+
+                {agentConfigTab === "general" && (
+                  <div className="space-y-6">
+                    {/* Información General */}
+                    <div className="bg-white rounded-[2rem] border border-zinc-100 p-6 md:p-8 shadow-sm space-y-5">
+                      <div className="flex items-center gap-3 pb-3 border-b border-zinc-100">
+                        <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <h4 className="text-sm md:text-base font-black italic text-zinc-950 uppercase tracking-tight">Información General</h4>
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Prompt del Sistema</label>
+                        <p className="text-[8px] text-zinc-300 italic ml-1 mb-2 font-medium">Personaliza cómo se comporta el agente IA. Si se deja vacío, se usará el prompt por defecto.</p>
+                        <textarea value={agentConfig.systemPrompt} onChange={e => setAgentConfig(c => ({...c, systemPrompt: e.target.value}))} placeholder="Escribe el prompt personalizado para el agente..." className="w-full bg-zinc-50 p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-40 text-sm" />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                          <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Temperatura</label>
+                          <p className="text-[8px] text-zinc-300 italic ml-1 mb-2 font-medium">Controla la creatividad (0 = preciso, 2 = creativo)</p>
+                          <div className="flex items-center gap-3">
+                            <input type="range" min="0" max="2" step="0.1" value={agentConfig.temperature} onChange={e => setAgentConfig(c => ({...c, temperature: parseFloat(e.target.value)}))} className="flex-1 accent-red-600" />
+                            <span className="text-sm font-black italic text-zinc-700 w-8 text-center">{agentConfig.temperature.toFixed(1)}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Modelo</label>
+                          <p className="text-[8px] text-zinc-300 italic ml-1 mb-2 font-medium">Motor de IA a utilizar</p>
+                          <select value={agentConfig.model} onChange={e => setAgentConfig(c => ({...c, model: e.target.value}))} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all italic text-sm">
+                            <option value="gpt-4o-mini">GPT-4o Mini (rápido)</option>
+                            <option value="gpt-4o">GPT-4o (potente)</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo (económico)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Apariencia y Marca */}
+                    <div className="bg-white rounded-[2rem] border border-zinc-100 p-6 md:p-8 shadow-sm space-y-5">
+                      <div className="flex items-center gap-3 pb-3 border-b border-zinc-100">
+                        <div className="w-8 h-8 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        </div>
+                        <h4 className="text-sm md:text-base font-black italic text-zinc-950 uppercase tracking-tight">Apariencia y Marca</h4>
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Logo del Agente</label>
+                        <p className="text-[8px] text-zinc-300 italic ml-1 mb-2 font-medium">PNG, SVG, JPG o WebP. Se mostrará en el chat y widget.</p>
+                        <div className="flex items-start gap-4">
+                          <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl border-2 border-dashed border-zinc-200 flex items-center justify-center overflow-hidden shrink-0 bg-zinc-50">
+                            {agentConfig.logo ? (
+                              <img src={agentConfig.logo} alt="Logo" className="w-full h-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                            ) : (
+                              <svg className="w-8 h-8 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            )}
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <input type="text" value={agentConfig.logo} onChange={e => setAgentConfig(c => ({...c, logo: e.target.value}))} placeholder="URL del logo..." className="flex-1 bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs" />
+                              <label className="px-4 py-2.5 bg-zinc-100 text-zinc-600 rounded-xl font-black text-[9px] italic hover:bg-zinc-200 transition-all cursor-pointer flex items-center gap-1.5 shrink-0">
+                                <Upload className="w-3 h-3" /> SUBIR
+                                <input type="file" accept=".png,.svg,.jpg,.jpeg,.webp" className="hidden" onChange={e => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  const reader = new FileReader();
+                                  reader.onload = ev => setAgentConfig(c => ({...c, logo: ev.target?.result as string}));
+                                  reader.readAsDataURL(file);
+                                  e.target.value = "";
+                                }} />
+                              </label>
+                            </div>
+                            <button onClick={() => setAgentConfig(c => ({...c, logo: ""}))} className="text-[9px] font-bold text-rose-400 hover:text-rose-600 italic transition-colors">Eliminar logo</button>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest mb-3 block">Colores</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
+                            <input type="color" value={agentConfig.primaryColor} onChange={e => setAgentConfig(c => ({...c, primaryColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[9px] font-black text-zinc-500 uppercase italic">Principal</p>
+                              <p className="text-[10px] font-mono font-bold text-zinc-700 truncate">{agentConfig.primaryColor}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
+                            <input type="color" value={agentConfig.secondaryColor} onChange={e => setAgentConfig(c => ({...c, secondaryColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[9px] font-black text-zinc-500 uppercase italic">Secundario</p>
+                              <p className="text-[10px] font-mono font-bold text-zinc-700 truncate">{agentConfig.secondaryColor}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
+                            <input type="color" value={agentConfig.textColor} onChange={e => setAgentConfig(c => ({...c, textColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[9px] font-black text-zinc-500 uppercase italic">Texto</p>
+                              <p className="text-[10px] font-mono font-bold text-zinc-700 truncate">{agentConfig.textColor}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {agentConfigTab === "widget" && (
+                  <div className="space-y-5 bg-white rounded-[2rem] border border-zinc-100 p-6 md:p-8 shadow-sm">
+                    <div>
+                      <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Mensaje de Bienvenida</label>
+                      <p className="text-[8px] text-zinc-300 italic ml-1 mb-2 font-medium">Texto que aparece cuando el usuario abre el chat. Si se deja vacío, se usará el mensaje por defecto.</p>
+                      <input type="text" value={agentConfig.widgetWelcome} onChange={e => setAgentConfig(c => ({...c, widgetWelcome: e.target.value}))} placeholder="Ej. ¡Hola! Soy el asistente virtual. ¿En qué puedo ayudarte?" className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Placeholder del Input</label>
+                      <p className="text-[8px] text-zinc-300 italic ml-1 mb-2 font-medium">Texto de ejemplo dentro del campo de escritura.</p>
+                      <input type="text" value={agentConfig.widgetPlaceholder} onChange={e => setAgentConfig(c => ({...c, widgetPlaceholder: e.target.value}))} placeholder="Ej. Escribe tu pregunta..." className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Encabezado del Widget</label>
+                      <p className="text-[8px] text-zinc-300 italic ml-1 mb-2 font-medium">Texto que aparece en el header del chat widget.</p>
+                      <input type="text" value={agentConfig.widgetHeader} onChange={e => setAgentConfig(c => ({...c, widgetHeader: e.target.value}))} placeholder="Ej. Asistente de Mi Tienda" className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    </div>
+                    <div className="border-t border-zinc-100 pt-5">
+                      <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest mb-3 block">Colores del Widget</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
+                          <input type="color" value={agentConfig.primaryColor} onChange={e => setAgentConfig(c => ({...c, primaryColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-[9px] font-black text-zinc-500 uppercase italic">Principal</p>
+                            <p className="text-[10px] font-mono font-bold text-zinc-700 truncate">{agentConfig.primaryColor}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
+                          <input type="color" value={agentConfig.secondaryColor} onChange={e => setAgentConfig(c => ({...c, secondaryColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-[9px] font-black text-zinc-500 uppercase italic">Secundario</p>
+                            <p className="text-[10px] font-mono font-bold text-zinc-700 truncate">{agentConfig.secondaryColor}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
+                          <input type="color" value={agentConfig.textColor} onChange={e => setAgentConfig(c => ({...c, textColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-[9px] font-black text-zinc-500 uppercase italic">Texto</p>
+                            <p className="text-[10px] font-mono font-bold text-zinc-700 truncate">{agentConfig.textColor}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {section === "agentinstall" && (
+              <div className="space-y-6 md:space-y-8 max-w-3xl">
+                <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
+                  <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">Instalación <span className="text-red-600">del Widget</span></h3>
+                  <a href={`${window.location.origin}/s/${(userStore as any)?.slug || ""}`} target="_blank" rel="noopener noreferrer" className="px-5 md:px-6 py-2.5 md:py-3 bg-red-600 text-white rounded-2xl font-black text-[10px] md:text-xs italic hover:bg-red-700 transition-all shadow-xl inline-flex items-center gap-2">
+                    <ExternalLink className="w-3.5 h-3.5 md:w-4 md:h-4" /> VER TIENDA
+                  </a>
+                </div>
+
+                {/* URL Pública */}
+                <div className="bg-white rounded-[2rem] border border-zinc-100 p-6 md:p-8 shadow-sm space-y-4">
+                  <div className="flex items-center gap-3 pb-3 border-b border-zinc-100">
+                    <div className="w-8 h-8 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
+                      <Globe className="w-4 h-4" />
+                    </div>
+                    <h4 className="text-sm md:text-base font-black italic text-zinc-950 uppercase tracking-tight">URL Pública</h4>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-zinc-50 p-3 rounded-xl border border-zinc-100 text-xs md:text-sm font-mono text-zinc-700 truncate">
+                      ${window.location.origin}/s/{(userStore as any)?.slug || "tu-tienda"}
+                    </code>
+                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/s/${(userStore as any)?.slug || ""}`); showToast("URL copiada", "success"); }} className="p-3 bg-zinc-100 text-zinc-600 rounded-xl hover:bg-zinc-200 transition-all shrink-0">
+                      <Copy className="w-4 h-4" />
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Platform tabs */}
+                <div className="flex gap-1.5 flex-wrap">
+                  {[
+                    { key: "html" as const, label: "HTML / Script", icon: <Code className="w-3 h-3" /> },
+                    { key: "shopify" as const, label: "Shopify", icon: <ShoppingCart className="w-3 h-3" /> },
+                    { key: "woocommerce" as const, label: "WooCommerce", icon: <Store className="w-3 h-3" /> },
+                    { key: "wix" as const, label: "Wix", icon: <Globe className="w-3 h-3" /> },
+                    { key: "wordpress" as const, label: "WordPress", icon: <FileText className="w-3 h-3" /> },
+                  ].map(tab => (
+                    <motion.button key={tab.key} whileTap={{ scale: 0.95 }} onClick={() => setInstallTab(tab.key)} className={cn("px-4 py-2.5 rounded-xl font-black text-[9px] md:text-[10px] italic transition-all flex items-center gap-1.5", installTab === tab.key ? "bg-red-600 text-white shadow-md" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200")}>
+                      {tab.icon} {tab.label}
+                    </motion.button>
+                  ))}
+                </div>
+
+                {/* HTML / Script */}
+                {installTab === "html" && (
+                  <div className="space-y-5">
+                    <div className="bg-white rounded-[2rem] border border-zinc-100 p-6 md:p-8 shadow-sm space-y-4">
+                      <div className="flex items-center gap-3 pb-3 border-b border-zinc-100">
+                        <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                          <Code className="w-4 h-4" />
+                        </div>
+                        <h4 className="text-sm md:text-base font-black italic text-zinc-950 uppercase tracking-tight">Embed Iframe</h4>
+                      </div>
+                      <p className="text-[10px] md:text-xs text-zinc-500 font-medium">Inserta este código en tu sitio web para mostrar el asistente IA como un widget flotante.</p>
+                      <div className="relative">
+                        <pre className="bg-zinc-950 text-zinc-100 p-4 md:p-5 rounded-2xl text-[10px] md:text-xs font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap">
+{`<iframe
+  src="${window.location.origin}/s/${(userStore as any)?.slug || "tu-tienda"}"
+  style="width:100%;max-width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);position:fixed;bottom:24px;right:24px;z-index:9999;background:white;"
+  title="Asistente IA"
+></iframe>`}
+                        </pre>
+                        <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                          const code = `<iframe\n  src="${window.location.origin}/s/${(userStore as any)?.slug || "tu-tienda"}"\n  style="width:100%;max-width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);position:fixed;bottom:24px;right:24px;z-index:9999;background:white;"\n  title="Asistente IA"\n></iframe>`;
+                          navigator.clipboard.writeText(code);
+                          showToast("Código iframe copiado", "success");
+                        }} className="absolute top-3 right-3 p-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all">
+                          <Copy className="w-3.5 h-3.5" />
+                        </motion.button>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-[2rem] border border-zinc-100 p-6 md:p-8 shadow-sm space-y-4">
+                      <div className="flex items-center gap-3 pb-3 border-b border-zinc-100">
+                        <div className="w-8 h-8 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <h4 className="text-sm md:text-base font-black italic text-zinc-950 uppercase tracking-tight">Script JavaScript</h4>
+                      </div>
+                      <p className="text-[10px] md:text-xs text-zinc-500 font-medium">Agrega este script justo antes de cerrar el <code className="text-zinc-700 bg-zinc-100 px-1.5 py-0.5 rounded text-[9px] font-mono">&lt;/body&gt;</code> en tu sitio web.</p>
+                      <div className="relative">
+                        <pre className="bg-zinc-950 text-zinc-100 p-4 md:p-5 rounded-2xl text-[10px] md:text-xs font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap">
+{`<script>
+  (function() {
+    var slug = "${(userStore as any)?.slug || "tu-tienda"}";
+    var iframe = document.createElement('iframe');
+    iframe.src = '${window.location.origin}/s/' + slug;
+    iframe.style.cssText = 'width:100%;max-width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);position:fixed;bottom:24px;right:24px;z-index:9999;background:white;';
+    iframe.title = 'Asistente IA';
+    document.body.appendChild(iframe);
+  })();
+</script>`}
+                        </pre>
+                        <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                          const code = `<script>\n  (function() {\n    var slug = "${(userStore as any)?.slug || "tu-tienda"}";\n    var iframe = document.createElement('iframe');\n    iframe.src = '${window.location.origin}/s/' + slug;\n    iframe.style.cssText = 'width:100%;max-width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);position:fixed;bottom:24px;right:24px;z-index:9999;background:white;';\n    iframe.title = 'Asistente IA';\n    document.body.appendChild(iframe);\n  })();\n</script>`;
+                          navigator.clipboard.writeText(code);
+                          showToast("Código JS copiado", "success");
+                        }} className="absolute top-3 right-3 p-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all">
+                          <Copy className="w-3.5 h-3.5" />
+                        </motion.button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Shopify */}
+                {installTab === "shopify" && (
+                  <div className="bg-white rounded-[2rem] border border-zinc-100 p-6 md:p-8 shadow-sm space-y-4">
+                    <div className="flex items-center gap-3 pb-3 border-b border-zinc-100">
+                      <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
+                        <ShoppingCart className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm md:text-base font-black italic text-zinc-950 uppercase tracking-tight">Shopify</h4>
+                        <p className="text-[8px] font-bold text-zinc-400 italic">Para tiendas en Shopify</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3 text-[10px] md:text-xs text-zinc-600 font-medium leading-relaxed">
+                      <p><strong>1.</strong> En el panel de Shopify, ve a <strong>Tienda Online → Temas → Editar código</strong>.</p>
+                      <p><strong>2.</strong> Busca el archivo <code className="text-zinc-700 bg-zinc-100 px-1.5 py-0.5 rounded text-[9px] font-mono">theme.liquid</code>.</p>
+                      <p><strong>3.</strong> Pega este código justo antes del <code className="text-zinc-700 bg-zinc-100 px-1.5 py-0.5 rounded text-[9px] font-mono">&lt;/body&gt;</code>:</p>
+                    </div>
+                    <div className="relative">
+                      <pre className="bg-zinc-950 text-zinc-100 p-4 md:p-5 rounded-2xl text-[10px] md:text-xs font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap">
+{`{% comment %} Jandosoft AI Widget {% endcomment %}
+<script>
+  (function() {
+    var iframe = document.createElement('iframe');
+    iframe.src = '${window.location.origin}/s/${(userStore as any)?.slug || "tu-tienda"}';
+    iframe.style.cssText = 'width:100%;max-width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);position:fixed;bottom:24px;right:24px;z-index:9999;background:white;';
+    iframe.title = 'Asistente IA';
+    document.body.appendChild(iframe);
+  })();
+</script>`}
+                      </pre>
+                      <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                        navigator.clipboard.writeText(`{% comment %} Jandosoft AI Widget {% endcomment %}\n<script>\n  (function() {\n    var iframe = document.createElement('iframe');\n    iframe.src = '${window.location.origin}/s/${(userStore as any)?.slug || "tu-tienda"}';\n    iframe.style.cssText = 'width:100%;max-width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);position:fixed;bottom:24px;right:24px;z-index:9999;background:white;';\n    iframe.title = 'Asistente IA';\n    document.body.appendChild(iframe);\n  })();\n</script>`);
+                        showToast("Código Shopify copiado", "success");
+                      }} className="absolute top-3 right-3 p-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all">
+                        <Copy className="w-3.5 h-3.5" />
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
+
+                {/* WooCommerce */}
+                {installTab === "woocommerce" && (
+                  <div className="bg-white rounded-[2rem] border border-zinc-100 p-6 md:p-8 shadow-sm space-y-4">
+                    <div className="flex items-center gap-3 pb-3 border-b border-zinc-100">
+                      <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600">
+                        <Store className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm md:text-base font-black italic text-zinc-950 uppercase tracking-tight">WooCommerce</h4>
+                        <p className="text-[8px] font-bold text-zinc-400 italic">Plugin para WordPress + WooCommerce</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3 text-[10px] md:text-xs text-zinc-600 font-medium leading-relaxed">
+                      <p><strong>1.</strong> En el panel de WordPress, ve a <strong>Apariencia → Editor de temas → footer.php</strong> (o <strong>theme.json</strong> según tu tema).</p>
+                      <p><strong>2.</strong> Pega este código justo antes del <code className="text-zinc-700 bg-zinc-100 px-1.5 py-0.5 rounded text-[9px] font-mono">&lt;/body&gt;</code>:</p>
+                    </div>
+                    <div className="relative">
+                      <pre className="bg-zinc-950 text-zinc-100 p-4 md:p-5 rounded-2xl text-[10px] md:text-xs font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap">
+{`<!-- Jandosoft AI Widget -->
+<script>
+  (function() {
+    var iframe = document.createElement('iframe');
+    iframe.src = '${window.location.origin}/s/${(userStore as any)?.slug || "tu-tienda"}';
+    iframe.style.cssText = 'width:100%;max-width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);position:fixed;bottom:24px;right:24px;z-index:9999;background:white;';
+    iframe.title = 'Asistente IA';
+    document.body.appendChild(iframe);
+  })();
+</script>`}
+                      </pre>
+                      <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                        navigator.clipboard.writeText(`<!-- Jandosoft AI Widget -->\n<script>\n  (function() {\n    var iframe = document.createElement('iframe');\n    iframe.src = '${window.location.origin}/s/${(userStore as any)?.slug || "tu-tienda"}';\n    iframe.style.cssText = 'width:100%;max-width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);position:fixed;bottom:24px;right:24px;z-index:9999;background:white;';\n    iframe.title = 'Asistente IA';\n    document.body.appendChild(iframe);\n  })();\n</script>`);
+                        showToast("Código WooCommerce copiado", "success");
+                      }} className="absolute top-3 right-3 p-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all">
+                        <Copy className="w-3.5 h-3.5" />
+                      </motion.button>
+                    </div>
+                    <p className="text-[9px] text-zinc-400 italic font-medium">También puedes usar el plugin <strong>"Insert Headers and Footers"</strong> para agregar el código sin editar el tema.</p>
+                  </div>
+                )}
+
+                {/* Wix */}
+                {installTab === "wix" && (
+                  <div className="bg-white rounded-[2rem] border border-zinc-100 p-6 md:p-8 shadow-sm space-y-4">
+                    <div className="flex items-center gap-3 pb-3 border-b border-zinc-100">
+                      <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                        <Globe className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm md:text-base font-black italic text-zinc-950 uppercase tracking-tight">Wix</h4>
+                        <p className="text-[8px] font-bold text-zinc-400 italic">Para sitios en Wix</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3 text-[10px] md:text-xs text-zinc-600 font-medium leading-relaxed">
+                      <p><strong>1.</strong> En el editor de Wix, haz clic en <strong>Añadir → Más → HTML Personalizado</strong>.</p>
+                      <p><strong>2.</strong> Arrastra el elemento a tu página y pega este código:</p>
+                    </div>
+                    <div className="relative">
+                      <pre className="bg-zinc-950 text-zinc-100 p-4 md:p-5 rounded-2xl text-[10px] md:text-xs font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap">
+{`<div id="jandosoft-widget"></div>
+<script>
+  (function() {
+    var iframe = document.createElement('iframe');
+    iframe.src = '${window.location.origin}/s/${(userStore as any)?.slug || "tu-tienda"}';
+    iframe.style.cssText = 'width:100%;max-width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);position:fixed;bottom:24px;right:24px;z-index:9999;background:white;';
+    iframe.title = 'Asistente IA';
+    document.getElementById('jandosoft-widget').appendChild(iframe);
+  })();
+</script>`}
+                      </pre>
+                      <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                        navigator.clipboard.writeText(`<div id="jandosoft-widget"></div>\n<script>\n  (function() {\n    var iframe = document.createElement('iframe');\n    iframe.src = '${window.location.origin}/s/${(userStore as any)?.slug || "tu-tienda"}';\n    iframe.style.cssText = 'width:100%;max-width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);position:fixed;bottom:24px;right:24px;z-index:9999;background:white;';\n    iframe.title = 'Asistente IA';\n    document.getElementById('jandosoft-widget').appendChild(iframe);\n  })();\n</script>`);
+                        showToast("Código Wix copiado", "success");
+                      }} className="absolute top-3 right-3 p-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all">
+                        <Copy className="w-3.5 h-3.5" />
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
+
+                {/* WordPress */}
+                {installTab === "wordpress" && (
+                  <div className="bg-white rounded-[2rem] border border-zinc-100 p-6 md:p-8 shadow-sm space-y-4">
+                    <div className="flex items-center gap-3 pb-3 border-b border-zinc-100">
+                      <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm md:text-base font-black italic text-zinc-950 uppercase tracking-tight">WordPress</h4>
+                        <p className="text-[8px] font-bold text-zinc-400 italic">Para cualquier sitio en WordPress</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3 text-[10px] md:text-xs text-zinc-600 font-medium leading-relaxed">
+                      <p><strong>Opción 1:</strong> Ve a <strong>Apariencia → Editor de temas → footer.php</strong> y pega el script antes del <code className="text-zinc-700 bg-zinc-100 px-1.5 py-0.5 rounded text-[9px] font-mono">&lt;/body&gt;</code>.</p>
+                      <p><strong>Opción 2:</strong> Usa el plugin <strong>"Insert Headers and Footers"</strong> o <strong>"WPCode"</strong> para agregar el código sin editar archivos.</p>
+                    </div>
+                    <div className="relative">
+                      <pre className="bg-zinc-950 text-zinc-100 p-4 md:p-5 rounded-2xl text-[10px] md:text-xs font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap">
+{`<!-- Jandosoft AI Widget -->
+<script>
+  (function() {
+    var iframe = document.createElement('iframe');
+    iframe.src = '${window.location.origin}/s/${(userStore as any)?.slug || "tu-tienda"}';
+    iframe.style.cssText = 'width:100%;max-width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);position:fixed;bottom:24px;right:24px;z-index:9999;background:white;';
+    iframe.title = 'Asistente IA';
+    document.body.appendChild(iframe);
+  })();
+</script>`}
+                      </pre>
+                      <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                        navigator.clipboard.writeText(`<!-- Jandosoft AI Widget -->\n<script>\n  (function() {\n    var iframe = document.createElement('iframe');\n    iframe.src = '${window.location.origin}/s/${(userStore as any)?.slug || "tu-tienda"}';\n    iframe.style.cssText = 'width:100%;max-width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.12);position:fixed;bottom:24px;right:24px;z-index:9999;background:white;';\n    iframe.title = 'Asistente IA';\n    document.body.appendChild(iframe);\n  })();\n</script>`);
+                        showToast("Código WordPress copiado", "success");
+                      }} className="absolute top-3 right-3 p-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all">
+                        <Copy className="w-3.5 h-3.5" />
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Requirements note */}
+                <div className="bg-amber-50 border border-amber-200 p-4 md:p-6 rounded-[1.8rem] md:rounded-[2.5rem] space-y-2">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 mt-0.5 bg-amber-200 rounded-lg flex items-center justify-center text-amber-700 shrink-0">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] md:text-xs font-black italic text-amber-800">Requisito</p>
+                      <p className="text-[9px] md:text-[10px] font-medium text-amber-700 mt-1">El widget solo se mostrará si activaste "IA Pública" en la configuración de la tienda. Si no ves el asistente, ve a Ajustes de Tienda y activa la opción.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {section === "smartforms" && (
+              <div className="space-y-6 md:space-y-8">
+                <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
+                  <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">Smart <span className="text-red-600">Forms</span></h3>
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => {
+                    setEditingSmartForm(null);
+                    setSmartFormName("");
+                    setSmartFormDesc("");
+                    setSmartFormFields([]);
+                    setShowAddSmartForm(true);
+                  }} className="px-5 md:px-6 py-2.5 md:py-3 bg-red-600 text-white rounded-2xl font-black text-[10px] md:text-xs italic hover:bg-red-700 transition-all shadow-xl flex items-center gap-2">
+                    <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /> NUEVO FORMULARIO
+                  </motion.button>
+                </div>
+
+                {smartForms.length === 0 ? (
+                  <div className="py-16 md:py-20 text-center italic font-black uppercase tracking-widest text-zinc-200">
+                    No hay formularios. Crea tu primer Smart Form para empezar a recolectar datos.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                    {smartForms.map(form => (
+                      <div key={form.id} className="bg-white max-[400px]:p-4 p-6 rounded-[1.5rem] md:rounded-[2rem] border border-zinc-100 space-y-3 md:space-y-4 group hover:border-red-200 transition-all shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 md:w-10 md:h-10 bg-violet-50 rounded-xl flex items-center justify-center text-violet-600 shrink-0">
+                              <FileSpreadsheet className="w-4 h-4 md:w-5 md:h-5" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-black italic text-zinc-950 text-sm md:text-base truncate">{form.name}</p>
+                              {form.description && <p className="text-[9px] md:text-[10px] text-zinc-400 font-medium italic truncate">{form.description}</p>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                              setShowFormEmbed(form);
+                            }} className="p-1.5 md:p-2 text-zinc-300 hover:text-blue-500 transition-all"><Code className="w-3.5 h-3.5 md:w-4 md:h-4" /></motion.button>
+                            <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                              setShowFormSubmissions(form);
+                            }} className="p-1.5 md:p-2 text-zinc-300 hover:text-emerald-500 transition-all"><Layers className="w-3.5 h-3.5 md:w-4 md:h-4" /></motion.button>
+                            <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                              setEditingSmartForm(form);
+                              setSmartFormName(form.name);
+                              setSmartFormDesc(form.description || "");
+                              setSmartFormFields(form.fields || []);
+                              setShowAddSmartForm(true);
+                            }} className="p-1.5 md:p-2 text-zinc-300 hover:text-blue-500 transition-all"><Edit3 className="w-3.5 h-3.5 md:w-4 md:h-4" /></motion.button>
+                            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setConfirmDeleteForm(form)} className="p-1.5 md:p-2 text-zinc-300 hover:text-rose-500 transition-all"><Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" /></motion.button>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 text-[9px] md:text-[10px] font-bold text-zinc-400 italic">
+                          <span>{(form.fields || []).length} campos</span>
+                          <span className="w-1 h-1 rounded-full bg-zinc-300" />
+                          <span>{(form.submissions || []).length} respuestas</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Create / Edit Form Modal */}
+                <AnimatePresence>
+                  {showAddSmartForm && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 md:p-6" onClick={() => { setShowAddSmartForm(false); setEditingSmartForm(null); }}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-2xl bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative max-h-[90vh] overflow-y-auto no-scrollbar" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => { setShowAddSmartForm(false); setEditingSmartForm(null); }} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
+                        <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-6 uppercase tracking-tighter">{editingSmartForm ? "Editar Formulario" : "Nuevo Formulario"}</h3>
+
+                        <div className="space-y-5">
+                          <div>
+                            <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Nombre del Formulario</label>
+                            <input type="text" value={smartFormName} onChange={e => setSmartFormName(e.target.value)} placeholder="Ej. Formulario de Contacto" className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Descripción (opcional)</label>
+                            <textarea value={smartFormDesc} onChange={e => setSmartFormDesc(e.target.value)} placeholder="Ej. Formulario para que los clientes nos contacten..." className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-sm" />
+                          </div>
+
+                          {/* Fields */}
+                          <div className="border-t border-zinc-100 pt-5">
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-sm font-black italic text-zinc-950 uppercase tracking-tight">Campos <span className="text-zinc-400">({smartFormFields.length})</span></h4>
+                            </div>
+
+                            {editingSFormField !== null && (
+                              <div className="bg-zinc-50 rounded-2xl p-4 md:p-5 mb-4 space-y-3 border border-zinc-100">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-[9px] font-black text-zinc-400 uppercase italic">{editingSFormField === -1 ? "Nuevo Campo" : "Editar Campo"}</p>
+                                  <button onClick={() => setEditingSFormField(null)} className="text-[9px] font-black text-rose-400 hover:text-rose-600 italic">CANCELAR</button>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[8px] font-black text-zinc-400 uppercase italic">Tipo</label>
+                                    <select value={sformFieldType} onChange={e => setSformFieldType(e.target.value)} className="w-full bg-white p-2.5 rounded-xl border border-zinc-100 outline-none font-medium text-xs mt-1">
+                                      <option value="text">Texto</option>
+                                      <option value="email">Email</option>
+                                      <option value="phone">Teléfono</option>
+                                      <option value="textarea">Área de texto</option>
+                                      <option value="number">Número</option>
+                                      <option value="date">Fecha</option>
+                                      <option value="select">Selección</option>
+                                      <option value="checkbox">Checkbox</option>
+                                      <option value="radio">Radio</option>
+                                      <option value="file">Archivo</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-[8px] font-black text-zinc-400 uppercase italic">Etiqueta</label>
+                                    <input type="text" value={sformFieldLabel} onChange={e => setSformFieldLabel(e.target.value)} placeholder="Ej. Nombre completo" className="w-full bg-white p-2.5 rounded-xl border border-zinc-100 outline-none font-medium text-xs mt-1" />
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="text-[8px] font-black text-zinc-400 uppercase italic">Placeholder</label>
+                                    <input type="text" value={sformFieldPlaceholder} onChange={e => setSformFieldPlaceholder(e.target.value)} placeholder="Ej. Escribe tu nombre..." className="w-full bg-white p-2.5 rounded-xl border border-zinc-100 outline-none font-medium text-xs mt-1" />
+                                  </div>
+                                  <div className="flex items-end pb-2">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="checkbox" checked={sformFieldRequired} onChange={e => setSformFieldRequired(e.target.checked)} className="w-4 h-4 accent-red-600 rounded" />
+                                      <span className="text-[9px] font-black text-zinc-500 uppercase italic">Campo obligatorio</span>
+                                    </label>
+                                  </div>
+                                </div>
+                                {["select", "checkbox", "radio"].includes(sformFieldType) && (
+                                  <div>
+                                    <label className="text-[8px] font-black text-zinc-400 uppercase italic">Opciones (una por línea)</label>
+                                    <textarea value={sformFieldOptions} onChange={e => setSformFieldOptions(e.target.value)} placeholder="Opción 1&#10;Opción 2&#10;Opción 3" className="w-full bg-white p-2.5 rounded-xl border border-zinc-100 outline-none font-medium text-xs mt-1 resize-none h-20" />
+                                  </div>
+                                )}
+                                <motion.button whileTap={{ scale: 0.95 }} onClick={() => {
+                                  if (!sformFieldLabel.trim()) { showToast("La etiqueta es obligatoria", "info"); return; }
+                                  const newField = {
+                                    id: editingSFormField === -1 ? Date.now() : smartFormFields[editingSFormField].id,
+                                    type: sformFieldType,
+                                    label: sformFieldLabel.trim(),
+                                    placeholder: sformFieldPlaceholder,
+                                    required: sformFieldRequired,
+                                    options: ["select", "checkbox", "radio"].includes(sformFieldType) ? sformFieldOptions.split("\n").map(o => o.trim()).filter(Boolean) : [],
+                                  };
+                                  let updated;
+                                  if (editingSFormField === -1) {
+                                    updated = [...smartFormFields, newField];
+                                  } else {
+                                    updated = smartFormFields.map((f, i) => i === editingSFormField ? newField : f);
+                                  }
+                                  setSmartFormFields(updated);
+                                  setEditingSFormField(null);
+                                  setSformFieldType("text");
+                                  setSformFieldLabel("");
+                                  setSformFieldPlaceholder("");
+                                  setSformFieldRequired(false);
+                                  setSformFieldOptions("");
+                                }} disabled={!sformFieldLabel.trim()} className="w-full py-3 bg-red-600 text-white rounded-xl font-black text-[10px] italic hover:bg-red-700 transition-all shadow-md disabled:opacity-50">
+                                  {editingSFormField === -1 ? "AGREGAR CAMPO" : "ACTUALIZAR CAMPO"}
+                                </motion.button>
+                              </div>
+                            )}
+
+                            {smartFormFields.length === 0 && editingSFormField === null ? (
+                              <div className="py-8 text-center italic font-black uppercase tracking-widest text-zinc-200 text-xs">No hay campos. Agrega tu primer campo.</div>
+                            ) : (
+                              <div className="space-y-2">
+                                {smartFormFields.map((field, i) => (
+                                  <div key={field.id} className="flex items-center justify-between p-3 bg-zinc-50 rounded-xl group/field">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className="flex flex-col gap-0.5">
+                                        <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                                          if (i === 0) return;
+                                          const updated = [...smartFormFields];
+                                          [updated[i-1], updated[i]] = [updated[i], updated[i-1]];
+                                          setSmartFormFields(updated);
+                                        }} disabled={i === 0} className="text-zinc-300 hover:text-zinc-600 disabled:opacity-30 p-0.5"><ChevronUp className="w-3 h-3" /></motion.button>
+                                        <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                                          if (i === smartFormFields.length - 1) return;
+                                          const updated = [...smartFormFields];
+                                          [updated[i], updated[i+1]] = [updated[i+1], updated[i]];
+                                          setSmartFormFields(updated);
+                                        }} disabled={i === smartFormFields.length - 1} className="text-zinc-300 hover:text-zinc-600 disabled:opacity-30 p-0.5"><ChevronDown className="w-3 h-3" /></motion.button>
+                                      </div>
+                                      <div>
+                                        <p className="text-xs font-bold italic text-zinc-700 truncate">{field.label}</p>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                          <span className="px-1.5 py-0.5 bg-zinc-200 text-zinc-500 rounded text-[7px] font-black uppercase italic">{field.type}</span>
+                                          {field.required && <span className="px-1.5 py-0.5 bg-rose-100 text-rose-600 rounded text-[7px] font-black uppercase italic">Req</span>}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover/field:opacity-100 transition-all">
+                                      <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                                        setSformFieldType(field.type);
+                                        setSformFieldLabel(field.label);
+                                        setSformFieldPlaceholder(field.placeholder || "");
+                                        setSformFieldRequired(field.required || false);
+                                        setSformFieldOptions((field.options || []).join("\n"));
+                                        setEditingSFormField(i);
+                                      }} className="p-1.5 text-zinc-300 hover:text-blue-500 transition-all"><Edit3 className="w-3 h-3" /></motion.button>
+                                      <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                                        setSmartFormFields(smartFormFields.filter((_, fi) => fi !== i));
+                                      }} className="p-1.5 text-zinc-300 hover:text-rose-500 transition-all"><Trash2 className="w-3 h-3" /></motion.button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {editingSFormField === null && (
+                              <motion.button whileTap={{ scale: 0.95 }} onClick={() => {
+                                setSformFieldType("text");
+                                setSformFieldLabel("");
+                                setSformFieldPlaceholder("");
+                                setSformFieldRequired(false);
+                                setSformFieldOptions("");
+                                setEditingSFormField(-1);
+                              }} className="w-full mt-3 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-black text-[10px] italic hover:bg-zinc-200 transition-all flex items-center justify-center gap-2">
+                                <Plus className="w-3.5 h-3.5" /> AÑADIR CAMPO
+                              </motion.button>
+                            )}
+                          </div>
+
+                          <button onClick={() => {
+                            if (!smartFormName.trim()) { showToast("El nombre del formulario es obligatorio", "info"); return; }
+                            if (smartFormFields.length === 0) { showToast("Agrega al menos un campo", "info"); return; }
+                            let updated;
+                            if (editingSmartForm) {
+                              updated = smartForms.map(f => f.id === editingSmartForm.id ? { ...f, name: smartFormName.trim(), description: smartFormDesc.trim(), fields: smartFormFields } : f);
+                            } else {
+                              updated = [...smartForms, { id: Date.now(), name: smartFormName.trim(), description: smartFormDesc.trim(), fields: smartFormFields, submissions: [], createdAt: new Date().toISOString() }];
+                            }
+                            setSmartForms(updated);
+                            persistStore(undefined, undefined, undefined, undefined, undefined, undefined, updated);
+                            setShowAddSmartForm(false);
+                            setEditingSmartForm(null);
+                            setSmartFormName("");
+                            setSmartFormDesc("");
+                            setSmartFormFields([]);
+                            showToast(editingSmartForm ? "Formulario actualizado" : "Formulario creado", "success");
+                          }} disabled={!smartFormName.trim() || smartFormFields.length === 0} className="w-full py-4 bg-red-600 text-white rounded-2xl font-black italic text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
+                            {editingSmartForm ? "ACTUALIZAR FORMULARIO" : "CREAR FORMULARIO"}
+                          </button>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Submissions Modal */}
+                <AnimatePresence>
+                  {showFormSubmissions && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 md:p-6" onClick={() => setShowFormSubmissions(null)}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-4xl bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setShowFormSubmissions(null)} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
+                        <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-2 uppercase tracking-tighter">{showFormSubmissions.name}</h3>
+                        <p className="text-[9px] md:text-[10px] font-bold text-zinc-400 italic mb-6">{(showFormSubmissions.submissions || []).length} respuestas</p>
+
+                        {(showFormSubmissions.submissions || []).length === 0 ? (
+                          <div className="py-12 text-center italic font-black uppercase tracking-widest text-zinc-200 text-sm">Sin respuestas aún</div>
+                        ) : (
+                          <div className="overflow-x-auto flex-1">
+                            <table className="w-full text-xs md:text-sm">
+                              <thead>
+                                <tr className="border-b border-zinc-100">
+                                  <th className="text-left py-2 px-2 font-black italic text-zinc-400 text-[9px] md:text-[10px] uppercase tracking-wider">#</th>
+                                  {(showFormSubmissions.fields || []).map((f: any) => (
+                                    <th key={f.id} className="text-left py-2 px-2 font-black italic text-zinc-400 text-[9px] md:text-[10px] uppercase tracking-wider whitespace-nowrap">{f.label}</th>
+                                  ))}
+                                  <th className="text-left py-2 px-2 font-black italic text-zinc-400 text-[9px] md:text-[10px] uppercase tracking-wider whitespace-nowrap">Fecha</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(showFormSubmissions.submissions || []).map((sub: any, i: number) => (
+                                  <tr key={sub.id} className="border-b border-zinc-50 hover:bg-zinc-50 transition-all">
+                                    <td className="py-2.5 px-2 font-bold text-zinc-400 italic">{i + 1}</td>
+                                    {(showFormSubmissions.fields || []).map((f: any) => (
+                                      <td key={f.id} className="py-2.5 px-2 font-medium text-zinc-700 max-w-[200px] truncate">{sub.data?.[f.id] || "-"}</td>
+                                    ))}
+                                    <td className="py-2.5 px-2 font-medium text-zinc-400 text-[10px] whitespace-nowrap">{new Date(sub.submittedAt).toLocaleDateString()}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Embed Modal */}
+                <AnimatePresence>
+                  {showFormEmbed && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 md:p-6" onClick={() => setShowFormEmbed(null)}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-lg bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setShowFormEmbed(null)} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
+                        <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-2 uppercase tracking-tighter">Embed <span className="text-red-600">{showFormEmbed.name}</span></h3>
+                        <p className="text-[9px] font-bold text-zinc-400 italic mb-6">Inserta este formulario en tu sitio web</p>
+                        <div className="space-y-5">
+                          <div className="bg-zinc-50 rounded-2xl p-4 space-y-3">
+                            <h4 className="text-[9px] font-black text-zinc-500 uppercase italic tracking-wider">Iframe</h4>
+                            <div className="relative">
+                              <pre className="bg-zinc-950 text-zinc-100 p-3 rounded-xl text-[9px] md:text-[10px] font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap">
+{`<iframe
+  src="${window.location.origin}/embed/form/${(userStore as any)?.slug || "tu-tienda"}/${showFormEmbed.id}"
+  style="width:100%;max-width:500px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);background:white;"
+  title="${showFormEmbed.name}"
+></iframe>`}
+                              </pre>
+                              <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                                const code = `<iframe\n  src="${window.location.origin}/embed/form/${(userStore as any)?.slug || "tu-tienda"}/${showFormEmbed.id}"\n  style="width:100%;max-width:500px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);background:white;"\n  title="${showFormEmbed.name}"\n></iframe>`;
+                                navigator.clipboard.writeText(code);
+                                showToast("Código iframe copiado", "success");
+                              }} className="absolute top-2 right-2 p-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all">
+                                <Copy className="w-3 h-3" />
+                              </motion.button>
+                            </div>
+                          </div>
+                          <div className="bg-zinc-50 rounded-2xl p-4 space-y-3">
+                            <h4 className="text-[9px] font-black text-zinc-500 uppercase italic tracking-wider">JavaScript</h4>
+                            <div className="relative">
+                              <pre className="bg-zinc-950 text-zinc-100 p-3 rounded-xl text-[9px] md:text-[10px] font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap">
+{`<div id="jandosoft-form-${showFormEmbed.id}"></div>
+<script>
+  (function() {
+    var container = document.getElementById('jandosoft-form-${showFormEmbed.id}');
+    if (!container) return;
+    var iframe = document.createElement('iframe');
+    iframe.src = '${window.location.origin}/embed/form/${(userStore as any)?.slug || "tu-tienda"}/${showFormEmbed.id}';
+    iframe.style.cssText = 'width:100%;max-width:500px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);background:white;';
+    iframe.title = '${showFormEmbed.name}';
+    container.appendChild(iframe);
+  })();
+</script>`}
+                              </pre>
+                              <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
+                                const code = `<div id="jandosoft-form-${showFormEmbed.id}"></div>\n<script>\n  (function() {\n    var container = document.getElementById('jandosoft-form-${showFormEmbed.id}');\n    if (!container) return;\n    var iframe = document.createElement('iframe');\n    iframe.src = '${window.location.origin}/embed/form/${(userStore as any)?.slug || "tu-tienda"}/${showFormEmbed.id}';\n    iframe.style.cssText = 'width:100%;max-width:500px;height:600px;border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);background:white;';\n    iframe.title = '${showFormEmbed.name}';\n    container.appendChild(iframe);\n  })();\n</script>`;
+                                navigator.clipboard.writeText(code);
+                                showToast("Código JS copiado", "success");
+                              }} className="absolute top-2 right-2 p-1.5 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all">
+                                <Copy className="w-3 h-3" />
+                              </motion.button>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Delete confirmation */}
+                <AnimatePresence>
+                  {confirmDeleteForm && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setConfirmDeleteForm(null)}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-sm bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setConfirmDeleteForm(null)} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
+                        <div className="text-center space-y-4">
+                          <div className="w-14 h-14 mx-auto bg-rose-100 rounded-2xl flex items-center justify-center text-rose-600">
+                            <AlertTriangle className="w-7 h-7" />
+                          </div>
+                          <h3 className="text-xl font-black italic text-zinc-950 uppercase tracking-tighter">¿Eliminar formulario?</h3>
+                          <p className="text-sm text-zinc-500 font-medium">Se eliminará "{confirmDeleteForm.name}" y todas sus respuestas ({confirmDeleteForm.submissions?.length || 0}). Esta acción no se puede deshacer.</p>
+                          <div className="flex gap-3 pt-2">
+                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => setConfirmDeleteForm(null)} className="flex-1 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-black text-xs italic hover:bg-zinc-200 transition-all">
+                              CANCELAR
+                            </motion.button>
+                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => {
+                              const updated = smartForms.filter(f => f.id !== confirmDeleteForm.id);
+                              setSmartForms(updated);
+                              persistStore(undefined, undefined, undefined, undefined, undefined, undefined, updated);
+                              setConfirmDeleteForm(null);
+                              showToast("Formulario eliminado", "success");
+                            }} className="flex-1 py-3 bg-rose-600 text-white rounded-xl font-black text-xs italic hover:bg-rose-700 transition-all shadow-md">
+                              ELIMINAR
+                            </motion.button>
+                          </div>
                         </div>
                       </motion.div>
                     </motion.div>
@@ -970,15 +2026,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                                 <option value="send_notification">Notificación en app</option>
                                 <option value="webhook">Webhook (HTTP request)</option>
                               </optgroup>
-                              <optgroup label="Integraciones">
-                                <option value="ai_generate">IA Generar texto (OpenAI/Anthropic)</option>
-                                <option value="send_telegram">Enviar a Telegram</option>
-                                <option value="send_discord">Enviar a Discord</option>
-                                <option value="send_slack">Enviar a Slack</option>
-                                <option value="send_whatsapp">Enviar WhatsApp</option>
-                                <option value="send_sms">Enviar SMS (Twilio)</option>
-                                <option value="post_to_social">Publicar en redes sociales</option>
-                              </optgroup>
+
                             </select>
                           </div>
 
@@ -1041,36 +2089,6 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                             </>
                           )}
 
-                          {automationForm.actionType === "send_whatsapp" && (
-                            <>
-                              <div>
-                                <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Número de destino</label>
-                                <input type="text" placeholder="Ej. 521234567890" value={automationForm.actionConfig.to || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, to: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
-                              </div>
-                              <div>
-                                <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Mensaje</label>
-                                <textarea placeholder="Ej. ¡Gracias por tu compra!" value={automationForm.actionConfig.message || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, message: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-sm" />
-                              </div>
-                            </>
-                          )}
-
-                          {automationForm.actionType === "send_sms" && (
-                            <>
-                              <div>
-                                <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Número origen (Twilio)</label>
-                                <input type="text" placeholder="Ej. +15017122661" value={automationForm.actionConfig.from || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, from: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
-                              </div>
-                              <div>
-                                <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Número destino</label>
-                                <input type="text" placeholder="Ej. +521234567890" value={automationForm.actionConfig.to || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, to: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
-                              </div>
-                              <div>
-                                <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Mensaje</label>
-                                <textarea placeholder="Ej. Tu pedido está en camino" value={automationForm.actionConfig.message || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, message: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-sm" />
-                              </div>
-                            </>
-                          )}
-
                           {automationForm.actionType === "post_to_social" && (
                             <>
                               <div>
@@ -1096,7 +2114,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                             persistStore(undefined, undefined, undefined, undefined, newAutomations);
                             setShowAddAutomation(false);
                             setEditingAutomation(null);
-                          }} disabled={!automationForm.name || (automationForm.actionType === "webhook" && !automationForm.actionConfig.webhookUrl) || (automationForm.actionType === "send_telegram" && !automationForm.actionConfig.chatId) || (automationForm.actionType === "send_slack" && !automationForm.actionConfig.channel) || (automationForm.actionType === "send_whatsapp" && !automationForm.actionConfig.to) || (automationForm.actionType === "send_sms" && (!automationForm.actionConfig.from || !automationForm.actionConfig.to))} className="w-full py-4 md:py-5 bg-red-600 text-white rounded-2xl font-black italic text-sm md:text-base hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
+                          }} disabled={!automationForm.name || (automationForm.actionType === "webhook" && !automationForm.actionConfig.webhookUrl) || (automationForm.actionType === "send_telegram" && !automationForm.actionConfig.chatId) || (automationForm.actionType === "send_slack" && !automationForm.actionConfig.channel)} className="w-full py-4 md:py-5 bg-red-600 text-white rounded-2xl font-black italic text-sm md:text-base hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
                             {editingAutomation ? "ACTUALIZAR REGLA" : "CREAR REGLA"}
                           </button>
                         </div>
@@ -1453,8 +2471,10 @@ function StripeConnectPanel({ storeId, userStore, userEmail }: { storeId: string
     } catch {}
   };
 
+  const [showStripeDisconnectModal, setShowStripeDisconnectModal] = useState(false);
+
   const disconnectStripe = async () => {
-    if (!confirm("¿Desconectar Stripe? Se eliminará la cuenta conectada y se desactivarán los pagos.")) return;
+    setShowStripeDisconnectModal(false);
     setLoading(true);
     try {
       const res = await fetch("/api/stripe/disconnect", {
@@ -1572,10 +2592,24 @@ function StripeConnectPanel({ storeId, userStore, userEmail }: { storeId: string
                   </motion.button>
                 )}
 
-                <motion.button whileTap={{ scale: 0.95 }} onClick={disconnectStripe} disabled={loading} className="w-full py-3 md:py-4 bg-rose-50 text-rose-600 border border-rose-200 rounded-2xl font-black text-[9px] md:text-xs italic hover:bg-rose-100 transition-all flex items-center justify-center gap-2">
+                <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowStripeDisconnectModal(true)} disabled={loading} className="w-full py-3 md:py-4 bg-rose-50 text-rose-600 border border-rose-200 rounded-2xl font-black text-[9px] md:text-xs italic hover:bg-rose-100 transition-all flex items-center justify-center gap-2">
                   <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
                   DESCONECTAR
                 </motion.button>
+
+                {showStripeDisconnectModal && (
+                  <div className="bg-rose-50 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-rose-200 space-y-3 md:space-y-4 text-center">
+                    <p className="text-xs md:text-sm font-black italic text-rose-700">¿Desconectar Stripe? Se eliminará la cuenta conectada y se desactivarán los pagos.</p>
+                    <div className="flex gap-3 md:gap-4 justify-center">
+                      <button onClick={() => setShowStripeDisconnectModal(false)} className="px-5 md:px-8 py-2.5 md:py-3 bg-white text-zinc-700 rounded-xl font-black text-[10px] md:text-xs italic border border-zinc-200">
+                        CANCELAR
+                      </button>
+                      <button onClick={disconnectStripe} className="px-5 md:px-8 py-2.5 md:py-3 bg-rose-600 text-white rounded-xl font-black text-[10px] md:text-xs italic hover:bg-rose-700">
+                        DESCONECTAR
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1790,6 +2824,7 @@ function BusinessAI({ agentName, store, products, setProducts, customers, setCus
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [aiContacts, setAiContacts] = useState<any[]>([]);
   const [aiConversations, setAiConversations] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Load messaging data for AI context
@@ -1808,6 +2843,20 @@ function BusinessAI({ agentName, store, products, setProducts, customers, setCus
     };
     load();
   }, []);
+
+  // Load appointments for AI context
+  useEffect(() => {
+    const storeId = (store as any)?._id;
+    if (!storeId) return;
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/appointments?storeId=${storeId}&limit=50`);
+        const data = await res.json();
+        setAppointments(data.appointments || []);
+      } catch {}
+    };
+    load();
+  }, [store]);
 
   // Scroll detection
   useEffect(() => {
@@ -1841,7 +2890,7 @@ function BusinessAI({ agentName, store, products, setProducts, customers, setCus
         }
       }
     } catch {}
-    setMessages([{ role: "bot", content: `¡Hola! Soy el agente IA de ${agentName || "tu negocio"}. Puedo ayudarte a gestionar productos, clientes y pedidos. Solo dime qué necesitas crear, modificar o eliminar.`, timestamp: Date.now() }]);
+    setMessages([{ role: "bot", content: `¡Hola! Soy el agente IA de ${agentName || "tu negocio"}. Puedo ayudarte a gestionar productos, clientes, pedidos y citas. Solo dime qué necesitas crear, modificar o eliminar.`, timestamp: Date.now() }]);
     setLoaded(true);
   }, [storageKey, agentName]);
 
@@ -1883,10 +2932,14 @@ function BusinessAI({ agentName, store, products, setProducts, customers, setCus
   const contactsStr = aiContacts.map((c: any) => `${c.contactName} (${c.contactEmail})`).join(", ");
   const storeConfig = store ? `\n\nCONFIGURACIÓN DE LA TIENDA:\n- Tipo: ${store.type || "No definido"}\n- Industria: ${store.industry || "No definida"}\n- Descripción: ${store.desc || "Sin descripción"}\n- Slug: ${store.slug || "Sin slug"}\n- URL pública: ${store.slug ? window.location.origin + "/s/" + store.slug : "N/A"}\n- Tienda pública: ${store.isPublic ? "Sí" : "No"}\n- IA pública: ${store.publicAI ? "Sí" : "No"}\n- Imagen: ${store.image ? "Tiene imagen" : "Sin imagen"}\n- Moneda: ${store.currency || "USD"}\n- Stripe Connect: ${store.stripeAccountId ? "Conectado" : "No conectado"}\n- Pagos habilitados: ${store.paymentsEnabled ? "Sí" : "No"}\n- Comisión de plataforma: ${store.platformFeePercent ?? 5}%` : "";
 
+  const appointmentsStr = appointments.map((a: any) =>
+    `  - ${a.date} ${a.time} | ${a.customerInfo?.name || "Sin nombre"} | ${a.service?.name || "Sin servicio"} | ${a.status}`
+  ).join("\n");
+
   const contextInfo = `DATOS ACTUALES:\nProductos (${products.length}): ${productsStr || "ninguno"}\nClientes (${customers.length}): ${customersStr || "ninguno"}\nPedidos (${orders.length}): ${ordersStr || "ninguno"}\nVentas totales: $${totalSales}${storeConfig}\n\nBASE DE CONOCIMIENTO (${kbEntries.length} entradas):\n${kbStr || "No hay entradas en la base de conocimiento."}\n\nAUTOMATIZACIONES ACTIVAS (${automations.filter((a: any) => a.enabled).length}):\n${autoStr || "No hay automatizaciones activas."}\n\nCONTACTOS (${aiContacts.length}): ${contactsStr || "No hay contactos guardados. Puedes añadir contactos con la acción addContact."}\n\nCONVERSACIONES RECIENTES (${aiConversations.length}):\n${aiConversations.map((c: any) => {
     const other = c.participants?.find((p: any) => p.email !== c.lastSenderId) || c.participants?.[0];
     return `- ${other?.name || "Usuario"}: ${c.lastMessage || "Sin mensajes"}`;
-  }).join("\n") || "No hay conversaciones."}\n\nPuedes consultar la base de conocimiento, automatizaciones, contactos y conversaciones para responder preguntas del usuario. También puedes sugerir añadir, modificar o eliminar entradas de KB y automatizaciones usando los actions correspondientes. Puedes enviar mensajes a otros usuarios usando la acción sendMessage y añadir contactos con addContact.`;
+  }).join("\n") || "No hay conversaciones."}\n\nCITAS (${appointments.length}):\n${appointmentsStr || "  No hay citas agendadas."}\n\nPuedes consultar la base de conocimiento, automatizaciones, contactos, conversaciones y citas para responder preguntas del usuario. También puedes sugerir añadir, modificar o eliminar entradas de KB, automatizaciones y citas usando los actions correspondientes. Puedes enviar mensajes a otros usuarios usando la acción sendMessage y añadir contactos con addContact.`;
 
   const executeActions = (actions: any[]) => {
     let newProducts = [...products];
@@ -1894,6 +2947,7 @@ function BusinessAI({ agentName, store, products, setProducts, customers, setCus
     let newOrders = [...orders];
     let newKbEntries = [...kbEntries];
     let newAutomations = [...automations];
+    let newAppointments = [...appointments];
     let result = "";
     let _uid = Date.now();
     const uid = () => ++_uid;
@@ -1999,6 +3053,66 @@ function BusinessAI({ agentName, store, products, setProducts, customers, setCus
             }
           })();
           break;
+        case "addAppointment":
+          (async () => {
+            const storeId = (store as any)?._id;
+            if (!storeId) { result += "⚠️ Error: ID de tienda no disponible. "; return; }
+            try {
+              const res = await fetch("/api/appointments", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  storeId,
+                  customerInfo: { name: action.customerName || "", email: action.customerEmail || "", phone: action.customerPhone || "" },
+                  service: { id: 0, name: action.serviceName || "General", price: action.servicePrice || 0, duration: action.duration || 60 },
+                  date: action.date,
+                  time: action.time,
+                  duration: action.duration || 60,
+                  notes: action.notes || "",
+                  status: action.status || "pending",
+                }),
+              });
+              const data = await res.json();
+              if (data.appointment) {
+                newAppointments = [...newAppointments, data.appointment];
+                result += `✅ Cita agendada para ${action.customerName} el ${action.date} a las ${action.time}. `;
+              } else { result += `⚠️ Error al crear cita. `; }
+            } catch { result += `⚠️ Error al crear cita. `; }
+          })();
+          break;
+        case "updateAppointment":
+          (async () => {
+            const id = action.id;
+            if (!id) { result += "⚠️ Error: ID de cita requerido. "; return; }
+            try {
+              const res = await fetch(`/api/appointments/${id}`, {
+                method: "PUT", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(action.data || {}),
+              });
+              const data = await res.json();
+              if (data.appointment) {
+                newAppointments = newAppointments.map((a: any) => a._id === id ? data.appointment : a);
+                result += `✏️ Cita actualizada. `;
+              } else { result += `⚠️ Error al actualizar cita. `; }
+            } catch { result += `⚠️ Error al actualizar cita. `; }
+          })();
+          break;
+        case "cancelAppointment":
+          (async () => {
+            const id = action.id;
+            if (!id) { result += "⚠️ Error: ID de cita requerido. "; return; }
+            try {
+              const res = await fetch(`/api/appointments/${id}`, {
+                method: "PUT", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "cancelled" }),
+              });
+              const data = await res.json();
+              if (data.appointment) {
+                newAppointments = newAppointments.map((a: any) => a._id === id ? data.appointment : a);
+                result += `🗑️ Cita cancelada. `;
+              } else { result += `⚠️ Error al cancelar cita. `; }
+            } catch { result += `⚠️ Error al cancelar cita. `; }
+          })();
+          break;
       }
     }
     setProducts(newProducts);
@@ -2006,6 +3120,7 @@ function BusinessAI({ agentName, store, products, setProducts, customers, setCus
     setOrders(newOrders);
     setKbEntries(newKbEntries);
     setAutomations(newAutomations);
+    setAppointments(newAppointments);
     return { result, newProducts, newCustomers, newOrders, newKbEntries, newAutomations };
   };
 
@@ -2016,12 +3131,8 @@ function BusinessAI({ agentName, store, products, setProducts, customers, setCus
     setInput("");
     setIsLoading(true);
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [
-            { role: "system", content: `Eres un asistente IA experto en gestión de negocios y en la plataforma Jandosoft. Ayudas al usuario a administrar su negocio "${agentName}" dentro de Jandosoft.
+      const ac = (store as any)?.agentConfig || {};
+      const defaultSystem = `Eres un asistente IA experto en gestión de negocios y en la plataforma Jandosoft. Ayudas al usuario a administrar su negocio "${agentName}" dentro de Jandosoft.
 
 ${contextInfo}
 
@@ -2045,7 +3156,10 @@ Puedes MODIFICAR los datos del negocio actual. Para ello, incluye al final de tu
   {"type":"deleteKbEntry","id":1},
   {"type":"updateKbEntry","id":1,"data":{"title":"Nuevo título","content":"Nuevo contenido","category":"faq"}},
   {"type":"sendMessage","to":"email@usuario.com","content":"Mensaje a enviar"},
-  {"type":"addContact","email":"email@usuario.com"}
+  {"type":"addContact","email":"email@usuario.com"},
+  {"type":"addAppointment","customerName":"Juan","customerEmail":"j@e.com","customerPhone":"123","serviceName":"Consulta","servicePrice":50,"date":"2026-06-17","time":"15:00","duration":60,"notes":"Nota opcional"},
+  {"type":"updateAppointment","id":"ID_DE_CITA","data":{"date":"2026-06-18","time":"16:00","status":"confirmed","notes":"Actualizada"}},
+  {"type":"cancelAppointment","id":"ID_DE_CITA"}
 ]}
 \`\`\`
 
@@ -2057,15 +3171,30 @@ REGLAS:
 - Si el usuario pide modificar datos, genera el JSON y explícale qué hiciste.
 - Responde en español profesional y amigable.
 - Si ves que falta configuración importante (Stripe no conectado, tienda no pública, etc.), sugiere amablemente cómo mejorarlo.
+- Puedes gestionar citas/agenda: crear (addAppointment), modificar (updateAppointment) y cancelar (cancelAppointment). Usa fechas implícitas ("mañana", "próximo lunes") sin preguntar de más.
 
 LÍMITES ÉTICOS:
 - NO compartas, repitas ni expongas información personal de los clientes (emails, teléfonos, nombres completos) a menos que el usuario sea el dueño del negocio y esté consultando sus propios datos.
 - NO des consejos financieros, contables, legales ni médicos. Si te preguntan, recomienda consultar a un profesional.
 - NO generes contenido ofensivo, discriminatorio, engañoso o inapropiado.
 - NO inventes transacciones, productos o clientes que no existan en el contexto.
-- Si el usuario pide algo fuera del alcance de la gestión del negocio, responde amablemente que no puedes ayudar con eso y sugiere algo relacionado al negocio.` },
+- Si el usuario pide algo fuera del alcance de la gestión del negocio, responde amablemente que no puedes ayudar con eso y sugiere algo relacionado al negocio.`;
+
+      const systemContent = ac.systemPrompt
+        ? `${ac.systemPrompt}\n\n${contextInfo}\n\nIMPORTANTE - Puedes MODIFICAR los datos del negocio actual. Para ello, incluye al final de tu respuesta un bloque JSON con las acciones a ejecutar, usando el formato estandar de Jandosoft.\n\nREGLAS:\n- Siempre confirma con el usuario ANTES de eliminar algo.\n- Después de crear algo, confirma el nombre y nuevo ID en tu mensaje.\n- Precios y montos en dólares.\n- No inventes datos que no existan en el contexto.\n- Si el usuario pide modificar datos, genera el JSON y explícale qué hiciste.\n- Responde en español profesional y amigable.\n\nLÍMITES ÉTICOS:\n- NO compartas, repitas ni expongas información personal de los clientes (emails, teléfonos, nombres completos) a menos que el usuario sea el dueño del negocio y esté consultando sus propios datos.\n- NO des consejos financieros, contables, legales ni médicos.\n- NO generes contenido ofensivo, discriminatorio, engañoso o inapropiado.\n- NO inventes transacciones, productos o clientes que no existan en el contexto.`
+        : defaultSystem;
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            { role: "system", content: systemContent },
             ...messages.concat(userMsg).map(m => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }))
-          ]
+          ],
+          overrideSystem: true,
+          model: ac.model ? `openai/${ac.model}` : undefined,
+          temperature: ac.temperature,
         })
       });
       const data = await response.json();
