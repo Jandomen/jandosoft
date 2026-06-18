@@ -77,6 +77,109 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "create_appointment",
+      description: "Create a new appointment. Only customerName, date and time are required — everything else has defaults. Use implied dates (ej. 'mañana' = tomorrow, 'próximo lunes' = next Monday) without asking.",
+      parameters: {
+        type: "object",
+        properties: {
+          customerName: { type: "string", description: "Customer name (required)" },
+          customerEmail: { type: "string", description: "Customer email (opcional)" },
+          customerPhone: { type: "string", description: "Customer phone (opcional)" },
+          serviceName: { type: "string", description: "Service name (default: 'General')" },
+          servicePrice: { type: "number", description: "Service price in dollars (default: 0)" },
+          date: { type: "string", description: "Date in YYYY-MM-DD format" },
+          time: { type: "string", description: "Time in HH:MM format" },
+          duration: { type: "number", description: "Duration in minutes (default: 60)" },
+          notes: { type: "string", description: "Optional notes" },
+        },
+        required: ["customerName", "date", "time"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_appointment",
+      description: "Update an existing appointment's date, time, status, or notes",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentId: { type: "string", description: "Appointment ID" },
+          date: { type: "string", description: "New date YYYY-MM-DD (optional)" },
+          time: { type: "string", description: "New time HH:MM (optional)" },
+          status: { type: "string", enum: ["pending", "confirmed", "in_progress", "completed", "cancelled"], description: "New status (optional)" },
+          notes: { type: "string", description: "New notes (optional)" },
+        },
+        required: ["appointmentId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "cancel_appointment",
+      description: "Cancel an appointment by setting its status to cancelled",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentId: { type: "string", description: "Appointment ID to cancel" },
+        },
+        required: ["appointmentId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_email",
+      description: "Send an email to any recipient. If content is provided, it's used as-is. template is only used when no custom content is given.",
+      parameters: {
+        type: "object",
+        properties: {
+          to: { type: "string", description: "Recipient email address" },
+          subject: { type: "string", description: "Email subject line" },
+          content: { type: "string", description: "Custom HTML content. Si se envía content, NO incluir template." },
+          template: { type: "string", enum: ["", "welcome", "verification", "password-reset", "invoice", "appointment-reminder", "payment-confirmation", "order-confirmation", "new-client", "payment-received", "campaign"], description: "Predefined template (solo usar si no hay content personalizado)" },
+          templateParams: { type: "object", description: "Parameters for the template (e.g. userName, token, customerName, date, time, amount, etc.)", properties: {
+            userName: { type: "string" },
+            token: { type: "string" },
+            customerName: { type: "string" },
+            customerEmail: { type: "string" },
+            customerPhone: { type: "string" },
+            serviceName: { type: "string" },
+            date: { type: "string" },
+            time: { type: "string" },
+            notes: { type: "string" },
+            amount: { type: "number" },
+            currency: { type: "string" },
+            invoiceNumber: { type: "string" },
+            storeName: { type: "string" },
+            description: { type: "string" },
+            items: { type: "array", items: { type: "string" } },
+          } },
+        },
+        required: ["to", "subject"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_appointments",
+      description: "List appointments with optional date or status filters",
+      parameters: {
+        type: "object",
+        properties: {
+          date: { type: "string", description: "Filter by date YYYY-MM-DD (optional)" },
+          status: { type: "string", enum: ["pending", "confirmed", "in_progress", "completed", "cancelled"], description: "Filter by status (optional)" },
+          limit: { type: "number", description: "Max results to return (default 20)" },
+        },
+      },
+    },
+  },
 ];
 
 async function callLLM(messages: any[], tools?: any[]) {
@@ -197,6 +300,145 @@ async function executeTool(toolCall: any, store: any, userId: string) {
     return { success: true, message: `Tienda "${args.name}" actualizada con éxito` };
   }
 
+  if (name === "create_appointment") {
+    const storeId = store?._id || store?.id;
+    if (!storeId) return { error: "No store selected" };
+    const { connectDB } = await import("@/lib/mongodb");
+    const { Appointment } = await import("@/lib/models/Appointment");
+    await connectDB();
+    const appointment = await Appointment.create({
+      storeId,
+      customerInfo: {
+        name: args.customerName,
+        email: args.customerEmail || "",
+        phone: args.customerPhone || "",
+      },
+      service: {
+        id: 0,
+        name: args.serviceName || "General",
+        price: args.servicePrice || 0,
+        duration: args.duration || 60,
+      },
+      date: args.date,
+      time: args.time,
+      duration: args.duration || 60,
+      notes: args.notes || "",
+      status: "pending",
+      createdBy: "owner",
+    });
+    return { success: true, message: `Cita creada: ${args.customerName} el ${args.date} a las ${args.time}`, appointmentId: appointment._id };
+  }
+
+  if (name === "update_appointment") {
+    const { connectDB } = await import("@/lib/mongodb");
+    const { Appointment } = await import("@/lib/models/Appointment");
+    await connectDB();
+    const update: any = {};
+    if (args.date) update.date = args.date;
+    if (args.time) update.time = args.time;
+    if (args.status) update.status = args.status;
+    if (args.notes !== undefined) update.notes = args.notes;
+    const updated = await Appointment.findByIdAndUpdate(args.appointmentId, { $set: update }, { new: true }).lean();
+    if (!updated) return { error: `Cita con ID ${args.appointmentId} no encontrada` };
+    return { success: true, message: `Cita actualizada correctamente` };
+  }
+
+  if (name === "cancel_appointment") {
+    const { connectDB } = await import("@/lib/mongodb");
+    const { Appointment } = await import("@/lib/models/Appointment");
+    await connectDB();
+    const updated = await Appointment.findByIdAndUpdate(args.appointmentId, { $set: { status: "cancelled" } }, { new: true }).lean();
+    if (!updated) return { error: `Cita con ID ${args.appointmentId} no encontrada` };
+    return { success: true, message: `Cita cancelada correctamente` };
+  }
+
+  if (name === "list_appointments") {
+    const storeId = store?._id || store?.id;
+    if (!storeId) return { error: "No store selected" };
+    const { connectDB } = await import("@/lib/mongodb");
+    const { Appointment } = await import("@/lib/models/Appointment");
+    await connectDB();
+    const filter: any = { storeId };
+    if (args.date) filter.date = args.date;
+    if (args.status) filter.status = args.status;
+    const appointments = await Appointment.find(filter)
+      .sort({ date: 1, time: 1 })
+      .limit(args.limit || 20)
+      .lean();
+    return {
+      success: true,
+      appointments: appointments.map((a: any) => ({
+        id: a._id,
+        customer: a.customerInfo.name,
+        service: a.service?.name,
+        date: a.date,
+        time: a.time,
+        duration: a.duration,
+        status: a.status,
+        notes: a.notes,
+      })),
+      count: appointments.length,
+    };
+  }
+
+  if (name === "send_email") {
+    const { sendEmail } = await import("@/lib/email");
+    const { connectDB } = await import("@/lib/mongodb");
+    const { EmailLog } = await import("@/lib/models/EmailLog");
+    const {
+      welcomeEmailHtml,
+      passwordResetEmailHtml,
+      verificationEmailHtml,
+      invoiceEmailHtml,
+      appointmentReminderEmailHtml,
+      paymentConfirmationEmailHtml,
+      orderConfirmationEmailHtml,
+      newClientNotificationEmailHtml,
+      paymentReceivedNotificationEmailHtml,
+      campaignEmailHtml,
+    } = await import("@/lib/email-templates");
+
+    const TEMPLATES: Record<string, (p: any) => string> = {
+      welcome: (p) => welcomeEmailHtml(p.userName),
+      "password-reset": (p) => passwordResetEmailHtml(p.token),
+      verification: (p) => verificationEmailHtml(p.token, p.userName),
+      invoice: (p) => invoiceEmailHtml(p),
+      "appointment-reminder": (p) => appointmentReminderEmailHtml(p),
+      "payment-confirmation": (p) => paymentConfirmationEmailHtml(p),
+      "order-confirmation": (p) => orderConfirmationEmailHtml(p),
+      "new-client": (p) => newClientNotificationEmailHtml(p),
+      "payment-received": (p) => paymentReceivedNotificationEmailHtml(p),
+      campaign: (p) => campaignEmailHtml(p),
+    };
+
+    let html: string;
+    if (args.content) {
+      html = args.content;
+    } else if (args.template && TEMPLATES[args.template]) {
+      html = TEMPLATES[args.template](args.templateParams || {});
+    } else {
+      return { error: "Debes proporcionar content o un template válido" };
+    }
+
+    const { User } = await import("@/lib/models/User");
+    await connectDB();
+    const user = await User.findById(userId);
+    const result = await sendEmail({ to: args.to, subject: args.subject, html });
+    await EmailLog.create({
+      to: args.to,
+      subject: args.subject,
+      messageId: result.messageId,
+      status: result.success ? "sent" : "failed",
+      organizationId: user?.organizationId || "unknown",
+      error: result.error,
+    });
+
+    if (!result.success) {
+      return { error: `Error al enviar correo: ${result.error}` };
+    }
+    return { success: true, message: `Correo enviado a ${args.to}: "${args.subject}"` };
+  }
+
   return { error: `Unknown tool: ${name}` };
 }
 
@@ -270,13 +512,19 @@ export async function askBusinessAI({
     servicesList || "  (ninguno)",
   ].join("\n") : "No hay información de configuración disponible.";
 
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("es-MX", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const timeStr = now.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+
   const role = store?._generic
     ? "Eres el asistente oficial de Jandosoft, una plataforma para crear y gestionar tiendas en línea."
     : storeExists
     ? `Eres el asistente oficial de ${store.name}, un negocio en la plataforma Jandosoft.`
     : "Eres el asistente oficial de Jandosoft, una plataforma para crear y gestionar tiendas en línea.";
 
-  const systemPrompt = `${role}
+  const systemPrompt = `HOY ES: ${dateStr}. HORA ACTUAL: ${timeStr}.
+
+${role}
 
 CONFIGURACIÓN ACTUAL DE LA TIENDA:
 ${storeConfig}
@@ -347,6 +595,31 @@ export async function askBusinessAIWithTools({
   else if (nearProductLimit) limitWarnings.push("⚠️ ADVERTENCIA: Estás usando más del 80% de tu límite de productos.");
   if (sub?.expiry && new Date(sub.expiry) < new Date()) limitWarnings.push("⚠️ TU SUSCRIPCIÓN ESTÁ VENCIDA. Renueva para seguir usando funciones premium.");
 
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("es-MX", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const timeStr = now.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+
+  let appointmentsCount = 0;
+  let appointmentsList = "";
+  try {
+    const storeId = store?._id || store?.id;
+    if (storeId) {
+      const { connectDB } = await import("@/lib/mongodb");
+      const { Appointment: AppointmentModel } = await import("@/lib/models/Appointment");
+      await connectDB();
+      const appointments = await AppointmentModel.find({ storeId })
+        .sort({ date: 1, time: 1 })
+        .limit(50)
+        .lean();
+      appointmentsCount = appointments.length;
+      appointmentsList = appointments.map((a: any) =>
+        `  - ${a.customerInfo?.name || "Sin nombre"} | ${a.service?.name || "Sin servicio"} | ${a.date} ${a.time} | ${a.status}`
+      ).join("\n");
+    }
+  } catch (e) {
+    // appointments not available
+  }
+
   const userStoresList = store?._stores?.length
     ? (store._stores || []).map((s: any) =>
         `  - ${s.name}${s.slug ? ` (${s.slug})` : ""} — ${s.productsCount} productos`
@@ -383,6 +656,9 @@ export async function askBusinessAIWithTools({
     ``,
     `SERVICIOS (${servicesCount}):`,
     servicesList || "  (ninguno)",
+    ``,
+    `CITAS (${appointmentsCount}):`,
+    appointmentsList || "  (ninguna)",
   ].join("\n") : (store?._generic ? [
     `SUSCRIPCIÓN: ${(sub?.plan || "free").toUpperCase()}`,
     `Límite de tiendas: ${sub?.maxStores || "—"}`,
@@ -400,12 +676,18 @@ export async function askBusinessAIWithTools({
     ? `Eres el asistente oficial de ${store.name}, un negocio en la plataforma Jandosoft.`
     : "Eres el asistente oficial de Jandosoft, una plataforma para crear y gestionar tiendas en línea.";
 
-  const systemPrompt = `${role}
+  const systemPrompt = `HOY ES: ${dateStr}. HORA ACTUAL: ${timeStr}.
+
+${role}
 
 CONFIGURACIÓN ACTUAL DE LA TIENDA:
 ${storeConfig}
 
-Tienes acceso a herramientas para ejecutar acciones directamente: crear productos, eliminar productos, crear tiendas, eliminar tiendas y modificar tiendas.
+Tienes acceso a herramientas para ejecutar acciones directamente: crear productos, eliminar productos, crear tiendas, eliminar tiendas, modificar tiendas, gestionar citas (crear, modificar, cancelar, listar), y ENVIAR CORREOS ELECTRÓNICOS con contenido personalizado o usando plantillas predefinidas (welcome, verification, password-reset, invoice, appointment-reminder, payment-confirmation, order-confirmation, new-client, payment-received, campaign).
+
+IMPORTANTE — CREAR CITAS: Solo necesitas el nombre del cliente, fecha y hora. Todo lo demás (servicio, email, teléfono, duración, notas) tiene valores por defecto. Si el usuario dice "mañana", "próximo lunes", "en 2 horas", etc., interpreta la fecha/hora implícita y CREA la cita sin pedir más datos. No preguntes de más — usa sentido común.
+
+IMPORTANTE — ENVIAR CORREOS: Si el usuario te pide contenido personalizado, usa el campo content con HTML propio. NO uses template si ya escribiste content personalizado. El campo template solo es para cuando NO hay contenido personalizado.
 
 El usuario está usando la interfaz de línea de comandos (CLI) de Jandosoft. Cuando te pida hacer algo, USA LA HERRAMIENTA correspondiente para hacerlo realidad. NO te limites a sugerir — EJECUTA la acción directamente.
 

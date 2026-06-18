@@ -26,6 +26,7 @@ export interface IService {
   name: string;
   desc: string;
   price: number;
+  duration?: number;
 }
 
 export interface IStore extends Document {
@@ -78,6 +79,7 @@ const ServiceSchema = new Schema<IService>({
   name: { type: String, required: true },
   desc: { type: String, default: "" },
   price: { type: Number, required: true },
+  duration: { type: Number, default: 60 },
 }, { _id: false });
 
 const StoreSchema = new Schema<IStore>({

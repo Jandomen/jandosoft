@@ -1,16 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Store } from "@/lib/models/Store";
+import { User } from "@/lib/models/User";
 import { stripe } from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
   try {
-    const { storeId, items, amount, currency, customerEmail, customerName, description } = await req.json();
+    const { storeId, items, amount, currency, customerEmail, customerName, description, priceId, planId } = await req.json();
     if (!customerEmail) {
       return NextResponse.json({ error: "customerEmail required" }, { status: 400 });
     }
 
-    // Support both single-item (legacy) and multi-item (cart) checkout
+    const baseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
+
+    if (priceId) {
+      await connectDB();
+      let user = await User.findOne({ email: customerEmail });
+      let stripeCustomerId = user?.stripeCustomerId;
+
+      if (!stripeCustomerId) {
+        const customer = await stripe.customers.create({
+          email: customerEmail,
+          name: customerName || undefined,
+          metadata: { userId: user?._id?.toString() || "" },
+        });
+        stripeCustomerId = customer.id;
+        if (user) {
+          await User.findByIdAndUpdate(user._id, { stripeCustomerId });
+        }
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        payment_method_types: ["card"],
+        line_items: [{ price: priceId, quantity: 1 }],
+        customer: stripeCustomerId,
+        success_url: `${baseUrl}/?stripe_success={CHECKOUT_SESSION_ID}&plan=${planId}`,
+        cancel_url: `${baseUrl}/?stripe_cancel=1`,
+        metadata: {
+          customerEmail,
+          planId: planId || "",
+          planName: description || "",
+        },
+        subscription_data: {
+          metadata: {
+            customerEmail,
+            planId: planId || "",
+          },
+        },
+      });
+
+      return NextResponse.json({ url: session.url, sessionId: session.id });
+    }
+
     let totalAmount = amount;
     let itemsList = items;
     let desc = description;
@@ -27,7 +69,30 @@ export async function POST(req: NextRequest) {
 
     const amountInCents = Math.round(totalAmount * 100);
 
-    // If storeId provided, use Stripe Connect (transfer to store)
+    const sessionParams: any = {
+      mode: "payment",
+      payment_method_types: ["card"],
+      line_items: [{
+        price_data: {
+          currency: (currency || "usd").toLowerCase(),
+          product_data: {
+            name: desc?.substring(0, 150) || "Pago Jandosoft",
+          },
+          unit_amount: amountInCents,
+        },
+        quantity: 1,
+      }],
+      customer_email: customerEmail,
+      customer_name: customerName || undefined,
+      success_url: `${baseUrl}/?stripe_success={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/?stripe_cancel=1`,
+      metadata: {
+        customerEmail,
+        customerName: customerName || "",
+        items: itemsList ? JSON.stringify(itemsList) : "",
+      },
+    };
+
     if (storeId) {
       await connectDB();
       const store = await Store.findById(storeId);
@@ -41,11 +106,9 @@ export async function POST(req: NextRequest) {
       const feePercent = store.platformFeePercent ?? 5;
       const applicationFee = Math.round(amountInCents * (feePercent / 100));
 
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amountInCents,
-        currency: (currency || "usd").toLowerCase(),
+      sessionParams.payment_intent_data = {
+        transfer_data: { destination: store.stripeAccountId },
         application_fee_amount: applicationFee,
-        description: (desc || `Pago a ${store.name}`).substring(0, 250),
         metadata: {
           storeId: store._id.toString(),
           storeName: store.name,
@@ -55,44 +118,17 @@ export async function POST(req: NextRequest) {
           platformFeePercent: feePercent.toString(),
           items: itemsList ? JSON.stringify(itemsList) : "",
         },
-        transfer_data: {
-          destination: store.stripeAccountId,
-        },
-        automatic_payment_methods: {
-          enabled: true,
-        },
-      });
-
-      return NextResponse.json({
-        clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id,
-        amount: amountInCents,
-        applicationFee,
-      });
+      };
     }
 
-    // Direct payment (no store) — for platform plan purchases
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountInCents,
-      currency: (currency || "usd").toLowerCase(),
-      description: (desc || "Pago a Jandosoft").substring(0, 250),
-      metadata: {
-        customerEmail,
-        customerName: customerName || "",
-        items: itemsList ? JSON.stringify(itemsList) : "",
-      },
-      automatic_payment_methods: {
-        enabled: true,
-      },
-    });
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     return NextResponse.json({
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
-      amount: amountInCents,
+      url: session.url,
+      sessionId: session.id,
     });
   } catch (error: any) {
-    console.error("Error creating payment intent:", error);
+    console.error("Error creating checkout session:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
