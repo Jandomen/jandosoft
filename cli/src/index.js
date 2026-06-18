@@ -123,58 +123,63 @@ async function handleAction(action) {
 }
 
 async function runDirectCommand() {
-  switch (cmd) {
-    case 'login':
-      await login.handler(args);
-      break;
-    case 'me':
-      logo();
-      await me.handler(args);
-      break;
-    case 'stores':
-      logo();
-      await stores.handler(args);
-      break;
-    case 'org':
-      logo();
-      await org.handler(args);
-      break;
-    case 'chat':
-      logo();
-      await chat.handler(args);
-      break;
-    case 'conversations':
-      logo();
-      await conversations.handler(args);
-      break;
-    case 'status':
-      logo();
-      await status.handler(args);
-      break;
-    case 'config':
-      logo();
-      const cfg = config.load();
-      console.log(`\n ${chalk.bold(' Configuración local')}\n`);
-      console.log(`   ${chalk.dim('📁 Archivo:')} ${chalk.cyan(config.CONFIG_PATH)}`);
-      console.log(`   ${chalk.dim('🔑 Token:')}   ${cfg.token ? chalk.green('✓ configurado') : chalk.yellow('✖ vacío')}`);
-      console.log(`   ${chalk.dim('📧 Email:')}   ${cfg.email ? chalk.green(cfg.email) : chalk.yellow('(no guardado)')}`);
-      console.log('');
-      break;
-    case 'logout':
-      logo();
-      config.clear();
-      console.log(`\n ${chalk.green('✓')} Sesión cerrada. Token eliminado.\n`);
-      break;
-    case 'help':
-    case undefined:
-    case '':
-      await menuLoop();
-      break;
-    default:
-      if (cmd !== undefined) {
-        console.log(`\n ${chalk.red.bold(`✖ Comando desconocido: "${cmd}"`)}\n`);
-      }
-      await menuLoop();
+  try {
+    switch (cmd) {
+      case 'login':
+        await login.handler(args);
+        break;
+      case 'me':
+        logo();
+        await me.handler(args);
+        break;
+      case 'stores':
+        logo();
+        await stores.handler(args);
+        break;
+      case 'org':
+        logo();
+        await org.handler(args);
+        break;
+      case 'chat':
+        logo();
+        await chat.handler(args);
+        break;
+      case 'conversations':
+        logo();
+        await conversations.handler(args);
+        break;
+      case 'status':
+        logo();
+        await status.handler(args);
+        break;
+      case 'config':
+        logo();
+        const cfg = config.load();
+        console.log(`\n ${chalk.bold(' Configuración local')}\n`);
+        console.log(`   ${chalk.dim('📁 Archivo:')} ${chalk.cyan(config.CONFIG_PATH)}`);
+        console.log(`   ${chalk.dim('🔑 Token:')}   ${cfg.token ? chalk.green('✓ configurado') : chalk.yellow('✖ vacío')}`);
+        console.log(`   ${chalk.dim('📧 Email:')}   ${cfg.email ? chalk.green(cfg.email) : chalk.yellow('(no guardado)')}`);
+        console.log('');
+        break;
+      case 'logout':
+        logo();
+        config.clear();
+        console.log(`\n ${chalk.green('✓')} Sesión cerrada. Token eliminado.\n`);
+        break;
+      case 'help':
+      case undefined:
+      case '':
+        await menuLoop();
+        break;
+      default:
+        if (cmd !== undefined) {
+          console.log(`\n ${chalk.red.bold(`✖ Comando desconocido: "${cmd}"`)}\n`);
+        }
+        await menuLoop();
+    }
+  } catch (err) {
+    console.log(`\n${chalk.red.bold(' ✖ Error')} ${err.message}\n`);
+    process.exit(1);
   }
 }
 
@@ -187,7 +192,11 @@ async function menuLoop() {
       console.log(`\n ${chalk.dim(' Hasta luego!')}\n`);
       process.exit(0);
     }
-    await handleAction(action);
+    try {
+      await handleAction(action);
+    } catch (err) {
+      console.log(`\n${chalk.red.bold(' ✖ Error')} ${err.message}\n`);
+    }
     const skipPause = ['login', 'logout', 'chat', 'stores', 'conversations'];
     if (!skipPause.includes(action)) {
       await inquirer.prompt([{ type: 'input', name: '_', message: `${chalk.dim('Presiona Enter para volver al menú...')}`, prefix: '' }]);
@@ -204,6 +213,8 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(`\n ${chalk.red.bold('✖ Error inesperado:')} ${err.message}\n`);
-  process.exit(1);
+  if (cmd && cmd !== 'help' && cmd !== '') {
+    console.error(`\n ${chalk.red.bold('✖ Error inesperado:')} ${err.message}\n`);
+    process.exit(1);
+  }
 });

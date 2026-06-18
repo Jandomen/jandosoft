@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
         subscription: user.subscription,
         subscriptionExpiry: user.subscriptionExpiry,
         isSuspended: user.isSuspended,
+        emailVerified: user.emailVerified ?? false,
         organizationId: user.organizationId,
         role: user.role || "member",
       },
