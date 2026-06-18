@@ -22,7 +22,8 @@ export async function GET(req: NextRequest) {
           name: user.name,
           subscription: user.subscription,
           subscriptionExpiry: user.subscriptionExpiry,
-          isSuspended: user.isSuspended,
+        isSuspended: user.isSuspended,
+          emailVerified: user.emailVerified ?? false,
           organizationId: user.organizationId,
           role: user.role,
         }
@@ -43,6 +44,7 @@ export async function GET(req: NextRequest) {
         subscription: user.subscription,
         subscriptionExpiry: user.subscriptionExpiry,
         isSuspended: user.isSuspended,
+        emailVerified: user.emailVerified ?? false,
         organizationId: user.organizationId,
         role: user.role,
       }

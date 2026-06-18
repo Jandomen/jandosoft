@@ -3,14 +3,21 @@ const config = require('./config');
 
 const BASE_URL = 'https://jandosoft.vercel.app';
 
+class ApiError extends Error {
+  constructor(status, message, data) {
+    super(message);
+    this.status = status;
+    this.data = data;
+  }
+}
+
 async function request(method, path, body = null, auth = true) {
   const headers = { 'Content-Type': 'application/json' };
 
   if (auth) {
     const token = config.get('token');
     if (!token) {
-      console.log(`\n${chalk.red.bold(' ✖ No autenticado.')} Usa ${chalk.cyan('jandosoft login')} primero.\n`);
-      process.exit(1);
+      throw new ApiError(401, 'No autenticado. Usa jandosoft login primero.');
     }
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -25,16 +32,14 @@ async function request(method, path, body = null, auth = true) {
     const data = await res.json();
 
     if (!res.ok) {
-      console.log(`\n${chalk.red.bold(' ✖ Error')} ${res.status}: ${data.error || data.message || 'Desconocido'}\n`);
-      process.exit(1);
+      throw new ApiError(res.status, data.error || data.message || 'Desconocido', data);
     }
 
     return data;
   } catch (err) {
-    console.log(`\n${chalk.red.bold(' ✖ Error de conexión')} No se pudo conectar con ${chalk.cyan(BASE_URL)}`);
-    console.log(`${chalk.dim(err.message)}\n`);
-    process.exit(1);
+    if (err instanceof ApiError) throw err;
+    throw new ApiError(0, `No se pudo conectar con ${BASE_URL}: ${err.message}`);
   }
 }
 
-module.exports = { request, BASE_URL };
+module.exports = { request, BASE_URL, ApiError };

@@ -2,14 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Minus, Trash2, ShoppingCart, CreditCard, CheckCircle2, Loader2, ChevronLeft } from "lucide-react";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements } from "@stripe/react-stripe-js";
-import { StripePaymentForm } from "@/components/store/StripePaymentForm";
+import { X, Plus, Minus, Trash2, ShoppingCart, CreditCard, CheckCircle2, Loader2, ChevronLeft, Bitcoin } from "lucide-react";
 import { useCart } from "./CartProvider";
-
-const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
 
 export default function CartSidebar({
   storeId, storeName, slug, paymentsEnabled
@@ -21,7 +15,7 @@ export default function CartSidebar({
   const [view, setView] = useState<"cart" | "checkout" | "success">("cart");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "crypto">("stripe");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [paymentId, setPaymentId] = useState("");
@@ -33,20 +27,37 @@ export default function CartSidebar({
     setCheckoutLoading(true);
     setCheckoutError("");
     try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          storeId,
-          items: items.map(i => ({ name: i.name, price: i.price, quantity: i.quantity })),
-          currency: "USD",
-          customerEmail,
-          customerName,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error al iniciar pago");
-      setClientSecret(data.clientSecret);
+      if (paymentMethod === "crypto") {
+        const res = await fetch("/api/nowpayments/create-invoice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: totalPrice,
+            currency: "USD",
+            email: customerEmail,
+            storeId,
+            description: items.map(i => `${i.quantity}x ${i.name}`).join(", "),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Error al crear factura crypto");
+        window.location.href = data.invoiceUrl;
+      } else {
+        const res = await fetch("/api/stripe/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            storeId,
+            items: items.map(i => ({ name: i.name, price: i.price, quantity: i.quantity })),
+            currency: "USD",
+            customerEmail,
+            customerName,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Error al iniciar pago");
+        window.location.href = data.url;
+      }
     } catch (e: any) {
       setCheckoutError(e.message || "Error al conectar con pasarela de pago");
     } finally {
@@ -54,15 +65,8 @@ export default function CartSidebar({
     }
   };
 
-  const handlePaymentSuccess = (paymentIntentId: string) => {
-    setPaymentId(paymentIntentId);
-    setView("success");
-    clearCart();
-  };
-
   const resetCheckout = () => {
     setView("cart");
-    setClientSecret(null);
     setCheckoutError("");
   };
 
@@ -181,39 +185,69 @@ export default function CartSidebar({
                     </div>
                   </div>
 
+                  {/* Payment Method Selector */}
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-zinc-500 uppercase italic tracking-widest ml-1">Método de pago</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => setPaymentMethod("stripe")}
+                        className={`flex items-center gap-2 p-3 rounded-2xl border-2 transition-all text-left ${
+                          paymentMethod === "stripe"
+                            ? "border-red-600 bg-red-50"
+                            : "border-zinc-100 bg-white hover:border-red-200"
+                        }`}
+                      >
+                        <div className={`p-2 rounded-xl ${paymentMethod === "stripe" ? "bg-red-600 text-white" : "bg-zinc-100 text-zinc-400"}`}>
+                          <CreditCard className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black italic text-zinc-950">Stripe</p>
+                          <p className="text-[8px] text-zinc-400 font-medium">Tarjeta crédito/débito</p>
+                        </div>
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => setPaymentMethod("crypto")}
+                        className={`flex items-center gap-2 p-3 rounded-2xl border-2 transition-all text-left ${
+                          paymentMethod === "crypto"
+                            ? "border-red-600 bg-red-50"
+                            : "border-zinc-100 bg-white hover:border-red-200"
+                        }`}
+                      >
+                        <div className={`p-2 rounded-xl ${paymentMethod === "crypto" ? "bg-red-600 text-white" : "bg-zinc-100 text-zinc-400"}`}>
+                          <Bitcoin className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black italic text-zinc-950">Crypto</p>
+                          <p className="text-[8px] text-zinc-400 font-medium">BTC, ETH, USDT</p>
+                        </div>
+                      </motion.button>
+                    </div>
+                  </div>
+
                   {checkoutError && (
                     <p className="text-[10px] font-bold text-rose-600 italic">{checkoutError}</p>
                   )}
 
-                  {clientSecret ? (
-                    <div className="space-y-4">
-                      {stripePromise ? (
-                        <Elements stripe={stripePromise} options={{ clientSecret }}>
-                          <StripePaymentForm
-                            amount={totalPrice}
-                            currency="USD"
-                            onSuccess={handlePaymentSuccess}
-                            onError={(msg) => setCheckoutError(msg)}
-                          />
-                        </Elements>
-                      ) : (
-                        <p className="text-rose-600 text-xs font-bold italic">Error: Stripe no está configurado.</p>
-                      )}
-                    </div>
-                  ) : (
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handleStartCheckout}
-                      disabled={!customerEmail || checkoutLoading || items.length === 0}
-                      className="w-full py-4 bg-red-600 text-white rounded-2xl font-black italic text-xs hover:bg-red-700 transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50"
-                    >
-                      {checkoutLoading ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> INICIANDO PAGO...</>
-                      ) : (
-                        <><CreditCard className="w-4 h-4" /> PAGAR ${totalPrice.toFixed(2)}</>
-                      )}
-                    </motion.button>
+                  {paymentMethod === "crypto" && (
+                    <p className="text-[9px] text-amber-600 font-medium italic bg-amber-50 rounded-xl p-3">
+                      Serás redirigido a NowPayments para pagar con criptomonedas.
+                    </p>
                   )}
+
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleStartCheckout}
+                    disabled={!customerEmail || checkoutLoading || items.length === 0}
+                    className="w-full py-4 bg-red-600 text-white rounded-2xl font-black italic text-xs hover:bg-red-700 transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50"
+                  >
+                    {checkoutLoading ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> PROCESANDO...</>
+                    ) : (
+                      <><CreditCard className="w-4 h-4" /> {paymentMethod === "crypto" ? "PAGAR CON CRYPTO" : `PAGAR $${totalPrice.toFixed(2)}`}</>
+                    )}
+                  </motion.button>
                 </div>
               ) : (
                 items.length === 0 ? (

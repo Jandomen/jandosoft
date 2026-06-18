@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, User, Loader2, Sparkles, Trash2, Mic, MicOff, Paperclip, Store, BarChart3, ShoppingCart, TrendingUp, Zap, Menu, Plus, MessageSquare, MoreHorizontal } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, Trash2, Mic, MicOff, Paperclip, Store, BarChart3, ShoppingCart, TrendingUp, Zap, Menu, Plus, MessageSquare, MoreHorizontal, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useVoiceInput } from "@/lib/hooks/useVoiceInput";
-import { readFileAsText, formatFileMessage } from "@/lib/utils/readFile";
+import { readFileAsText, formatFileMessage, readImageAsBase64, isImageFile, getImageFromClipboard } from "@/lib/utils/readFile";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { useConversations, type StoredMessage } from "@/lib/hooks/useConversations";
 
@@ -32,6 +32,38 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [serverRemaining, setServerRemaining] = useState<number | null>(null);
+  const [isPublic, setIsPublic] = useState(!context?.email);
+  const [attachedImages, setAttachedImages] = useState<string[]>([]);
+
+  const guestId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!context?.email) {
+      let id = localStorage.getItem("jandosoft_guest_id");
+      if (!id) {
+        id = crypto.randomUUID?.() || Date.now().toString(36) + Math.random().toString(36).slice(2);
+        localStorage.setItem("jandosoft_guest_id", id);
+      }
+      guestId.current = id;
+    }
+  }, [context?.email]);
+
+  const removeImage = (index: number) => {
+    setAttachedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const handlePaste = async (e: ClipboardEvent) => {
+      const b64 = await getImageFromClipboard(e.clipboardData?.items as any);
+      if (b64) {
+        e.preventDefault();
+        setAttachedImages(prev => [...prev, b64]);
+      }
+    };
+    el.addEventListener("paste", handlePaste);
+    return () => el.removeEventListener("paste", handlePaste);
+  }, []);
 
   useEffect(() => {
     if (activeId) {
@@ -99,41 +131,75 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const content = await readFileAsText(file);
-      const msg = formatFileMessage(file.name, content);
-      setMessages(prev => [...prev, { role: "user", content: msg, timestamp: Date.now() }]);
+      if (isImageFile(file.name)) {
+        const b64 = await readImageAsBase64(file);
+        setAttachedImages(prev => [...prev, b64]);
+      } else {
+        const content = await readFileAsText(file);
+        const msg = formatFileMessage(file.name, content);
+        setMessages(prev => [...prev, { role: "user", content: msg, timestamp: Date.now() }]);
+      }
     } catch (err: any) {
       setMessages(prev => [...prev, { role: "bot", content: `⚠️ ${err.message}`, timestamp: Date.now() }]);
     }
     e.target.value = "";
   };
 
+  const uploadImage = async (b64: string): Promise<string> => {
+    const blob = await fetch(b64).then(r => r.blob());
+    const fd = new FormData();
+    fd.append("file", blob, "image.png");
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    return data.url || b64;
+  };
+
   const handleSend = useCallback(async (text?: string) => {
     const msg = text || input;
-    if (!msg.trim() || isLoading || !canSend) return;
+    if ((!msg.trim() && attachedImages.length === 0) || isLoading || !canSend) return;
 
-    const userMessage: StoredMessage = { role: "user", content: msg, timestamp: Date.now() };
+    setIsLoading(true);
+    setInput("");
+
+    let imageUrls: string[] = [];
+    if (attachedImages.length > 0) {
+      const uploads = await Promise.allSettled(attachedImages.map(uploadImage));
+      imageUrls = uploads
+        .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
+        .map(r => r.value);
+      setAttachedImages([]);
+    }
+
+    const imgMd = imageUrls.map(url => `![image](${url})`).join("\n");
+    const fullMsg = [imgMd, msg].filter(Boolean).join("\n\n");
+    const userMessage: StoredMessage = { role: "user", content: fullMsg, timestamp: Date.now() };
     const updated = [...messages, userMessage];
     setMessages(updated);
-    setInput("");
-    setIsLoading(true);
 
     try {
+      const payload: any = {
+        messages: updated.map(m => ({
+          role: m.role === "user" ? "user" : "assistant",
+          content: m.content
+        })),
+        context
+      };
+      if (guestId.current) {
+        payload.guestId = guestId.current;
+      }
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: updated.map(m => ({
-            role: m.role === "user" ? "user" : "assistant",
-            content: m.content
-          })),
-          context
-        })
+        body: JSON.stringify(payload)
       });
 
       const data = await response.json();
       if (data.remaining !== undefined) {
         setServerRemaining(data.remaining);
+      }
+      if (data.isPublic) {
+        setIsPublic(true);
       }
       if (data.text) {
         setMessages(prev => [...prev, { role: "bot", content: data.text, timestamp: Date.now() }]);
@@ -145,7 +211,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, canSend, messages, context]);
+  }, [input, isLoading, canSend, messages, context, attachedImages]);
 
   const handleNewChat = () => {
     createConversation();
@@ -254,6 +320,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
             <h3 className="text-sm max-[340px]:text-xs font-black italic text-zinc-950 uppercase tracking-tight truncate">Jandosoft AI</h3>
             <div className="flex items-center gap-1">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {isPublic && <Globe className="w-2.5 h-2.5 text-emerald-500 shrink-0" />}
               <span className="text-[8px] max-[340px]:text-[7.5px] font-black text-zinc-400 uppercase tracking-widest max-[340px]:tracking-wider italic whitespace-nowrap">
                 {displayRemaining} Mensajes restantes
               </span>
@@ -403,11 +470,26 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
 
       {/* Input area */}
       <div className="max-[400px]:px-2.5 max-[340px]:px-2 max-[400px]:py-2.5 max-[340px]:py-2 px-6 md:px-8 py-4 md:py-6 bg-white border-t border-zinc-100 shrink-0">
+        {attachedImages.length > 0 && (
+          <div className="flex gap-2 mb-2 overflow-x-auto pb-1">
+            {attachedImages.map((b64, i) => (
+              <div key={i} className="relative shrink-0 group">
+                <img src={b64} alt={`imagen ${i+1}`} className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border border-zinc-200" />
+                <button
+                  onClick={() => removeImage(i)}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="relative">
           <input
             ref={inputRef}
             type="text"
-            placeholder={!canSend ? "Límite de 10 preguntas alcanzado (vuelve en 24h)" : "Pregunta algo sobre Jandosoft..."}
+            placeholder={!canSend ? (isPublic ? "Límite de 5 preguntas alcanzado (vuelve en 6h)" : "Límite de 10 preguntas alcanzado (vuelve en 24h)") : "Pega una imagen (Ctrl+V) o pregunta algo..."}
             disabled={!canSend}
             className={cn(
               "w-full bg-zinc-50 max-[400px]:p-3 max-[340px]:p-2.5 max-[400px]:text-xs text-sm p-4 md:p-5 pr-20 md:pr-24 rounded-xl md:rounded-2xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 focus:ring-2 focus:ring-red-600/5 transition-all shadow-sm disabled:opacity-50 disabled:bg-zinc-100",
@@ -427,7 +509,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
             >
               <Paperclip className="w-3.5 h-3.5 max-[340px]:w-3 max-[340px]:h-3 md:w-4 md:h-4" />
             </motion.button>
-            <input ref={fileInputRef} type="file" accept=".json,.csv,.tsv,.txt,.xml,.yaml,.yml,.md,.log,.env,.sql,.html,.css,.js,.ts,.jsx,.tsx,.py,.rb,.php,.java,.go,.rs,.sh" className="hidden" onChange={handleAttachFile} />
+            <input ref={fileInputRef} type="file" accept="image/*,.json,.csv,.tsv,.txt,.xml,.yaml,.yml,.md,.log,.env,.sql,.html,.css,.js,.ts,.jsx,.tsx,.py,.rb,.php,.java,.go,.rs,.sh" className="hidden" onChange={handleAttachFile} />
             {voice.isSupported && (
               <motion.button
                 whileTap={{ scale: 0.9 }}

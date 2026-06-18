@@ -11,6 +11,14 @@ export interface IUser extends Document {
   suspendedUntil: Date | null;
   organizationId?: mongoose.Types.ObjectId;
   role?: "owner" | "admin" | "member";
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  subscriptionStatus?: "active" | "past_due" | "canceled" | "unpaid" | "trialing" | "incomplete" | "incomplete_expired" | "paused";
+  emailVerified?: boolean;
+  verificationToken?: string | null;
+  verificationTokenExpiry?: Date | null;
+  resetPasswordToken?: string | null;
+  resetPasswordTokenExpiry?: Date | null;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -24,6 +32,14 @@ const UserSchema = new Schema<IUser>({
   suspendedUntil: { type: Date, default: null },
   organizationId: { type: Schema.Types.ObjectId, ref: "Organization", index: true },
   role: { type: String, enum: ["owner", "admin", "member"], default: "owner" },
+  stripeCustomerId: { type: String, default: null },
+  stripeSubscriptionId: { type: String, default: null },
+  subscriptionStatus: { type: String, default: null },
+  emailVerified: { type: Boolean, default: false },
+  verificationToken: { type: String, default: null },
+  verificationTokenExpiry: { type: Date, default: null },
+  resetPasswordToken: { type: String, default: null },
+  resetPasswordTokenExpiry: { type: Date, default: null },
 }, { timestamps: true });
 
 export const User = mongoose.models.User || mongoose.model<IUser>("User", UserSchema);

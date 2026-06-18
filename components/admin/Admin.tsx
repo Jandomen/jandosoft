@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import {
   BarChart3, 
   Users, 
@@ -40,9 +41,15 @@ import {
   Megaphone,
   Ban,
   CheckCircle,
-  ExternalLink
+  ExternalLink,
+  Star,
+  Check,
+  Save,
+  RotateCcw,
+  Edit3,
 } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/pdf-utils";
+import EmailAdminSection from "./EmailAdminSection";
 
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ');
 
@@ -55,6 +62,7 @@ interface AdminProps {
 }
 
 export default function Admin({ currency, setCurrency, products, setProducts, transactions, onLogout }: AdminProps & { onLogout?: () => void }) {
+  const { language, setLanguage, t } = useLanguage();
   const [newProduct, setNewProduct] = useState<{ name: string; price: string; desc: string; images: string[] }>({ name: "", price: "", desc: "", images: [] });
   const [activeTab, setActiveTab] = useState("dashboard");
   const [liveActivity, setLiveActivity] = useState<{ action: string; time: string; detail?: string; createdAt?: string }[]>([]);
@@ -81,13 +89,41 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
   const [confirmingType, setConfirmingType] = useState<'user' | 'store'>('user');
   const [loading, setLoading] = useState(true);
 
-  const fetchDashboard = async () => {
+  const [usersPage, setUsersPage] = useState(1);
+  const [storesPage, setStoresPage] = useState(1);
+  const [invoicesPage, setInvoicesPage] = useState(1);
+  const [totalUsersPages, setTotalUsersPages] = useState(1);
+  const [totalStoresPages, setTotalStoresPages] = useState(1);
+  const [totalInvoicesPages, setTotalInvoicesPages] = useState(1);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [planConfig, setPlanConfig] = useState<{ plans: any[]; freePlan: any } | null>(null);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<any>(null);
+  const [savingPlans, setSavingPlans] = useState(false);
+  const [syncingStripe, setSyncingStripe] = useState(false);
+  const [planToast, setPlanToast] = useState("");
+
+  const [changingPlanUserId, setChangingPlanUserId] = useState<string | null>(null);
+  const [changingPlanValue, setChangingPlanValue] = useState("");
+
+  const fetchDashboard = async (overrides?: {
+    searchUsers?: string; usersPage?: number;
+    searchStores?: string; storesPage?: number;
+    invoicesPage?: number;
+  }) => {
     try {
+      const uSearch = overrides?.searchUsers ?? searchUsers;
+      const uPage = overrides?.usersPage ?? usersPage;
+      const sSearch = overrides?.searchStores ?? searchStores;
+      const sPage = overrides?.storesPage ?? storesPage;
+      const iPage = overrides?.invoicesPage ?? invoicesPage;
+
       const [dashRes, usersRes, storesRes, invRes, commRes] = await Promise.all([
         fetch("/api/admin/dashboard"),
-        fetch("/api/admin/users"),
-        fetch("/api/admin/stores"),
-        fetch("/api/invoices"),
+        fetch(`/api/admin/users?search=${encodeURIComponent(uSearch)}&page=${uPage}&limit=20`),
+        fetch(`/api/admin/stores?search=${encodeURIComponent(sSearch)}&page=${sPage}&limit=20`),
+        fetch(`/api/invoices?page=${iPage}&limit=20`),
         fetch("/api/admin/commercials"),
       ]);
       if (dashRes.ok) {
@@ -98,14 +134,17 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
       if (usersRes.ok) {
         const data = await usersRes.json();
         setAllUsers(data.users || []);
+        setTotalUsersPages(data.totalPages || 1);
       }
       if (storesRes.ok) {
         const data = await storesRes.json();
         setAllStores(data.stores || []);
+        setTotalStoresPages(data.totalPages || 1);
       }
       if (invRes.ok) {
         const data = await invRes.json();
         setAllInvoices(data.invoices || []);
+        setTotalInvoicesPages(data.totalPages || 1);
       }
       if (commRes.ok) {
         const data = await commRes.json();
@@ -116,6 +155,76 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchPlans = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/plans");
+      if (res.ok) {
+        const data = await res.json();
+        setPlanConfig({ plans: data.plans, freePlan: data.freePlan });
+      }
+    } catch {}
+  }, []);
+
+  const handleSavePlans = async () => {
+    if (!planConfig) return;
+    setSavingPlans(true);
+    try {
+      const res = await fetch("/api/admin/plans", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(planConfig),
+      });
+      if (res.ok) {
+        setPlanToast("Planes guardados correctamente");
+        setEditingPlanId(null);
+        setEditForm(null);
+      } else {
+        setPlanToast("Error al guardar planes");
+      }
+    } catch {
+      setPlanToast("Error de conexión");
+    } finally {
+      setSavingPlans(false);
+      setTimeout(() => setPlanToast(""), 3000);
+    }
+  };
+
+  const handleSyncStripe = async () => {
+    setSyncingStripe(true);
+    try {
+      const res = await fetch("/api/stripe/sync-prices", { method: "POST" });
+      if (res.ok) {
+        setPlanToast("Planes sincronizados con Stripe");
+        fetchPlans();
+      } else {
+        const err = await res.json();
+        setPlanToast(err.error || "Error al sincronizar");
+      }
+    } catch {
+      setPlanToast("Error de conexión");
+    } finally {
+      setSyncingStripe(false);
+      setTimeout(() => setPlanToast(""), 3000);
+    }
+  };
+
+  const handleChangeUserPlan = async (userId: string, plan: string) => {
+    try {
+      const expiry = new Date();
+      expiry.setDate(expiry.getDate() + 30);
+      const res = await fetch(`/api/admin/users/${userId}/plan`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: plan, subscriptionExpiry: expiry.toISOString() }),
+      });
+      if (res.ok) {
+        fetchDashboard();
+      }
+    } catch {}
+    setChangingPlanUserId(null);
+    setChangingPlanValue("");
   };
 
   const handleToggleSuspend = async (storeId: string, reason?: string, duration?: string) => {
@@ -178,27 +287,27 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
     }
   };
 
-  const filteredStores = allStores.filter((s) => {
-    if (!searchStores) return true;
-    const q = searchStores.toLowerCase();
-    return (
-      s.name?.toLowerCase().includes(q) ||
-      s.ownerEmail?.toLowerCase().includes(q) ||
-      s.slug?.toLowerCase().includes(q)
-    );
-  });
+  const handleSearchUsers = (value: string) => {
+    setSearchUsers(value);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      setUsersPage(1);
+      fetchDashboard({ searchUsers: value, usersPage: 1 });
+    }, 300);
+  };
 
-  const filteredUsers = allUsers.filter((u) => {
-    if (!searchUsers) return true;
-    const q = searchUsers.toLowerCase();
-    return (
-      u.name?.toLowerCase().includes(q) ||
-      u.email?.toLowerCase().includes(q)
-    );
-  });
+  const handleSearchStores = (value: string) => {
+    setSearchStores(value);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      setStoresPage(1);
+      fetchDashboard({ searchStores: value, storesPage: 1 });
+    }, 300);
+  };
 
   useEffect(() => {
     fetchDashboard();
+    fetchPlans();
   }, []);
 
   const [imageUrlInput, setImageUrlInput] = useState("");
@@ -248,27 +357,41 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                <ShieldCheck className="w-5 h-5 md:w-6 md:h-6" />
             </div>
             <div className="min-w-0">
-               <h2 className="max-[400px]:text-base text-lg md:text-xl font-black italic tracking-tighter text-zinc-950 truncate">Panel <span className="text-red-600">Jandosoft</span></h2>
-               <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest italic truncate">Administración Global</p>
+               <h2 className="max-[400px]:text-base text-lg md:text-xl font-black italic tracking-tighter text-zinc-950 truncate"><span className="text-red-600">Jandosoft</span> {t("admin.title")}</h2>
+               <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest italic truncate">{t("admin.subtitle")}</p>
             </div>
          </div>
          <div className="hidden md:flex items-center gap-6">
-            <div className="flex items-center gap-2 px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl">
-               <span className="text-[10px] font-black text-zinc-400 uppercase italic">Moneda:</span>
-               <select 
-                  value={currency} 
-                  onChange={(e) => setCurrency(e.target.value as any)}
-                  className="bg-transparent text-xs font-black italic text-red-600 outline-none cursor-pointer"
-               >
-                  <option value="USD">USD ($)</option>
-                  <option value="MXN">MXN ($)</option>
-                  <option value="COP">COP ($)</option>
-                  <option value="ARS">ARS ($)</option>
-               </select>
-            </div>
-             <button onClick={fetchDashboard} className="p-2.5 hover:bg-zinc-50 rounded-xl transition-all" title="Actualizar datos">
-               <RefreshCw className={cn("w-5 h-5 text-zinc-400", loading ? "animate-spin" : "")} />
-             </button>
+             <div className="flex items-center gap-2 px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl">
+                <span className="text-[10px] font-black text-zinc-400 uppercase italic">Moneda:</span>
+                <select 
+                   value={currency} 
+                   onChange={(e) => setCurrency(e.target.value as any)}
+                   className="bg-transparent text-xs font-black italic text-red-600 outline-none cursor-pointer"
+                >
+                   <option value="USD">USD ($)</option>
+                   <option value="MXN">MXN ($)</option>
+                   <option value="COP">COP ($)</option>
+                   <option value="ARS">ARS ($)</option>
+                </select>
+             </div>
+             <div className="flex items-center gap-2 px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl">
+                <Globe className="w-3.5 h-3.5 text-zinc-400" />
+                <select 
+                   value={language} 
+                   onChange={(e) => setLanguage(e.target.value as any)}
+                   className="bg-transparent text-xs font-black italic text-red-600 outline-none cursor-pointer"
+                >
+                   <option value="es">Español</option>
+                   <option value="en">English</option>
+                   <option value="fr">Français</option>
+                   <option value="zh">中文</option>
+                   <option value="hi">हिन्दी</option>
+                </select>
+             </div>
+              <button onClick={() => fetchDashboard()} className="p-2.5 hover:bg-zinc-50 rounded-xl transition-all" title="Actualizar datos">
+                <RefreshCw className={cn("w-5 h-5 text-zinc-400", loading ? "animate-spin" : "")} />
+              </button>
              <button onClick={onLogout} className="p-2.5 hover:bg-rose-50 rounded-xl transition-all" title="Cerrar sesión">
                <LogOut className="w-5 h-5 text-zinc-400 hover:text-rose-600" />
              </button>
@@ -281,8 +404,8 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
             </div>
          </div>
           <div className="flex md:hidden items-center gap-1">
-            <motion.button whileTap={{ scale: 0.9 }} onClick={fetchDashboard} className="p-1.5 hover:bg-zinc-50 rounded-xl transition-all" title="Actualizar datos">
-              <RefreshCw className={cn("w-4 h-4 text-zinc-400", loading ? "animate-spin" : "")} />
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => fetchDashboard()} className="p-1.5 hover:bg-zinc-50 rounded-xl transition-all" title="Actualizar datos">
+               <RefreshCw className={cn("w-4 h-4 text-zinc-400", loading ? "animate-spin" : "")} />
             </motion.button>
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => setActiveTab("settings")} className="p-1.5 hover:bg-zinc-50 rounded-xl transition-all">
               <Settings className="w-4 h-4 text-zinc-400" />
@@ -295,15 +418,16 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
 
       <div className="md:hidden flex overflow-x-auto gap-1 px-2 py-2 bg-zinc-50 border-b border-zinc-100 sticky top-0 z-10">
         {[
-          { id: "dashboard", icon: <BarChart3 className="w-3.5 h-3.5" />, label: "Dashboard" },
-          { id: "users", icon: <Users className="w-3.5 h-3.5" />, label: "Usuarios" },
-          { id: "stores", icon: <Store className="w-3.5 h-3.5" />, label: "Tiendas" },
-          { id: "store-admin", icon: <ShoppingBag className="w-3.5 h-3.5" />, label: "Productos" },
-          { id: "analytics", icon: <BarChart3 className="w-3.5 h-3.5" />, label: "Analytics" },
-          { id: "revenue", icon: <DollarSign className="w-3.5 h-3.5" />, label: "Ganancias" },
-          { id: "history", icon: <FileText className="w-3.5 h-3.5" />, label: "Historial" },
-          { id: "commercials", icon: <Megaphone className="w-3.5 h-3.5" />, label: "Comerciales" },
-          { id: "settings", icon: <Settings className="w-3.5 h-3.5" />, label: "Ajustes" },
+          { id: "dashboard", icon: <BarChart3 className="w-3.5 h-3.5" />, label: t("nav.dashboard") },
+          { id: "users", icon: <Users className="w-3.5 h-3.5" />, label: t("admin.users") },
+          { id: "stores", icon: <Store className="w-3.5 h-3.5" />, label: t("admin.stores") },
+          { id: "store-admin", icon: <ShoppingBag className="w-3.5 h-3.5" />, label: t("section.products") },
+          { id: "analytics", icon: <BarChart3 className="w-3.5 h-3.5" />, label: t("nav.analytics") },
+          { id: "revenue", icon: <DollarSign className="w-3.5 h-3.5" />, label: t("admin.revenue") },
+          { id: "history", icon: <FileText className="w-3.5 h-3.5" />, label: t("admin.history") },
+          { id: "commercials", icon: <Megaphone className="w-3.5 h-3.5" />, label: t("admin.commercials") },
+          { id: "plans", icon: <Star className="w-3.5 h-3.5" />, label: t("admin.plans") },
+          { id: "settings", icon: <Settings className="w-3.5 h-3.5" />, label: t("admin.settings_label") },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -318,20 +442,22 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
       <div className="flex flex-1 overflow-hidden relative">
          <aside className="hidden md:flex flex-col w-56 lg:w-64 bg-zinc-50 border-r border-zinc-100 p-4 lg:p-6 gap-6 lg:gap-8 overflow-y-auto shrink-0">
            <div className="space-y-1">
-             <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 lg:mb-4 italic">General</h3>
-             <MenuItem icon={<BarChart3 />} label="Dashboard" active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
-             <MenuItem icon={<Users />} label="Usuarios" active={activeTab === "users"} onClick={() => setActiveTab("users")} />
-             <MenuItem icon={<Store />} label="Tiendas" active={activeTab === "stores"} onClick={() => setActiveTab("stores")} />
-             <MenuItem icon={<ShoppingBag />} label="Productos" active={activeTab === "store-admin"} onClick={() => setActiveTab("store-admin")} />
-             <MenuItem icon={<DbIcon />} label="Database" active={activeTab === "database"} onClick={() => setActiveTab("database")} />
+            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 lg:mb-4 italic">{t("admin.general")}</h3>
+              <MenuItem icon={<BarChart3 />} label={t("nav.dashboard")} active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
+              <MenuItem icon={<Users />} label={t("admin.users")} active={activeTab === "users"} onClick={() => setActiveTab("users")} />
+              <MenuItem icon={<Store />} label={t("admin.stores")} active={activeTab === "stores"} onClick={() => setActiveTab("stores")} />
+              <MenuItem icon={<ShoppingBag />} label={t("section.products")} active={activeTab === "store-admin"} onClick={() => setActiveTab("store-admin")} />
+              <MenuItem icon={<DbIcon />} label={t("admin.database")} active={activeTab === "database"} onClick={() => setActiveTab("database")} />
            </div>
            <div className="space-y-1">
-             <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 lg:mb-4 italic">Gestión</h3>
-             <MenuItem icon={<BarChart3 />} label="Analytics" active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} />
-             <MenuItem icon={<DollarSign />} label="Ganancias" active={activeTab === 'revenue'} onClick={() => setActiveTab('revenue')} />
-             <MenuItem icon={<FileText />} label="Historial" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
-             <MenuItem icon={<Megaphone />} label="Comerciales" active={activeTab === 'commercials'} onClick={() => setActiveTab('commercials')} />
-             <MenuItem icon={<Settings />} label="Ajustes" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
+            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 lg:mb-4 italic">{t("admin.management")}</h3>
+              <MenuItem icon={<BarChart3 />} label={t("nav.analytics")} active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} />
+              <MenuItem icon={<DollarSign />} label={t("admin.revenue")} active={activeTab === 'revenue'} onClick={() => setActiveTab('revenue')} />
+              <MenuItem icon={<FileText />} label={t("admin.history")} active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
+                <MenuItem icon={<Megaphone />} label={t("admin.commercials")} active={activeTab === 'commercials'} onClick={() => setActiveTab('commercials')} />
+                <MenuItem icon={<Mail />} label={t("admin.email")} active={activeTab === 'email'} onClick={() => setActiveTab('email')} />
+                <MenuItem icon={<Star />} label={t("admin.plans")} active={activeTab === 'plans'} onClick={() => setActiveTab('plans')} />
+                <MenuItem icon={<Settings />} label={t("admin.settings_label")} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
            </div>
          </aside>
 
@@ -342,21 +468,21 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                      {loading ? (
                        <div className="flex items-center justify-center py-20">
                          <div className="flex items-center gap-3 px-6 py-4 bg-zinc-50 rounded-2xl text-zinc-400 italic font-black text-sm">
-                           <Loader className="w-5 h-5 animate-spin" /> CARGANDO DATOS...
+                           <Loader className="w-5 h-5 animate-spin" /> {t("admin.loading")}
                          </div>
                        </div>
                      ) : (
                        <>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-                          <StatCard icon={<Users className="text-red-500" />} label="Usuarios Totales" value={dashboardStats.totalUsers.toString()} change={`+${dashboardStats.newUsersThisMonth} este mes`} />
-                          <StatCard icon={<Store className="text-emerald-500" />} label="Tiendas" value={dashboardStats.totalStores.toString()} change={`${dashboardStats.totalProducts} productos`} />
-                          <StatCard icon={<ShoppingBag className="text-amber-500" />} label="Pedidos" value={dashboardStats.totalOrders.toString()} change={`$${dashboardStats.totalRevenue}`} />
-                          <StatCard icon={<TrendingUp className="text-blue-500" />} label="Hoy" value={dashboardStats.activeUsersToday.toString()} change="nuevos hoy" />
+                          <StatCard icon={<Users className="text-red-500" />} label={t("admin.user_total")} value={dashboardStats.totalUsers.toString()} change={t("admin.this_month").replace("{n}", String(dashboardStats.newUsersThisMonth))} />
+                          <StatCard icon={<Store className="text-emerald-500" />} label={t("admin.stores_title")} value={dashboardStats.totalStores.toString()} change={`${dashboardStats.totalProducts} ${t("admin.productos")}`} />
+                          <StatCard icon={<ShoppingBag className="text-amber-500" />} label={t("nav.orders")} value={dashboardStats.totalOrders.toString()} change={`$${dashboardStats.totalRevenue}`} />
+                          <StatCard icon={<TrendingUp className="text-blue-500" />} label={t("admin.today")} value={dashboardStats.activeUsersToday.toString()} change={t("admin.new_today")} />
                        </div>
  
                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
                           <div className="bg-zinc-50/50 max-[400px]:p-5 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 space-y-4 md:space-y-6 shadow-sm">
-                             <h3 className="max-[400px]:text-lg text-xl font-black italic text-zinc-950">Actividad Reciente</h3>
+                             <h3 className="max-[400px]:text-lg text-xl font-black italic text-zinc-950">{t("admin.recent_activity")}</h3>
                              <div className="space-y-3 md:space-y-4">
                                  {liveActivity.map((act, i) => (
                                     <motion.div
@@ -374,17 +500,17 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                                     </motion.div>
                                  ))}
                                 {liveActivity.length === 0 && (
-                                  <div className="py-6 md:py-8 text-center italic font-black text-zinc-200 text-[10px] md:text-xs">Sin actividad reciente</div>
+                                  <div className="py-6 md:py-8 text-center italic font-black text-zinc-200 text-[10px] md:text-xs">{t("admin.no_activity")}</div>
                                 )}
                              </div>
                           </div>
                           <div className="bg-red-600 max-[400px]:p-6 p-8 md:p-10 rounded-[2rem] md:rounded-[3rem] text-white space-y-6 md:space-y-8 relative overflow-hidden group shadow-2xl shadow-red-200">
                              <Zap className="absolute top-6 md:top-10 right-6 md:right-10 w-20 h-20 md:w-32 md:h-32 opacity-10 group-hover:rotate-12 transition-transform duration-700" />
                              <div className="relative z-10 space-y-3 md:space-y-4">
-                                <h3 className="max-[400px]:text-2xl text-3xl md:text-4xl font-black italic leading-none">Aumenta tu Escalabilidad.</h3>
-                                <p className="text-red-100 font-medium max-[400px]:text-sm">Gestiona tu infraestructura Cloud desde un solo lugar con la potencia de Jandosoft Enterprise.</p>
+                                <h3 className="max-[400px]:text-2xl text-3xl md:text-4xl font-black italic leading-none">{t("admin.scalability")}</h3>
+                                <p className="text-red-100 font-medium max-[400px]:text-sm">{t("admin.cloud_desc")}</p>
                              </div>
-                             <motion.button whileTap={{ scale: 0.95 }} onClick={() => setActiveTab("settings")} className="relative z-10 px-6 md:px-8 py-3 md:py-4 bg-white text-red-600 rounded-2xl font-black italic shadow-xl hover:scale-105 transition-all text-[10px] md:text-sm">GESTIONAR CLUSTER</motion.button>
+                              <motion.button whileTap={{ scale: 0.95 }} onClick={() => setActiveTab("settings")} className="relative z-10 px-6 md:px-8 py-3 md:py-4 bg-white text-red-600 rounded-2xl font-black italic shadow-xl hover:scale-105 transition-all text-[10px] md:text-sm">{t("admin.manage_cluster")}</motion.button>
                           </div>
                        </div>
                       </>
@@ -395,19 +521,19 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                 {activeTab === "users" && (
                   <motion.div key="users" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 md:space-y-8">
                      <div className="flex items-center justify-between flex-wrap gap-3">
-                       <h3 className="max-[340px]:text-xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">Usuarios <span className="text-red-600">({filteredUsers.length})</span></h3>
+                        <h3 className="max-[340px]:text-xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">{t("admin.users_title")} <span className="text-red-600">({allUsers.length})</span></h3>
                        <div className="flex items-center gap-2 flex-wrap">
                          <div className="flex items-center gap-1 px-2 py-1.5 bg-zinc-50 border border-zinc-100 rounded-xl">
-                           <span className="text-[7px] md:text-[8px] font-black text-zinc-400 uppercase italic hidden sm:inline">Dur:</span>
+                           <span className="text-[7px] md:text-[8px] font-black text-zinc-400 uppercase italic hidden sm:inline">{t("admin.duration")}</span>
                            <select
                              value={suspendDuration}
                              onChange={(e) => setSuspendDuration(e.target.value)}
                              className="bg-transparent text-[8px] md:text-[9px] font-black italic text-red-600 outline-none cursor-pointer"
                            >
-                             <option value="24h">24h</option>
-                             <option value="7d">7d</option>
-                             <option value="30d">30d</option>
-                             <option value="permanent">Perm.</option>
+                             <option value="24h">{t("admin.hours_24")}</option>
+                             <option value="7d">{t("admin.days_7")}</option>
+                             <option value="30d">{t("admin.days_30")}</option>
+                             <option value="permanent">{t("admin.permanent")}</option>
                            </select>
                          </div>
                          <div className="relative w-full max-w-[160px] md:max-w-none">
@@ -415,15 +541,15 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                            <input
                              type="text"
                              value={searchUsers}
-                             onChange={(e) => setSearchUsers(e.target.value)}
-                             placeholder="Buscar usuarios..."
+                              onChange={(e) => handleSearchUsers(e.target.value)}
+                              placeholder={t("biz.search_users")}
                              className="w-full pl-8 md:pl-9 pr-2.5 md:pr-3 py-1.5 md:py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-[9px] md:text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50"
                            />
                          </div>
                        </div>
                      </div>
                     <div className="space-y-2 md:space-y-3">
-                      {filteredUsers.map((u) => (
+                       {allUsers.map((u: any) => (
                         <div key={u._id} className={cn("flex items-center justify-between max-[340px]:p-2.5 max-[400px]:p-3.5 p-5 rounded-2xl border transition-all", u.isSuspended ? "bg-rose-50 border-rose-200" : "bg-zinc-50 border-zinc-100 hover:border-red-200")}>
                           <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
                             <div className={cn("w-7 h-7 md:w-12 md:h-12 rounded-lg md:rounded-2xl flex items-center justify-center shadow-sm font-black italic text-[9px] md:text-base shrink-0", u.isSuspended ? "bg-rose-100 text-rose-600" : "bg-white text-red-600")}>
@@ -433,7 +559,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                               <div className="flex items-center gap-1.5 md:gap-2">
                                 <p className={cn("font-black italic text-[10px] md:text-base truncate", u.isSuspended ? "text-rose-700" : "text-zinc-950")}>{u.name}</p>
                                 {u.isSuspended && (
-                                  <span className="px-1 py-0.5 bg-rose-200 text-rose-700 rounded-full text-[6px] md:text-[7px] font-black uppercase italic leading-none">Suspendido</span>
+                                  <span className="px-1 py-0.5 bg-rose-200 text-rose-700 rounded-full text-[6px] md:text-[7px] font-black uppercase italic leading-none">{t("biz.suspended_user")}</span>
                                 )}
                               </div>
                               <p className="text-[8px] md:text-[10px] text-zinc-400 font-bold italic truncate">{u.email}</p>
@@ -441,10 +567,26 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                           </div>
                           <div className="flex items-center gap-1.5 md:gap-4 shrink-0">
                             <div className="text-right hidden md:block">
-                              <p className="text-[9px] md:text-[10px] font-black italic text-zinc-950">{u.storeCount || 0} tiendas</p>
-                              <p className={cn("text-[8px] md:text-[9px] font-bold uppercase italic", u.subscription ? "text-emerald-600" : "text-zinc-400")}>
-                                {u.subscription || "Free"}
-                              </p>
+                              <p className="text-[9px] md:text-[10px] font-black italic text-zinc-950">                              {t("biz.total_stores").replace("{n}", String(u.storeCount || 0))}</p>
+                              {changingPlanUserId === u._id ? (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <select
+                                    value={changingPlanValue || u.subscription || "free"}
+                                    onChange={(e) => setChangingPlanValue(e.target.value)}
+                                    className="text-[8px] font-black italic bg-white border border-zinc-200 rounded-lg px-1.5 py-1 outline-none focus:ring-1 focus:ring-red-600"
+                                  >
+                                    <option value="free">Free</option>
+                                    <option value="starter">Starter</option>
+                                    <option value="business">Business</option>
+                                    <option value="enterprise">Enterprise</option>
+                                  </select>
+                                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleChangeUserPlan(u._id, changingPlanValue)} className="p-1 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition-all"><Check className="w-3 h-3" /></motion.button>
+                                </div>
+                              ) : (
+                                <button onClick={() => { setChangingPlanUserId(u._id); setChangingPlanValue(u.subscription || "free"); }} className={cn("text-[8px] md:text-[9px] font-bold uppercase italic hover:text-red-600 transition-colors", u.subscription ? "text-emerald-600" : "text-zinc-400")}>
+                                  {u.subscription || "Free"} <Edit3 className="w-2.5 h-2.5 inline ml-0.5 opacity-40" />
+                                </button>
+                              )}
                             </div>
                             <motion.button
                               whileTap={{ scale: 0.9 }}
@@ -457,24 +599,39 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                                 }
                               }}
                               className={cn("p-1.5 md:p-2 rounded-lg md:rounded-xl transition-all", u.isSuspended ? "bg-emerald-100 text-emerald-600 hover:bg-emerald-200" : "bg-rose-100 text-rose-500 hover:bg-rose-200")}
-                              title={u.isSuspended ? "Activar usuario" : "Suspender usuario"}
+                              title={u.isSuspended ? t("biz.activate") : t("biz.suspend")}
                             >
                               {u.isSuspended ? <CheckCircle className="w-3 h-3 md:w-3.5 md:h-3.5" /> : <Ban className="w-3 h-3 md:w-3.5 md:h-3.5" />}
                             </motion.button>
                           </div>
                         </div>
                       ))}
-                      {filteredUsers.length === 0 && (
-                        <div className="py-12 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200">{searchUsers ? "Sin resultados" : "No hay usuarios registrados"}</div>
+                      {allUsers.length === 0 && (
+                        <div className="py-12 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200">{searchUsers ? t("status.noresults") : t("biz.no_customers")}</div>
                       )}
                     </div>
+                    {totalUsersPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 pt-4">
+                        <motion.button whileTap={{ scale: 0.9 }}
+                          onClick={() => { const p = Math.max(1, usersPage - 1); setUsersPage(p); fetchDashboard({ usersPage: p }); }}
+                          disabled={usersPage <= 1}
+                          className="px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-[9px] font-black italic text-zinc-500 hover:bg-zinc-100 transition-all disabled:opacity-30"
+                        >{t("admin.previous")}</motion.button>
+                        <span className="text-[9px] font-black italic text-zinc-400 px-2">{usersPage} / {totalUsersPages}</span>
+                        <motion.button whileTap={{ scale: 0.9 }}
+                          onClick={() => { const p = Math.min(totalUsersPages, usersPage + 1); setUsersPage(p); fetchDashboard({ usersPage: p }); }}
+                          disabled={usersPage >= totalUsersPages}
+                          className="px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-[9px] font-black italic text-zinc-500 hover:bg-zinc-100 transition-all disabled:opacity-30"
+                        >{t("admin.next")}</motion.button>
+                      </div>
+                    )}
                   </motion.div>
                 )}
 
                 {activeTab === "stores" && (
                   <motion.div key="stores" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 md:space-y-8">
                      <div className="flex items-center justify-between flex-wrap gap-3">
-                       <h3 className="max-[340px]:text-xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">Tiendas <span className="text-red-600">({filteredStores.length})</span></h3>
+                        <h3 className="max-[340px]:text-xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">{t("admin.stores_title")} <span className="text-red-600">({allStores.length})</span></h3>
                        <div className="flex items-center gap-2 flex-wrap">
                          <div className="flex items-center gap-1 px-2 py-1.5 bg-zinc-50 border border-zinc-100 rounded-xl">
                            <span className="text-[7px] md:text-[8px] font-black text-zinc-400 uppercase italic hidden sm:inline">Dur:</span>
@@ -483,10 +640,10 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                              onChange={(e) => setSuspendDuration(e.target.value)}
                              className="bg-transparent text-[8px] md:text-[9px] font-black italic text-red-600 outline-none cursor-pointer"
                            >
-                             <option value="24h">24h</option>
-                             <option value="7d">7d</option>
-                             <option value="30d">30d</option>
-                             <option value="permanent">Perm.</option>
+                             <option value="24h">{t("admin.hours_24")}</option>
+                             <option value="7d">{t("admin.days_7")}</option>
+                             <option value="30d">{t("admin.days_30")}</option>
+                             <option value="permanent">{t("admin.permanent")}</option>
                            </select>
                          </div>
                          <div className="relative w-full max-w-[160px] md:max-w-none">
@@ -494,15 +651,15 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                            <input
                              type="text"
                              value={searchStores}
-                             onChange={(e) => setSearchStores(e.target.value)}
-                             placeholder="Buscar tiendas..."
+                              onChange={(e) => handleSearchStores(e.target.value)}
+                              placeholder={t("biz.search_stores")}
                              className="w-full pl-8 md:pl-9 pr-2.5 md:pr-3 py-1.5 md:py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-[9px] md:text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50"
                            />
                          </div>
                        </div>
                      </div>
                     <div className="space-y-2 md:space-y-3">
-                      {filteredStores.map((s) => (
+                       {allStores.map((s: any) => (
                         <div key={s._id} className={cn("flex items-center justify-between max-[340px]:p-2.5 max-[400px]:p-3.5 p-5 rounded-2xl border transition-all", s.isSuspended ? "bg-rose-50 border-rose-200" : "bg-zinc-50 border-zinc-100 hover:border-red-200")}>
                           <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
                             <div className={cn("w-7 h-7 md:w-12 md:h-12 rounded-lg md:rounded-2xl flex items-center justify-center shadow-sm shrink-0", s.isSuspended ? "bg-rose-100 text-rose-600" : "bg-white text-red-600")}>
@@ -512,7 +669,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                               <div className="flex items-center gap-1.5 md:gap-2">
                                 <p className={cn("font-black italic text-[10px] md:text-base truncate", s.isSuspended ? "text-rose-700" : "text-zinc-950")}>{s.name}</p>
                                 {s.isSuspended && (
-                                  <span className="px-1 py-0.5 bg-rose-200 text-rose-700 rounded-full text-[6px] md:text-[7px] font-black uppercase italic leading-none">Suspendida</span>
+                                  <span className="px-1 py-0.5 bg-rose-200 text-rose-700 rounded-full text-[6px] md:text-[7px] font-black uppercase italic leading-none">{t("biz.suspended")}</span>
                                 )}
                               </div>
                               <p className="text-[8px] md:text-[10px] text-zinc-400 font-bold italic truncate">{s.ownerEmail} · {s.typeLabel || s.type}</p>
@@ -520,9 +677,9 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                           </div>
                           <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
                             <div className="flex gap-1.5 md:gap-4 text-[7px] md:text-[10px] font-black italic text-zinc-500">
-                              <span>{s.productCount} prod.</span>
-                              <span className="hidden md:inline">{s.customerCount} clientes</span>
-                              <span className="max-[340px]:hidden">{s.orderCount} ped.</span>
+                              <span>{t("biz.products_count").replace("{n}", String(s.productCount))}</span>
+                              <span className="hidden md:inline">{t("biz.customers_count").replace("{n}", String(s.customerCount))}</span>
+                              <span className="max-[340px]:hidden">{t("biz.orders_count").replace("{n}", String(s.orderCount))}</span>
                             </div>
                             <motion.button
                               whileTap={{ scale: 0.9 }}
@@ -535,36 +692,51 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                                 }
                               }}
                               className={cn("p-1.5 md:p-2 rounded-lg md:rounded-xl transition-all", s.isSuspended ? "bg-emerald-100 text-emerald-600 hover:bg-emerald-200" : "bg-rose-100 text-rose-500 hover:bg-rose-200")}
-                              title={s.isSuspended ? "Activar tienda" : "Suspender tienda"}
+                              title={s.isSuspended ? t("biz.activate") : t("biz.suspend")}
                             >
                               {s.isSuspended ? <CheckCircle className="w-3 h-3 md:w-3.5 md:h-3.5" /> : <Ban className="w-3 h-3 md:w-3.5 md:h-3.5" />}
                             </motion.button>
                           </div>
                         </div>
                       ))}
-                      {filteredStores.length === 0 && (
-                        <div className="py-12 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200">{searchStores ? "Sin resultados" : "No hay tiendas creadas"}</div>
+                      {allStores.length === 0 && (
+                        <div className="py-12 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200">{searchStores ? t("status.noresults") : "No hay tiendas creadas"}</div>
                       )}
                     </div>
+                    {totalStoresPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 pt-4">
+                        <motion.button whileTap={{ scale: 0.9 }}
+                          onClick={() => { const p = Math.max(1, storesPage - 1); setStoresPage(p); fetchDashboard({ storesPage: p }); }}
+                          disabled={storesPage <= 1}
+                          className="px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-[9px] font-black italic text-zinc-500 hover:bg-zinc-100 transition-all disabled:opacity-30"
+                        >ANTERIOR</motion.button>
+                        <span className="text-[9px] font-black italic text-zinc-400 px-2">{storesPage} / {totalStoresPages}</span>
+                        <motion.button whileTap={{ scale: 0.9 }}
+                          onClick={() => { const p = Math.min(totalStoresPages, storesPage + 1); setStoresPage(p); fetchDashboard({ storesPage: p }); }}
+                          disabled={storesPage >= totalStoresPages}
+                          className="px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-[9px] font-black italic text-zinc-500 hover:bg-zinc-100 transition-all disabled:opacity-30"
+                        >SIGUIENTE</motion.button>
+                      </div>
+                    )}
                   </motion.div>
                 )}
 
                 {activeTab === "store-admin" && (
                    <motion.div key="store" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 md:space-y-10">
                       <div className="flex items-center justify-between flex-wrap gap-3">
-                         <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">Gestión de <span className="text-red-600">Productos</span></h3>
-                         <span className="text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest italic">{products.length} Items Publicados</span>
+                         <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">{t("admin.products_title")}</h3>
+                         <span className="text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest italic">{t("admin.published_items").replace("{n}", String(products.length))}</span>
                       </div>
                       
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
                          <div className="bg-zinc-50 max-[400px]:p-5 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 space-y-5 md:space-y-6 shadow-sm">
                             <div className="space-y-3 md:space-y-4">
                                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                                  <AdminInput label="Nombre del Producto" placeholder="Ej. Plan Avanzado" value={newProduct.name} onChange={(v: string) => setNewProduct({...newProduct, name: v})} />
-                                  <AdminInput label={`Inversión (${currency})`} placeholder="Ej. 299" type="number" value={newProduct.price} onChange={(v: string) => setNewProduct({...newProduct, price: v})} />
+                                  <AdminInput label={t("admin.product_name")} placeholder="Ej. Plan Avanzado" value={newProduct.name} onChange={(v: string) => setNewProduct({...newProduct, name: v})} />
+                                  <AdminInput label={t("admin.investment").replace("{currency}", currency)} placeholder="Ej. 299" type="number" value={newProduct.price} onChange={(v: string) => setNewProduct({...newProduct, price: v})} />
                                </div>
                                <div className="space-y-1.5">
-                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest ml-1">Descripción corta</label>
+                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest ml-1">{t("admin.short_desc")}</label>
                                   <textarea 
                                      value={newProduct.desc}
                                      onChange={(e) => setNewProduct({...newProduct, desc: e.target.value})}
@@ -575,7 +747,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                                
                                <div className="space-y-3">
                                   <label className="text-[9px] font-black text-zinc-400 uppercase italic flex items-center justify-between">
-                                     Galería (Hasta 10 imágenes)
+                                     {t("admin.gallery")}
                                      <span className="text-red-600">{newProduct.images.length}/10</span>
                                   </label>
                                   <div className="grid grid-cols-5 gap-2">
@@ -608,7 +780,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                                        disabled={!imageUrlInput || newProduct.images.length >= 10}
                                        className="px-4 py-2 bg-zinc-800 text-white rounded-xl text-[8px] font-black italic hover:bg-zinc-700 transition-all disabled:opacity-50 shrink-0"
                                      >
-                                       AÑADIR
+                                        {t("biz.add_image")}
                                      </button>
                                    </div>
                                 </div>
@@ -617,13 +789,13 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                                    onClick={publishProduct}
                                   className="w-full py-4 md:py-5 bg-red-600 text-white rounded-2xl font-black italic shadow-xl shadow-red-100 hover:bg-red-700 transition-all flex items-center justify-center gap-3 uppercase text-xs md:text-sm"
                                >
-                                  PUBLICAR PRODUCTO <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
+                                  {t("admin.publish_product")} <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
                                </motion.button>
                             </div>
                          </div>
 
                          <div className="space-y-3 md:space-y-4">
-                            <h4 className="text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest italic">Activos actualmente</h4>
+                            <h4 className="text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest italic">{t("admin.active_items")}</h4>
                             <div className="grid grid-cols-1 gap-3 md:gap-4">
                                {products.map((p: any) => (
                                   <div key={p.id} className="bg-white max-[400px]:p-3 p-4 rounded-2xl md:rounded-3xl border border-zinc-100 shadow-sm flex items-center justify-between group hover:border-red-600/20 transition-all">
@@ -647,11 +819,11 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                   </motion.div>
                )}
 
-               {activeTab === "database" && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}><div className="text-sm font-black italic text-zinc-400 p-10">Database View</div></motion.div>}
+                {activeTab === "database" && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}><div className="text-sm font-black italic text-zinc-400 p-10">{t("admin.database")}</div></motion.div>}
                
                 {activeTab === "settings" && (
                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 md:space-y-10">
-                      <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">Configuración <span className="text-red-600">Enterprise</span></h3>
+                      <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">{t("admin.config_title")}</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                          <ConfigBox label="MongoDB Cluster" value="mongodb+srv://alquizor8..." icon={<DbIcon className="text-emerald-500" />} />
                          <ConfigBox label="Cloudinary Assets" value="dpmufjj8y" icon={<Cloud className="text-blue-500" />} />
@@ -664,7 +836,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                 {activeTab === "history" && (
                    <motion.div key="history" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4 md:space-y-8">
                       <div className="flex items-center justify-between flex-wrap gap-3">
-                         <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">Historial Global de <span className="text-red-600">Pagos</span></h3>
+                         <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("admin.history_title")}</h3>
                          <div className="px-3 md:px-4 py-1.5 md:py-2 bg-zinc-950 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase italic">{allInvoices.length} Facturas</div>
                       </div>
 
@@ -707,12 +879,27 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                                   </tr>
                                )}
                             </tbody>
-                         </table>
+                          </table>
+                       </div>
+                    {totalInvoicesPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 pt-4">
+                        <motion.button whileTap={{ scale: 0.9 }}
+                          onClick={() => { const p = Math.max(1, invoicesPage - 1); setInvoicesPage(p); fetchDashboard({ invoicesPage: p }); }}
+                          disabled={invoicesPage <= 1}
+                          className="px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-[9px] font-black italic text-zinc-500 hover:bg-zinc-100 transition-all disabled:opacity-30"
+                        >ANTERIOR</motion.button>
+                        <span className="text-[9px] font-black italic text-zinc-400 px-2">{invoicesPage} / {totalInvoicesPages}</span>
+                        <motion.button whileTap={{ scale: 0.9 }}
+                          onClick={() => { const p = Math.min(totalInvoicesPages, invoicesPage + 1); setInvoicesPage(p); fetchDashboard({ invoicesPage: p }); }}
+                          disabled={invoicesPage >= totalInvoicesPages}
+                          className="px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-[9px] font-black italic text-zinc-500 hover:bg-zinc-100 transition-all disabled:opacity-30"
+                        >SIGUIENTE</motion.button>
                       </div>
-                   </motion.div>
-                 )}
+                    )}
+                    </motion.div>
+                  )}
 
-                {activeTab === "analytics" && (
+                 {activeTab === "analytics" && (
                    <motion.div key="analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 md:space-y-8">
                      <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">Analytics</h3>
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
@@ -796,6 +983,228 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                     </div>
                   </motion.div>
                 )}
+
+                {activeTab === "plans" && (
+                  <motion.div key="plans" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 md:space-y-10">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                      <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">Gestión de <span className="text-red-600">Planes</span></h3>
+                      <div className="flex items-center gap-2">
+                        {planToast && (
+                          <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-[9px] font-black italic">{planToast}</span>
+                        )}
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={handleSavePlans}
+                          disabled={savingPlans}
+                          className="px-4 md:px-6 py-2 md:py-3 bg-red-600 text-white rounded-xl font-black italic text-[10px] md:text-xs hover:bg-red-700 transition-all shadow-lg shadow-red-100 flex items-center gap-2 disabled:opacity-50"
+                        >
+                          <Save className="w-3.5 h-3.5" /> {savingPlans ? "GUARDANDO..." : "GUARDAR CAMBIOS"}
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={handleSyncStripe}
+                          disabled={syncingStripe}
+                          className="px-4 md:px-6 py-2 md:py-3 bg-emerald-600 text-white rounded-xl font-black italic text-[10px] md:text-xs hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center gap-2 disabled:opacity-50"
+                        >
+                          <Zap className="w-3.5 h-3.5" /> {syncingStripe ? "SINCRONIZANDO..." : "SINCRONIZAR CON STRIPE"}
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={fetchPlans}
+                          className="p-2 md:p-2.5 hover:bg-zinc-50 rounded-xl transition-all"
+                        >
+                          <RefreshCw className="w-4 h-4 text-zinc-400" />
+                        </motion.button>
+                      </div>
+                    </div>
+
+                    {/* Free Plan */}
+                    {planConfig && (
+                      <div className="bg-zinc-50 max-[400px]:p-5 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 space-y-5 md:space-y-6 shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm md:text-base font-black italic text-zinc-950 uppercase tracking-tighter">
+                            <span className="text-zinc-400">Plan</span> {planConfig.freePlan.name}
+                          </h4>
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                              if (editingPlanId === "free") {
+                                setEditingPlanId(null);
+                                setEditForm(null);
+                              } else {
+                                setEditingPlanId("free");
+                                setEditForm({ ...planConfig.freePlan });
+                              }
+                            }}
+                            className="p-2 hover:bg-white rounded-xl transition-all"
+                          >
+                            <Edit3 className="w-4 h-4 text-zinc-400 hover:text-red-600" />
+                          </motion.button>
+                        </div>
+                        {editingPlanId === "free" && editForm ? (
+                          <div className="space-y-4 bg-white rounded-2xl p-5 border border-zinc-100">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <AdminInput label="Nombre" value={editForm.name || ""} onChange={(v: string) => setEditForm({...editForm, name: v})} />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest">Límites</label>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <AdminInput label="Tiendas" type="number" value={editForm.limits?.maxStores?.toString() || "1"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxStores: parseInt(v) || 0}})} />
+                                <AdminInput label="Productos" type="number" value={editForm.limits?.maxProductsPerStore?.toString() || "10"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxProductsPerStore: parseInt(v) || 0}})} />
+                                <AdminInput label="Mensajes IA" type="number" value={editForm.limits?.maxMessages?.toString() || "10"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxMessages: parseInt(v) || 0}})} />
+                                <AdminInput label="Automations" type="number" value={editForm.limits?.maxAutomations?.toString() || "2"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxAutomations: parseInt(v) || 0}})} />
+                              </div>
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                              <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setEditingPlanId(null); setEditForm(null); }} className="px-5 py-2.5 bg-zinc-50 text-zinc-500 rounded-xl font-black italic text-[10px] hover:bg-zinc-100 transition-all">CANCELAR</motion.button>
+                              <motion.button whileTap={{ scale: 0.95 }} onClick={() => { if (planConfig) { setPlanConfig({...planConfig, freePlan: editForm}); setEditingPlanId(null); setEditForm(null); }} } className="px-5 py-2.5 bg-zinc-950 text-white rounded-xl font-black italic text-[10px] hover:bg-zinc-800 transition-all">APLICAR</motion.button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="bg-white rounded-xl p-3 md:p-4 border border-zinc-100">
+                              <p className="text-[8px] font-black text-zinc-400 uppercase italic">Tiendas</p>
+                              <p className="text-lg md:text-xl font-black italic text-zinc-950">{planConfig.freePlan.limits?.maxStores || 1}</p>
+                            </div>
+                            <div className="bg-white rounded-xl p-3 md:p-4 border border-zinc-100">
+                              <p className="text-[8px] font-black text-zinc-400 uppercase italic">Productos</p>
+                              <p className="text-lg md:text-xl font-black italic text-zinc-950">{planConfig.freePlan.limits?.maxProductsPerStore || 10}</p>
+                            </div>
+                            <div className="bg-white rounded-xl p-3 md:p-4 border border-zinc-100">
+                              <p className="text-[8px] font-black text-zinc-400 uppercase italic">Mensajes IA</p>
+                              <p className="text-lg md:text-xl font-black italic text-zinc-950">{planConfig.freePlan.limits?.maxMessages || 10}</p>
+                            </div>
+                            <div className="bg-white rounded-xl p-3 md:p-4 border border-zinc-100">
+                              <p className="text-[8px] font-black text-zinc-400 uppercase italic">Automations</p>
+                              <p className="text-lg md:text-xl font-black italic text-zinc-950">{planConfig.freePlan.limits?.maxAutomations || 2}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Paid Plans */}
+                    <div className="grid grid-cols-1 gap-6">
+                      {planConfig?.plans.map((plan: any) => (
+                        <div key={plan.id} className={cn("bg-white rounded-[2rem] md:rounded-[2.5rem] border-2 p-5 md:p-8 space-y-5 transition-all", plan.popular ? "border-red-600 shadow-2xl shadow-red-600/5" : "border-zinc-100")}>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-3">
+                                <h4 className="text-xl md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{plan.name}</h4>
+                                {plan.popular && (
+                                  <span className="px-2.5 py-1 bg-red-600 text-white rounded-full text-[7px] font-black uppercase tracking-widest italic leading-none flex items-center gap-1">
+                                    <Star className="w-2.5 h-2.5 fill-current" /> POPULAR
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-zinc-400 font-medium italic">{plan.desc}</p>
+                            </div>
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => {
+                                if (editingPlanId === plan.id) {
+                                  setEditingPlanId(null);
+                                  setEditForm(null);
+                                } else {
+                                  setEditingPlanId(plan.id);
+                                  setEditForm({ ...plan });
+                                }
+                              }}
+                              className="p-2 hover:bg-zinc-50 rounded-xl transition-all shrink-0"
+                            >
+                              <Edit3 className={cn("w-4 h-4", editingPlanId === plan.id ? "text-red-600" : "text-zinc-400")} />
+                            </motion.button>
+                          </div>
+
+                          {editingPlanId === plan.id && editForm ? (
+                            <div className="space-y-4 bg-zinc-50 rounded-2xl p-5 border border-zinc-100">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <AdminInput label="Nombre" value={editForm.name || ""} onChange={(v: string) => setEditForm({...editForm, name: v})} />
+                                <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Precio ($)</label>
+                                  <input type="number" value={editForm.price?.toString() || "0"} onChange={(e) => setEditForm({...editForm, price: parseInt(e.target.value) || 0})} className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic" />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Descripción</label>
+                                  <input type="text" value={editForm.desc || ""} onChange={(e) => setEditForm({...editForm, desc: e.target.value})} className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic" />
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest">Features (uno por línea)</label>
+                                <textarea
+                                  value={(editForm.features || []).join("\n")}
+                                  onChange={(e) => setEditForm({...editForm, features: e.target.value.split("\n").filter((f: string) => f.trim())})}
+                                  className="w-full bg-white border border-zinc-100 rounded-xl p-3 md:p-4 text-[11px] font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic h-28"
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest">Límites</label>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                  <AdminInput label="Tiendas" type="number" value={editForm.limits?.maxStores?.toString() || "3"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxStores: parseInt(v) || 0}})} />
+                                  <AdminInput label="Productos/tienda" type="number" value={editForm.limits?.maxProductsPerStore?.toString() || "50"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxProductsPerStore: parseInt(v) || 0}})} />
+                                  <AdminInput label="Mensajes IA" type="number" value={editForm.limits?.maxMessages?.toString() || "50"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxMessages: parseInt(v) || 0}})} />
+                                  <AdminInput label="Automations" type="number" value={editForm.limits?.maxAutomations?.toString() || "10"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxAutomations: parseInt(v) || 0}})} />
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" checked={editForm.popular || false} onChange={(e) => setEditForm({...editForm, popular: e.target.checked})} className="w-4 h-4 rounded accent-red-600" />
+                                  <span className="text-[10px] font-black italic text-zinc-600 uppercase">Marcar como "Más Popular"</span>
+                                </label>
+                              </div>
+
+                              <div className="flex gap-2 pt-2">
+                                <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setEditingPlanId(null); setEditForm(null); }} className="px-5 py-2.5 bg-zinc-50 text-zinc-500 rounded-xl font-black italic text-[10px] hover:bg-zinc-100 transition-all">CANCELAR</motion.button>
+                                <motion.button whileTap={{ scale: 0.95 }} onClick={() => { if (planConfig) { setPlanConfig({...planConfig, plans: planConfig.plans.map((p: any) => p.id === editForm.id ? editForm : p)}); setEditingPlanId(null); setEditForm(null); }} } className="px-5 py-2.5 bg-zinc-950 text-white rounded-xl font-black italic text-[10px] hover:bg-zinc-800 transition-all">APLICAR</motion.button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-3xl md:text-4xl font-black italic text-zinc-950 tracking-tighter">${plan.price}</span>
+                              <span className="text-zinc-400 font-black text-xs italic uppercase">/mes</span>
+                            </div>
+                          )}
+
+                          {editingPlanId !== plan.id && (
+                            <div className="flex flex-wrap gap-2">
+                              {(plan.features || []).map((f: string) => (
+                                <span key={f} className="px-3 py-1.5 bg-zinc-50 text-zinc-600 rounded-lg text-[9px] md:text-[10px] font-bold italic border border-zinc-100">
+                                  <Check className="w-2.5 h-2.5 inline mr-1 text-emerald-500" />{f}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {editingPlanId !== plan.id && (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+                              <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-100">
+                                <p className="text-[8px] font-black text-zinc-400 uppercase italic">Tiendas</p>
+                                <p className="text-sm md:text-base font-black italic text-zinc-950">{plan.limits?.maxStores || 3}</p>
+                              </div>
+                              <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-100">
+                                <p className="text-[8px] font-black text-zinc-400 uppercase italic">Productos</p>
+                                <p className="text-sm md:text-base font-black italic text-zinc-950">{plan.limits?.maxProductsPerStore || 50}</p>
+                              </div>
+                              <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-100">
+                                <p className="text-[8px] font-black text-zinc-400 uppercase italic">Mensajes IA</p>
+                                <p className="text-sm md:text-base font-black italic text-zinc-950">{plan.limits?.maxMessages || 50}</p>
+                              </div>
+                              <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-100">
+                                <p className="text-[8px] font-black text-zinc-400 uppercase italic">Automations</p>
+                                <p className="text-sm md:text-base font-black italic text-zinc-950">{plan.limits?.maxAutomations || 10}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {activeTab === "email" && <EmailAdminSection />}
             </AnimatePresence>
          </main>
       </div>
@@ -860,10 +1269,10 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                 onClick={() => setViewingActivity(null)}
                 className="w-full py-3 bg-zinc-50 text-zinc-500 rounded-xl font-black italic text-[10px] hover:bg-zinc-100 transition-all"
               >
-                CERRAR
-              </motion.button>
-            </motion.div>
-          </motion.div>
+                 {t("action.close")}
+               </motion.button>
+             </motion.div>
+           </motion.div>
         )}
       </AnimatePresence>
 
@@ -981,6 +1390,7 @@ function ConfigBox({ label, value, icon }: any) {
 }
 
 function AdminRevenuePanel() {
+  const { t } = useLanguage();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -1001,7 +1411,7 @@ function AdminRevenuePanel() {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-center py-20">
         <div className="flex items-center gap-3 px-6 py-4 bg-zinc-50 rounded-2xl text-zinc-400 italic font-black text-sm">
-          <Loader className="w-5 h-5 animate-spin" /> CARGANDO...
+           <Loader className="w-5 h-5 animate-spin" /> {t("admin.loading")}
         </div>
       </motion.div>
     );
@@ -1010,7 +1420,7 @@ function AdminRevenuePanel() {
   return (
     <motion.div key="revenue" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 md:space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">Ganancias de <span className="text-red-600">Plataforma</span></h3>
+        <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("admin.revenue")} de <span className="text-red-600">Plataforma</span></h3>
         <motion.button whileTap={{ scale: 0.9 }} onClick={fetchData} className="p-2 hover:md:p-2.5 hover:bg-zinc-50 rounded-xl transition-all">
           <RefreshCw className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" />
         </motion.button>

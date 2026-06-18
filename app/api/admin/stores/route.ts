@@ -9,6 +9,9 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
     const search = url.searchParams.get("search") || "";
+    const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
+    const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") || "20")));
+    const skip = (page - 1) * limit;
 
     let query: any = {};
     if (search) {
@@ -21,9 +24,14 @@ export async function GET(req: Request) {
       };
     }
 
-    const stores = await Store.find(query)
-      .sort({ createdAt: -1 })
-      .lean();
+    const [total, stores] = await Promise.all([
+      Store.countDocuments(query),
+      Store.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
 
     const storesWithStats = (stores as any[]).map((s) => ({
       _id: s._id,
@@ -41,7 +49,12 @@ export async function GET(req: Request) {
       orderCount: (s.orders || []).length,
     }));
 
-    return Response.json({ stores: storesWithStats });
+    return Response.json({
+      stores: storesWithStats,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     console.error("Admin stores error:", error);
     return Response.json({ error: "Error loading stores" }, { status: 500 });

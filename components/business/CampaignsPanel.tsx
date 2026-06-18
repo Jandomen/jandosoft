@@ -24,9 +24,10 @@ interface CampaignsPanelProps {
   campaigns: Campaign[];
   setCampaigns: (campaigns: Campaign[]) => void;
   onPersist: (campaigns?: Campaign[]) => void;
+  storeId?: string;
 }
 
-export default function CampaignsPanel({ campaigns, setCampaigns, onPersist }: CampaignsPanelProps) {
+export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, storeId }: CampaignsPanelProps) {
   const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
@@ -84,16 +85,56 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist }: C
   };
 
   const sendCampaign = async (id: number) => {
+    const campaign = campaigns.find(c => c.id === id);
+    if (!campaign) return;
     setSending(id);
-    await new Promise(r => setTimeout(r, 1500));
-    const nc = campaigns.map(c => c.id === id ? {
-      ...c, status: "sent" as const, sentAt: new Date().toISOString(),
-      stats: { sent: Math.floor(Math.random() * 500) + 50, opened: Math.floor(Math.random() * 200) + 10, clicked: Math.floor(Math.random() * 80) + 5, bounced: Math.floor(Math.random() * 10), unsubscribed: Math.floor(Math.random() * 5) },
-    } : c);
-    setCampaigns(nc);
-    onPersist(nc);
+    try {
+      if (campaign.type === "email") {
+        const res = await fetch("/api/email/campaigns", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customerIds: [],
+            audience: campaign.audience,
+            storeId,
+            subject: campaign.subject,
+            content: campaign.body,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || "Error al enviar", "error"); setSending(null); return; }
+        const nc = campaigns.map(c => c.id === id ? {
+          ...c, status: "sent" as const, sentAt: new Date().toISOString(),
+          stats: { sent: data.stats?.sent || 0, opened: 0, clicked: 0, bounced: data.stats?.failed || 0, unsubscribed: 0 },
+        } : c);
+        setCampaigns(nc);
+        onPersist(nc);
+        showToast(`Campaña enviada (${data.stats?.sent} enviados)`, "success");
+      } else if (campaign.type === "sms") {
+        const res = await fetch("/api/sms/campaigns", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customerIds: [],
+            audience: campaign.audience,
+            storeId,
+            content: campaign.body,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || "Error al enviar SMS", "error"); setSending(null); return; }
+        const nc = campaigns.map(c => c.id === id ? {
+          ...c, status: "sent" as const, sentAt: new Date().toISOString(),
+          stats: { sent: data.stats?.sent || 0, opened: 0, clicked: 0, bounced: data.stats?.failed || 0, unsubscribed: 0 },
+        } : c);
+        setCampaigns(nc);
+        onPersist(nc);
+        showToast(`Campaña SMS enviada (${data.stats?.sent} enviados)`, "success");
+      }
+    } catch {
+      showToast("Error de conexión al enviar campaña", "error");
+    }
     setSending(null);
-    showToast("Campaña enviada", "success");
   };
 
   const togglePause = (id: number) => {

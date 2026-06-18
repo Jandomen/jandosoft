@@ -3,12 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { Store } from "@/lib/models/Store";
 import { User } from "@/lib/models/User";
 import { getAuthFromCookies, getAuthFromHeaders } from "@/lib/auth";
-
-const PLAN_LIMITS: Record<string, { maxStores: number; maxProductsPerStore: number }> = {
-  free: { maxStores: 3, maxProductsPerStore: 20 },
-  basic: { maxStores: 10, maxProductsPerStore: 100 },
-  enterprise: { maxStores: 999, maxProductsPerStore: 9999 },
-};
+import { getPlanConfig, getPlanLimitsFromConfig } from "@/lib/plan-config";
 
 async function getAuth(req: NextRequest) {
   return getAuthFromHeaders(req) || await getAuthFromCookies();
@@ -19,8 +14,8 @@ async function checkProductLimit(storeId: string, organizationId: string, newPro
   if (!store) return null;
   const user = await User.findOne({ email: store.ownerEmail }).lean();
   if (!user) return "Usuario no encontrado";
-  const sub = user.subscription || "free";
-  const limits = PLAN_LIMITS[sub] || PLAN_LIMITS.free;
+  const config = await getPlanConfig();
+  const limits = getPlanLimitsFromConfig(config, user.subscription);
   const expiry = user.subscriptionExpiry ? new Date(user.subscriptionExpiry) : null;
   if (expiry && expiry < new Date()) return "Plan vencido. No puedes modificar productos.";
   if (newProductCount > limits.maxProductsPerStore) {
