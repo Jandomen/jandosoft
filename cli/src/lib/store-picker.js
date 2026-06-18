@@ -3,7 +3,12 @@ const inquirer = require('inquirer').default;
 const { request } = require('./api');
 
 async function selectStore() {
-  const data = await request('GET', '/api/stores');
+  let data;
+  try {
+    data = await request('GET', '/api/stores');
+  } catch {
+    return null;
+  }
   const stores = data.stores || [];
 
   if (stores.length === 0) {

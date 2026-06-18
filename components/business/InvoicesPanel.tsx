@@ -48,6 +48,7 @@ export default function InvoicesPanel({ storeId, userEmail }: { storeId: string 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          storeId,
           userEmail: form.userEmail,
           userName: form.userName,
           amount: parseFloat(form.amount),

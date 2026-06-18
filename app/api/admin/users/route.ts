@@ -10,6 +10,9 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
     const search = url.searchParams.get("search") || "";
+    const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
+    const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") || "20")));
+    const skip = (page - 1) * limit;
 
     let query: any = {};
     if (search) {
@@ -21,9 +24,14 @@ export async function GET(req: Request) {
       };
     }
 
-    const users = await User.find(query, "-password")
-      .sort({ createdAt: -1 })
-      .lean();
+    const [total, users] = await Promise.all([
+      User.countDocuments(query),
+      User.find(query, "-password")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
 
     const usersWithStoreCount = await Promise.all(
       (users as any[]).map(async (u) => {
@@ -32,7 +40,12 @@ export async function GET(req: Request) {
       })
     );
 
-    return Response.json({ users: usersWithStoreCount });
+    return Response.json({
+      users: usersWithStoreCount,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     console.error("Admin users error:", error);
     return Response.json({ error: "Error loading users" }, { status: 500 });

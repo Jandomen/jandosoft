@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { verifyEmailConfig } from "@/lib/email-verify";
+
+if (process.env.NODE_ENV !== "production") {
+  verifyEmailConfig();
+}
 
 const inter = Inter({
   variable: "--font-inter",

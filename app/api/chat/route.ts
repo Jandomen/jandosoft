@@ -7,8 +7,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY,
 });
 
-const MAX_MESSAGES = 10;
-const RESET_HOURS = 24;
+const AUTH_MAX_MESSAGES = 10;
+const AUTH_RESET_HOURS = 24;
+const PUBLIC_MAX_MESSAGES = 5;
+const PUBLIC_RESET_HOURS = 6;
 
 const BASE_INSTRUCTION = `
 Eres Jandosoft AI, un sistema operativo empresarial inteligente integrado dentro de la plataforma Jandosoft Enterprise.
@@ -39,31 +41,41 @@ Si el usuario pide ventas: genera scripts, pipelines, optimizaciones, tácticas 
 Si el usuario pide SaaS: genera arquitectura, APIs, workflows, dashboards, automatizaciones.
 `;
 
-async function checkAndIncrementUsage(email: string): Promise<{ allowed: boolean; remaining: number; totalUsed: number }> {
+async function checkAndIncrementUsage(identifier: string, maxMessages: number, resetHours: number): Promise<{ allowed: boolean; remaining: number; totalUsed: number }> {
   await connectDB();
   const now = new Date();
-  let usage = await ChatUsage.findOne({ email });
+  let usage = await ChatUsage.findOne({ email: identifier });
 
   if (!usage) {
-    usage = await ChatUsage.create({ email, messageCount: 1, lastResetAt: now });
-    return { allowed: true, remaining: MAX_MESSAGES - 1, totalUsed: 1 };
+    usage = await ChatUsage.create({ email: identifier, messageCount: 1, lastResetAt: now });
+    return { allowed: true, remaining: maxMessages - 1, totalUsed: 1 };
   }
 
   const hoursSinceReset = (now.getTime() - new Date(usage.lastResetAt).getTime()) / (1000 * 60 * 60);
-  if (hoursSinceReset >= RESET_HOURS) {
+  if (hoursSinceReset >= resetHours) {
     usage.messageCount = 1;
     usage.lastResetAt = now;
     await usage.save();
-    return { allowed: true, remaining: MAX_MESSAGES - 1, totalUsed: 1 };
+    return { allowed: true, remaining: maxMessages - 1, totalUsed: 1 };
   }
 
-  if (usage.messageCount >= MAX_MESSAGES) {
+  if (usage.messageCount >= maxMessages) {
     return { allowed: false, remaining: 0, totalUsed: usage.messageCount };
   }
 
   usage.messageCount += 1;
   await usage.save();
-  return { allowed: true, remaining: MAX_MESSAGES - usage.messageCount, totalUsed: usage.messageCount };
+  return { allowed: true, remaining: maxMessages - usage.messageCount, totalUsed: usage.messageCount };
+}
+
+async function getRemaining(identifier: string, maxMessages: number, resetHours: number): Promise<number> {
+  await connectDB();
+  const usage = await ChatUsage.findOne({ email: identifier });
+  if (!usage) return maxMessages;
+  const now = new Date();
+  const hoursSinceReset = (now.getTime() - new Date(usage.lastResetAt).getTime()) / (1000 * 60 * 60);
+  const count = hoursSinceReset >= resetHours ? 0 : usage.messageCount;
+  return Math.max(0, maxMessages - count);
 }
 
 export async function POST(req: Request) {
@@ -72,17 +84,39 @@ export async function POST(req: Request) {
     const messages = body.messages || [];
     const context = body.context || {};
     const email = context.email || "";
+    const guestId = body.guestId || "";
+    const overrideSystem = body.overrideSystem === true;
+    const model = body.model
+      ? (body.model.includes("/") ? body.model : `openai/${body.model}`)
+      : "openai/gpt-4o-mini";
+    const temperature = body.temperature !== undefined ? body.temperature : 0.7;
 
     if (!messages.length) {
       return Response.json({ error: "No messages provided" }, { status: 400 });
     }
 
+    let identifier = "";
+    let isPublic = false;
+    let maxMessages = AUTH_MAX_MESSAGES;
+    let resetHours = AUTH_RESET_HOURS;
+
     if (email) {
-      const { allowed, remaining } = await checkAndIncrementUsage(email);
+      identifier = email;
+    } else if (guestId) {
+      identifier = `guest:${guestId}`;
+      isPublic = true;
+      maxMessages = PUBLIC_MAX_MESSAGES;
+      resetHours = PUBLIC_RESET_HOURS;
+    }
+
+    if (identifier) {
+      const { allowed, remaining } = await checkAndIncrementUsage(identifier, maxMessages, resetHours);
       if (!allowed) {
+        const limitLabel = isPublic ? `${PUBLIC_MAX_MESSAGES} preguntas cada ${PUBLIC_RESET_HOURS} horas` : `${AUTH_MAX_MESSAGES} preguntas cada ${AUTH_RESET_HOURS} horas`;
         return Response.json({
-          error: `Has alcanzado el límite de ${MAX_MESSAGES} preguntas. Las preguntas se restablecen cada ${RESET_HOURS} horas.`,
+          error: `Has alcanzado el límite de ${limitLabel}. Vuelve más tarde.`,
           remaining: 0,
+          isPublic,
         }, { status: 429 });
       }
     }
@@ -93,40 +127,62 @@ CONTEXTO DE NEGOCIO:
 - Industria: ${context.industry || "N/A"}
 - Tipo: ${context.storeType || "N/A"}
 - Descripción: ${context.description || "N/A"}
-- Usuario: ${context.email || "N/A"}
+- Usuario: ${context.email || "Invitado"}
 - Plan: ${context.plan || "Free"}
 ` : "";
 
+    const IMG_RE = /!\[image\]\(([^)]+)\)/g;
+
+    function buildContent(content: string): string | any[] {
+      const urls: string[] = [];
+      let match;
+      while ((match = IMG_RE.exec(content)) !== null) {
+        urls.push(match[1]);
+      }
+      if (urls.length === 0) return content;
+
+      const text = content.replace(IMG_RE, "").trim();
+      const parts: any[] = [];
+      if (text) parts.push({ type: "text", text });
+      for (const url of urls) {
+        parts.push({ type: "image_url", image_url: { url } });
+      }
+      return parts;
+    }
+
+    const systemContent = overrideSystem
+      ? (messages.find((m: any) => m.role === "system")?.content || BASE_INSTRUCTION + contextBlock)
+      : BASE_INSTRUCTION + contextBlock;
+
+    const filteredMessages = messages.filter((m: any) => m.role !== "system");
+
     const finalMessages = [
-      { role: "system", content: BASE_INSTRUCTION + contextBlock },
-      ...messages.map((m: { role: string, content: string }) => ({
+      { role: "system", content: systemContent },
+      ...filteredMessages.map((m: { role: string, content: string }) => ({
         role: m.role === "user" ? "user" : "assistant",
-        content: m.content
+        content: m.role === "user" ? buildContent(m.content) : m.content
       }))
     ];
 
     const completion = await openai.chat.completions.create({
-      model: "deepseek/deepseek-chat",
+      model,
       messages: finalMessages,
+      temperature,
     });
+
+    const remaining = identifier ? await getRemaining(identifier, maxMessages, resetHours) : undefined;
 
     return Response.json({
       text: completion.choices[0].message.content,
-      remaining: email ? await getRemaining(email) : undefined,
+      remaining,
+      isPublic: isPublic || undefined,
     });
 
-  } catch (error) {
-    console.error("OpenRouter Error:", error);
+  } catch (error: any) {
+    console.error("Chat API 500:", error?.message || error, "HasKey:", !!process.env.OPENROUTER_API_KEY);
+    if (error?.status) console.error("Status:", error.status);
+    if (error?.error?.message) console.error("OpenRouter msg:", error.error.message);
+    if (error?.code === "insufficient_quota") console.error("QUOTA EXCEEDED — OpenRouter key needs funds");
     return Response.json({ error: "Error generating response" }, { status: 500 });
   }
-}
-
-async function getRemaining(email: string): Promise<number> {
-  await connectDB();
-  const usage = await ChatUsage.findOne({ email });
-  if (!usage) return MAX_MESSAGES;
-  const now = new Date();
-  const hoursSinceReset = (now.getTime() - new Date(usage.lastResetAt).getTime()) / (1000 * 60 * 60);
-  const count = hoursSinceReset >= RESET_HOURS ? 0 : usage.messageCount;
-  return Math.max(0, MAX_MESSAGES - count);
 }
