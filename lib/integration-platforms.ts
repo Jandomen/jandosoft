@@ -1,7 +1,7 @@
 export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields: { key: string; label: string; placeholder: string; secret?: boolean }[]; docs?: string }> = {
   telegram: {
     label: "Telegram",
-    icon: "Send",
+    icon: "SiTelegram",
     fields: [
       { key: "botToken", label: "Token del Bot", placeholder: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11", secret: true },
       { key: "chatId", label: "Chat ID", placeholder: "-1001234567890" },
@@ -10,7 +10,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   discord: {
     label: "Discord",
-    icon: "MessageSquare",
+    icon: "SiDiscord",
     fields: [
       { key: "webhookUrl", label: "Webhook URL", placeholder: "https://discord.com/api/webhooks/...", secret: true },
     ],
@@ -18,7 +18,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   slack: {
     label: "Slack",
-    icon: "MessageCircle",
+    icon: "SiSlack",
     fields: [
       { key: "webhookUrl", label: "Webhook URL", placeholder: "https://hooks.slack.com/services/...", secret: true },
     ],
@@ -26,7 +26,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   twilio: {
     label: "Twilio (SMS)",
-    icon: "Smartphone",
+    icon: "SiTwilio",
     fields: [
       { key: "accountSid", label: "Account SID", placeholder: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", secret: true },
       { key: "authToken", label: "Auth Token", placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", secret: true },
@@ -36,7 +36,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   whatsapp: {
     label: "WhatsApp (Twilio)",
-    icon: "MessageCircle",
+    icon: "SiWhatsapp",
     fields: [
       { key: "accountSid", label: "Account SID", placeholder: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", secret: true },
       { key: "authToken", label: "Auth Token", placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", secret: true },
@@ -46,7 +46,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   whatsapp_business: {
     label: "WhatsApp Business API (Meta)",
-    icon: "MessageCircle",
+    icon: "SiWhatsapp",
     fields: [
       { key: "phoneNumberId", label: "Phone Number ID", placeholder: "123456789012345", secret: false },
       { key: "accessToken", label: "Access Token (permanente)", placeholder: "EAAx...", secret: true },
@@ -56,7 +56,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   instagram: {
     label: "Instagram (Meta)",
-    icon: "Camera",
+    icon: "SiInstagram",
     fields: [
       { key: "instagramBusinessId", label: "ID de cuenta de Instagram Business", placeholder: "123456789012345", secret: false },
       { key: "accessToken", label: "Access Token (Meta)", placeholder: "EAAx...", secret: true },
@@ -66,7 +66,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   facebook: {
     label: "Facebook (Meta)",
-    icon: "Globe",
+    icon: "SiFacebook",
     fields: [
       { key: "pageId", label: "Facebook Page ID", placeholder: "123456789012345", secret: false },
       { key: "accessToken", label: "Access Token (Meta)", placeholder: "EAAx...", secret: true },
@@ -75,7 +75,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   twitter: {
     label: "Twitter / X",
-    icon: "Hash",
+    icon: "SiX",
     fields: [
       { key: "bearerToken", label: "Bearer Token", placeholder: "AAAAAAAAAAAAAAAAAAAAA...", secret: true },
       { key: "apiKey", label: "API Key", placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxx", secret: true },
@@ -87,7 +87,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   threads: {
     label: "Threads (Meta)",
-    icon: "MessageCircle",
+    icon: "SiThreads",
     fields: [
       { key: "threadsUserId", label: "Threads User ID", placeholder: "123456789012345", secret: false },
       { key: "accessToken", label: "Access Token (Meta)", placeholder: "EAAx...", secret: true },
@@ -97,7 +97,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   youtube: {
     label: "YouTube (Google)",
-    icon: "Play",
+    icon: "SiYoutube",
     fields: [
       { key: "apiKey", label: "API Key (Google Cloud)", placeholder: "AIzaSy...", secret: true },
       { key: "channelId", label: "Channel ID", placeholder: "UC...", secret: false },
@@ -106,7 +106,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   google_maps: {
     label: "Google Maps",
-    icon: "MapPin",
+    icon: "SiGooglemaps",
     fields: [
       { key: "apiKey", label: "API Key", placeholder: "AIzaSy...", secret: true },
     ],
@@ -114,7 +114,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   mapbox: {
     label: "Mapbox",
-    icon: "Map",
+    icon: "SiMapbox",
     fields: [
       { key: "accessToken", label: "Access Token", placeholder: "pk.eyJ1Ijoi...", secret: true },
     ],
@@ -122,7 +122,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   gmail: {
     label: "Gmail (Google)",
-    icon: "Mail",
+    icon: "SiGmail",
     fields: [
       { key: "clientId", label: "Client ID (OAuth 2.0)", placeholder: "1234567890-xxxxx.apps.googleusercontent.com", secret: true },
       { key: "clientSecret", label: "Client Secret", placeholder: "GOCSPX-...", secret: true },
@@ -133,7 +133,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   messenger: {
     label: "Messenger (Meta)",
-    icon: "MessageCircle",
+    icon: "SiMessenger",
     fields: [
       { key: "pageId", label: "Facebook Page ID", placeholder: "123456789012345", secret: false },
       { key: "accessToken", label: "Page Access Token", placeholder: "EAAx...", secret: true },
@@ -142,7 +142,7 @@ export const PLATFORM_INFO: Record<string, { label: string; icon: string; fields
   },
   tiktok: {
     label: "TikTok",
-    icon: "Music",
+    icon: "SiTiktok",
     fields: [
       { key: "accessToken", label: "Access Token", placeholder: "clt.xxxxx...", secret: true },
       { key: "openId", label: "Open ID (TikTok user ID)", placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", secret: false },

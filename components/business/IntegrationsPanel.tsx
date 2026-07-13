@@ -1,21 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plug, Send, MessageSquare, MessageCircle, Smartphone, Globe, Check, X, Loader2, Trash2, ExternalLink, Search, CreditCard, Wallet, Bitcoin, ShoppingBag, Star } from "lucide-react";
+import { Plug, Send, Check, X, Loader2, Trash2, ExternalLink, Search, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/components/ui/Toast";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { PLATFORM_INFO } from "@/lib/integration-platforms";
-
-const ICONS: Record<string, any> = {
-  Send, MessageSquare, MessageCircle, Smartphone, Globe,
-};
+import {
+  SiStripe, SiPaypal, SiMercadopago, SiBitcoin,
+  SiTelegram, SiDiscord, SiWhatsapp,
+  SiInstagram, SiFacebook, SiX, SiThreads, SiYoutube,
+  SiGooglemaps, SiMapbox, SiGmail, SiMessenger, SiTiktok,
+} from "react-icons/si";
+import { TbBrandSlack, TbBrandTwilio } from "react-icons/tb";
 
 const PAYMENT_ICONS: Record<string, any> = {
-  stripe: CreditCard,
-  paypal: Wallet,
-  mercadopago: ShoppingBag,
-  nowpayments: Bitcoin,
+  stripe: SiStripe,
+  paypal: SiPaypal,
+  mercadopago: SiMercadopago,
+  nowpayments: SiBitcoin,
 };
 
 const PAYMENT_COLORS: Record<string, string> = {
@@ -23,6 +26,32 @@ const PAYMENT_COLORS: Record<string, string> = {
   paypal: "#003087",
   mercadopago: "#009EE3",
   nowpayments: "#6C3EC1",
+};
+
+const REACT_ICONS: Record<string, any> = {
+  SiTelegram, SiDiscord, SiWhatsapp,
+  SiInstagram, SiFacebook, SiX, SiThreads, SiYoutube,
+  SiGooglemaps, SiMapbox, SiGmail, SiMessenger, SiTiktok,
+  TbBrandSlack, TbBrandTwilio,
+};
+
+const ICON_COLORS: Record<string, string> = {
+  telegram: "#26A5E4",
+  discord: "#5865F2",
+  slack: "#4A154B",
+  twilio: "#F22F46",
+  whatsapp: "#25D366",
+  whatsapp_business: "#25D366",
+  instagram: "#E4405F",
+  facebook: "#1877F2",
+  twitter: "#000000",
+  threads: "#000000",
+  youtube: "#FF0000",
+  google_maps: "#4285F4",
+  mapbox: "#4264FB",
+  gmail: "#EA4335",
+  messenger: "#00B2FF",
+  tiktok: "#000000",
 };
 
 interface Integration {
@@ -268,7 +297,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {["stripe", "paypal", "mercadopago", "nowpayments"].map((provider) => {
             const pi = paymentIntegrations.find(p => p.provider === provider);
-            const Icon = PAYMENT_ICONS[provider] || CreditCard;
+            const Icon = PAYMENT_ICONS[provider] || SiBitcoin;
             const isExpanded = expandedPayment === provider;
             const fields = PAYMENT_FIELDS[provider] || [];
 
@@ -372,7 +401,8 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
           info.label.toLowerCase().includes(searchQuery.toLowerCase())
         ).map(([platform, info]) => {
           const existing = getConfig(platform);
-          const Icon = ICONS[info.icon] || Plug;
+          const Icon = REACT_ICONS[info.icon] || Plug;
+          const iconColor = ICON_COLORS[platform] || "#71717a";
 
           return (
             <div key={platform}
@@ -381,8 +411,8 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
               }`}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl ${existing?.enabled ? "bg-green-50 text-green-600" : "bg-zinc-50 text-zinc-400"}`}>
-                    <Icon className="w-4 h-4" />
+                  <div className={`p-2.5 rounded-xl ${existing?.enabled ? "bg-green-50" : "bg-zinc-50"}`}>
+                    <Icon className="w-5 h-5" style={{ color: existing?.enabled ? iconColor : "#a1a1aa" }} />
                   </div>
                   <div>
                     <p className="text-sm font-black italic text-zinc-950 uppercase tracking-tighter">{info.label}</p>
