@@ -6,11 +6,11 @@ import {
   Bot, ChevronRight, ChevronLeft, ArrowLeft, Plus, Trash2, BarChart3,
   TrendingUp, Clock, Edit3, X, Send, Loader2, Sparkles, User,
   Settings, CheckCircle2, Layers, Download, ExternalLink,
-  ImageIcon, Upload, Link, Mic, MicOff, Paperclip, Search, BookOpen, Zap, Copy, Globe, Megaphone,   FileText, Menu, MessageSquare, FileSpreadsheet, AlertTriangle, HelpCircle, Code, ChevronUp, ChevronDown, Plug
+  ImageIcon, Upload, Link, Mic, MicOff, Paperclip, Search, BookOpen, Zap, Copy, Globe, Megaphone,   FileText, Menu, MessageSquare, FileSpreadsheet, AlertTriangle, HelpCircle, Code, ChevronUp, ChevronDown, Plug, Volume2, VolumeX
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn, isSoundEnabled, setSoundEnabled } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useToast } from "@/components/ui/Toast";
 import { MODULE_ICONS, CURRENCIES, convertToUSD, formatPrice } from "./currency";
@@ -169,6 +169,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
   const [storeImageUploading, setStoreImageUploading] = useState(false);
   const [publicVisible, setPublicVisible] = useState(false);
   const [publicAIEnabled, setPublicAIEnabled] = useState(false);
+  const [soundOn, setSoundOn] = useState(true);
   const [viewingProduct, setViewingProduct] = useState<any>(null);
   const [viewImgIndex, setViewImgIndex] = useState(0);
   const [searchProduct, setSearchProduct] = useState("");
@@ -179,6 +180,10 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
   const storeCategory = (userStore as any)?.category || "general";
   const { grouped: moduleGroups, modules: activeModules } = useCategoryModules(storeCategory);
+
+  useEffect(() => {
+    setSoundOn(isSoundEnabled());
+  }, []);
 
   useEffect(() => {
     if (userStore) {
@@ -483,6 +488,9 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingStore(false); setConfirmDelete(false); setSettingsForm({ name: userStore?.name || "", desc: userStore?.desc || "", industry: userStore?.industry || "", slug: userStore?.slug || "", image: userStore?.image || "", location: (userStore as any)?.location || "", phone: (userStore as any)?.phone || "", coordinates: (userStore as any)?.coordinates || null }); setPublicVisible(!!(userStore as any)?.isPublic); setPublicAIEnabled(!!(userStore as any)?.publicAI); setShowSettings(true); }} className="p-1.5 md:p-2 hover:bg-zinc-50 rounded-xl transition-all" title={t("biz.store_settings")}>
               <Settings className="w-4 h-4 md:w-5 md:h-5 text-zinc-400 hover:text-zinc-950 transition-colors" />
             </motion.button>
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => { const next = !soundOn; setSoundOn(next); setSoundEnabled(next); }} className="p-1.5 md:p-2 hover:bg-zinc-50 rounded-xl transition-all" title={soundOn ? "Silenciar sonidos" : "Activar sonidos"}>
+              {soundOn ? <Volume2 className="w-4 h-4 md:w-5 md:h-5 text-zinc-400 hover:text-zinc-950 transition-colors" /> : <VolumeX className="w-4 h-4 md:w-5 md:h-5 text-zinc-300 hover:text-zinc-950 transition-colors" />}
+            </motion.button>
             <div className="hidden md:block text-right">
               <p className="text-xs font-black text-zinc-950 italic">{userEmail?.split('@')[0]}</p>
               <p className="text-[9px] font-bold text-zinc-400 uppercase">{t("biz.owner")}</p>
@@ -572,6 +580,46 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                     <p className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">${totalSales}</p>
                   </div>
                 </div>
+
+                {/* API Status Summary */}
+                <div className="bg-white max-[400px]:p-4 p-5 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-[10px] md:text-xs font-black italic text-zinc-950 uppercase tracking-tight flex items-center gap-2">
+                      <Plug className="w-3.5 h-3.5 text-red-600" /> APIs Conectadas
+                    </h4>
+                    <button onClick={() => setSection("integrations")} className="text-[9px] font-black text-red-600 hover:text-red-700 italic uppercase">Ver todas</button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: "stripe", label: "Stripe", color: "#635BFF", icon: "💳" },
+                      { key: "paypal", label: "PayPal", color: "#003087", icon: "🅿️" },
+                      { key: "mercadopago", label: "MercadoPago", color: "#009EE3", icon: "💙" },
+                      { key: "whatsapp", label: "WhatsApp", color: "#25D366", icon: "💬" },
+                      { key: "telegram", label: "Telegram", color: "#26A5E4", icon: "✈️" },
+                      { key: "gmail", label: "Gmail", color: "#EA4335", icon: "📧" },
+                    ].map(api => {
+                      const connected = userStore?.integrations?.[api.key]?.enabled || userStore?.paymentIntegrations?.some((p: any) => p.provider === api.key && p.enabled);
+                      return (
+                        <div key={api.key} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black italic uppercase border transition-all ${connected ? "border-green-200 bg-green-50 text-green-700" : "border-zinc-100 bg-zinc-50 text-zinc-300"}`}>
+                          <span>{api.icon}</span> {api.label}
+                          {connected && <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />}
+                        </div>
+                      );
+                    })}
+                    {userStore?.aiProvider?.enabled && (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black italic uppercase border border-purple-200 bg-purple-50 text-purple-700">
+                        🤖 IA: {userStore.aiProvider.model || userStore.aiProvider.provider}
+                        <span className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
+                      </div>
+                    )}
+                    {!userStore?.aiProvider?.enabled && (
+                      <button onClick={() => setSection("integrations")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black italic uppercase border border-dashed border-zinc-200 bg-zinc-50 text-zinc-400 hover:border-purple-300 hover:text-purple-500 transition-all">
+                        🤖 + IA Propia
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="bg-gradient-to-br from-zinc-950 to-zinc-900 max-[400px]:p-6 p-10 max-[400px]:rounded-[2rem] rounded-[3rem] text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 rounded-full blur-[80px] -mr-32 -mt-32" />
                   <div className="relative z-10 space-y-3 md:space-y-4">

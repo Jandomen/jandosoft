@@ -21,7 +21,18 @@ function getAudioCtx() {
   return audioCtx;
 }
 
+export function isSoundEnabled(): boolean {
+  if (typeof window === "undefined") return true;
+  return localStorage.getItem("jandosoft_sound") !== "off";
+}
+
+export function setSoundEnabled(enabled: boolean) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("jandosoft_sound", enabled ? "on" : "off");
+}
+
 export function playNotificationSound(type: "success" | "error" | "info" = "info") {
+  if (!isSoundEnabled()) return;
   try {
     const ctx = getAudioCtx();
     const osc = ctx.createOscillator();

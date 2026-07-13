@@ -78,14 +78,14 @@ const AI_PROVIDER_COLORS: Record<string, string> = {
 };
 
 const AI_PROVIDERS_LIST = [
-  { id: "openai", label: "OpenAI", models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1", "o3-mini"] },
-  { id: "anthropic", label: "Anthropic", models: ["claude-sonnet-4-20250514", "claude-3-5-haiku-20241022"] },
-  { id: "gemini", label: "Google Gemini", models: ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.5-pro"] },
-  { id: "openrouter", label: "OpenRouter", models: ["openai/gpt-4o-mini", "openai/gpt-4o", "anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat"] },
-  { id: "ollama", label: "Ollama (Local)", models: ["llama3.1", "mistral", "codellama", "phi3"] },
-  { id: "groq", label: "Groq", models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"] },
-  { id: "deepseek", label: "DeepSeek", models: ["deepseek-chat", "deepseek-reasoner"] },
-  { id: "custom", label: "Custom OpenAI-Compatible", models: [] },
+  { id: "openai", label: "OpenAI", models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1", "o3-mini"], docs: "https://platform.openai.com/api-keys", docsLabel: "Obtener API Key" },
+  { id: "anthropic", label: "Anthropic", models: ["claude-sonnet-4-20250514", "claude-3-5-haiku-20241022"], docs: "https://console.anthropic.com/settings/keys", docsLabel: "Obtener API Key" },
+  { id: "gemini", label: "Google Gemini", models: ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.5-pro"], docs: "https://aistudio.google.com/apikey", docsLabel: "Obtener API Key" },
+  { id: "openrouter", label: "OpenRouter", models: ["openai/gpt-4o-mini", "openai/gpt-4o", "anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat"], docs: "https://openrouter.ai/keys", docsLabel: "Obtener API Key" },
+  { id: "ollama", label: "Ollama (Local)", models: ["llama3.1", "mistral", "codellama", "phi3"], docs: "https://ollama.com/download", docsLabel: "Instalar Ollama" },
+  { id: "groq", label: "Groq", models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"], docs: "https://console.groq.com/keys", docsLabel: "Obtener API Key" },
+  { id: "deepseek", label: "DeepSeek", models: ["deepseek-chat", "deepseek-reasoner"], docs: "https://platform.deepseek.com/api_keys", docsLabel: "Obtener API Key" },
+  { id: "custom", label: "Custom OpenAI-Compatible", models: [], docs: "", docsLabel: "" },
 ];
 
 interface Integration {
@@ -396,6 +396,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
       </div>
 
       {/* PAYMENT PROVIDERS */}
+      {(!searchQuery || ["stripe", "paypal", "mercadopago", "nowpayments"].some(p => p.includes(searchQuery.toLowerCase()))) && (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -494,10 +495,12 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
           })}
         </div>
       </div>
+      )}
 
       <div className="w-full h-px bg-zinc-100" />
 
       {/* AI PROVIDER */}
+      {(!searchQuery || ["openai", "anthropic", "gemini", "openrouter", "ollama", "groq", "deepseek", "custom", "ia", "ai", "proveedor de ia", "inteligencia artificial"].some(k => k.includes(searchQuery.toLowerCase()) || searchQuery.toLowerCase().includes(k))) && (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -552,7 +555,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
               Elige un proveedor para que tu agente IA funcione con tu propia API key.
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {AI_PROVIDERS_LIST.map(p => {
+              {AI_PROVIDERS_LIST.filter(p => !searchQuery || p.label.toLowerCase().includes(searchQuery.toLowerCase()) || p.id.includes(searchQuery.toLowerCase())).map(p => {
                 const I = AI_PROVIDER_ICONS[p.id];
                 return (
                   <button key={p.id} onClick={() => { setAiProviderId(p.id); setAiModel(p.models[0] || ""); setAiBaseUrl(p.id === "ollama" ? "http://localhost:11434/v1" : ""); }}
@@ -563,6 +566,12 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
                       {I && <I className="w-3.5 h-3.5" style={{ color: AI_PROVIDER_COLORS[p.id] }} />}
                       <span className="text-[10px] font-black italic text-zinc-700 uppercase">{p.label}</span>
                     </div>
+                    {p.docs && (
+                      <a href={p.docs} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 text-[8px] font-bold text-purple-500 hover:text-purple-700 italic mt-1">
+                        <ExternalLink className="w-2.5 h-2.5" /> {p.docsLabel}
+                      </a>
+                    )}
                   </button>
                 );
               })}
@@ -614,6 +623,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
           </div>
         )}
       </div>
+      )}
 
       <div className="w-full h-px bg-zinc-100" />
 
@@ -714,7 +724,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
         {searchQuery && Object.entries(PLATFORM_INFO).filter(([platform, info]) =>
           platform.toLowerCase().includes(searchQuery.toLowerCase()) ||
           info.label.toLowerCase().includes(searchQuery.toLowerCase())
-        ).length === 0 && (
+        ).length === 0 && !["stripe", "paypal", "mercadopago", "nowpayments"].some(p => p.includes(searchQuery.toLowerCase())) && !["openai", "anthropic", "gemini", "openrouter", "ollama", "groq", "deepseek", "custom"].some(p => p.includes(searchQuery.toLowerCase())) && (
           <div className="col-span-full text-center py-12">
             <Plug className="w-8 h-8 text-zinc-200 mx-auto mb-3" />
             <p className="text-sm font-medium text-zinc-300 italic">{t("biz.no_search_results").replace("{query}", searchQuery)}</p>
