@@ -41,7 +41,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ accountId: account.id });
   } catch (error: any) {
     console.error("Error creating Stripe account:", error);
-    const message = error?.raw?.message || error?.message || "Error desconocido al crear cuenta Stripe";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const rawMsg = error?.raw?.message || error?.message || "";
+    if (rawMsg.includes("signed up for Connect")) {
+      return NextResponse.json({
+        error: "Stripe Connect no está activado. Ve a https://dashboard.stripe.com/connect para activarlo.",
+        stripeConnectRequired: true,
+      }, { status: 400 });
+    }
+    return NextResponse.json({ error: rawMsg || "Error desconocido al crear cuenta Stripe" }, { status: 500 });
   }
 }

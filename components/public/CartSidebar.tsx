@@ -1,9 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Minus, Trash2, ShoppingCart, CreditCard, CheckCircle2, Loader2, ChevronLeft, Bitcoin } from "lucide-react";
+import { X, Plus, Minus, Trash2, ShoppingCart, CreditCard, CheckCircle2, Loader2, ChevronLeft, Wallet, Bitcoin, ShoppingBag } from "lucide-react";
 import { useCart } from "./CartProvider";
+
+const PROVIDER_ICONS: Record<string, any> = {
+  stripe: CreditCard,
+  paypal: Wallet,
+  mercadopago: ShoppingBag,
+  nowpayments: Bitcoin,
+};
+
+const PROVIDER_LABELS: Record<string, string> = {
+  stripe: "Stripe",
+  paypal: "PayPal",
+  mercadopago: "Mercado Pago",
+  nowpayments: "Crypto",
+};
+
+const PROVIDER_SUB: Record<string, string> = {
+  stripe: "Tarjeta crédito/débito",
+  paypal: "PayPal, tarjeta",
+  mercadopago: "Tarjeta, transferencia",
+  nowpayments: "BTC, ETH, USDT",
+};
 
 export default function CartSidebar({
   storeId, storeName, slug, paymentsEnabled
@@ -15,49 +36,50 @@ export default function CartSidebar({
   const [view, setView] = useState<"cart" | "checkout" | "success">("cart");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "crypto">("stripe");
+  const [paymentMethod, setPaymentMethod] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [paymentId, setPaymentId] = useState("");
+  const [availableProviders, setAvailableProviders] = useState<{ provider: string; label: string }[]>([]);
 
   const canCheckout = storeId && paymentsEnabled;
 
+  useEffect(() => {
+    if (!storeId) return;
+    fetch(`/api/stores/${storeId}/payment-integrations`)
+      .then(r => r.json())
+      .then(data => {
+        const active = (data.integrations || []).filter((i: any) => i.enabled);
+        setAvailableProviders(active.map((i: any) => ({ provider: i.provider, label: PROVIDER_LABELS[i.provider] || i.provider })));
+        if (active.length > 0 && !paymentMethod) {
+          const def = active.find((i: any) => i.isDefault) || active[0];
+          setPaymentMethod(def.provider);
+        }
+      })
+      .catch(() => {});
+  }, [storeId]);
+
   const handleStartCheckout = async () => {
-    if (!customerEmail || items.length === 0) return;
+    if (!customerEmail || items.length === 0 || !paymentMethod) return;
     setCheckoutLoading(true);
     setCheckoutError("");
     try {
-      if (paymentMethod === "crypto") {
-        const res = await fetch("/api/nowpayments/create-invoice", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount: totalPrice,
-            currency: "USD",
-            email: customerEmail,
-            storeId,
-            description: items.map(i => `${i.quantity}x ${i.name}`).join(", "),
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Error al crear factura crypto");
-        window.location.href = data.invoiceUrl;
-      } else {
-        const res = await fetch("/api/stripe/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            storeId,
-            items: items.map(i => ({ name: i.name, price: i.price, quantity: i.quantity })),
-            currency: "USD",
-            customerEmail,
-            customerName,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Error al iniciar pago");
-        window.location.href = data.url;
-      }
+      const res = await fetch("/api/store-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId,
+          amount: totalPrice,
+          currency: "USD",
+          description: items.map(i => `${i.quantity}x ${i.name}`).join(", "),
+          customerEmail,
+          customerName,
+          items: items.map(i => ({ name: i.name, price: i.price, quantity: i.quantity })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al iniciar pago");
+      if (data.url) window.location.href = data.url;
     } catch (e: any) {
       setCheckoutError(e.message || "Error al conectar con pasarela de pago");
     } finally {
@@ -188,64 +210,51 @@ export default function CartSidebar({
                   {/* Payment Method Selector */}
                   <div className="space-y-2">
                     <label className="text-[9px] font-black text-zinc-500 uppercase italic tracking-widest ml-1">Método de pago</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <motion.button
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => setPaymentMethod("stripe")}
-                        className={`flex items-center gap-2 p-3 rounded-2xl border-2 transition-all text-left ${
-                          paymentMethod === "stripe"
-                            ? "border-red-600 bg-red-50"
-                            : "border-zinc-100 bg-white hover:border-red-200"
-                        }`}
-                      >
-                        <div className={`p-2 rounded-xl ${paymentMethod === "stripe" ? "bg-red-600 text-white" : "bg-zinc-100 text-zinc-400"}`}>
-                          <CreditCard className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black italic text-zinc-950">Stripe</p>
-                          <p className="text-[8px] text-zinc-400 font-medium">Tarjeta crédito/débito</p>
-                        </div>
-                      </motion.button>
-                      <motion.button
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => setPaymentMethod("crypto")}
-                        className={`flex items-center gap-2 p-3 rounded-2xl border-2 transition-all text-left ${
-                          paymentMethod === "crypto"
-                            ? "border-red-600 bg-red-50"
-                            : "border-zinc-100 bg-white hover:border-red-200"
-                        }`}
-                      >
-                        <div className={`p-2 rounded-xl ${paymentMethod === "crypto" ? "bg-red-600 text-white" : "bg-zinc-100 text-zinc-400"}`}>
-                          <Bitcoin className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black italic text-zinc-950">Crypto</p>
-                          <p className="text-[8px] text-zinc-400 font-medium">BTC, ETH, USDT</p>
-                        </div>
-                      </motion.button>
-                    </div>
+                    {availableProviders.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {availableProviders.map(({ provider, label }) => {
+                          const Icon = PROVIDER_ICONS[provider] || CreditCard;
+                          return (
+                            <motion.button
+                              key={provider}
+                              whileTap={{ scale: 0.97 }}
+                              onClick={() => setPaymentMethod(provider)}
+                              className={`flex items-center gap-2 p-3 rounded-2xl border-2 transition-all text-left ${
+                                paymentMethod === provider
+                                  ? "border-red-600 bg-red-50"
+                                  : "border-zinc-100 bg-white hover:border-red-200"
+                              }`}
+                            >
+                              <div className={`p-2 rounded-xl ${paymentMethod === provider ? "bg-red-600 text-white" : "bg-zinc-100 text-zinc-400"}`}>
+                                <Icon className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-black italic text-zinc-950">{label}</p>
+                                <p className="text-[8px] text-zinc-400 font-medium">{PROVIDER_SUB[provider] || ""}</p>
+                              </div>
+                            </motion.button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-zinc-400 italic">Esta tienda no tiene métodos de pago configurados</p>
+                    )}
                   </div>
 
                   {checkoutError && (
                     <p className="text-[10px] font-bold text-rose-600 italic">{checkoutError}</p>
                   )}
 
-                  {paymentMethod === "crypto" && (
-                    <p className="text-[9px] text-amber-600 font-medium italic bg-amber-50 rounded-xl p-3">
-                      Serás redirigido a NowPayments para pagar con criptomonedas.
-                    </p>
-                  )}
-
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={handleStartCheckout}
-                    disabled={!customerEmail || checkoutLoading || items.length === 0}
+                    disabled={!customerEmail || checkoutLoading || items.length === 0 || !paymentMethod}
                     className="w-full py-4 bg-red-600 text-white rounded-2xl font-black italic text-xs hover:bg-red-700 transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50"
                   >
                     {checkoutLoading ? (
                       <><Loader2 className="w-4 h-4 animate-spin" /> PROCESANDO...</>
                     ) : (
-                      <><CreditCard className="w-4 h-4" /> {paymentMethod === "crypto" ? "PAGAR CON CRYPTO" : `PAGAR $${totalPrice.toFixed(2)}`}</>
+                      <><CreditCard className="w-4 h-4" /> PAGAR ${totalPrice.toFixed(2)}</>
                     )}
                   </motion.button>
                 </div>

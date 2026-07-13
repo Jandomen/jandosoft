@@ -293,6 +293,7 @@ export interface IStore extends Document {
   stripeAccountId?: string;
   paymentsEnabled?: boolean;
   platformFeePercent?: number;
+  paymentIntegrations?: { provider: string; credentials: Record<string, string>; enabled: boolean; isDefault: boolean; connectedAt?: Date }[];
   organizationId?: mongoose.Types.ObjectId;
   image?: string;
   isPublic?: boolean;
@@ -704,6 +705,7 @@ const StoreSchema = new Schema<IStore>({
   stripeAccountId: { type: String, default: "" },
   paymentsEnabled: { type: Boolean, default: false },
   platformFeePercent: { type: Number, default: 5 },
+  paymentIntegrations: { type: [Schema.Types.Mixed], default: [] },
   organizationId: { type: Schema.Types.ObjectId, ref: "Organization", index: true },
   image: { type: String, default: "" },
   location: { type: String, default: "" },

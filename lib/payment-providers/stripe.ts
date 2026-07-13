@@ -1,0 +1,74 @@
+import Stripe from "stripe";
+import type { PaymentProvider, CheckoutRequest, CheckoutResult } from "./index";
+
+export const stripeProvider: PaymentProvider = {
+  config: {
+    id: "stripe",
+    label: "Stripe",
+    icon: "CreditCard",
+    color: "#635BFF",
+    fields: [
+      { key: "secretKey", label: "Secret Key", placeholder: "sk_live_xxx o sk_test_xxx", secret: true },
+      { key: "publishableKey", label: "Publishable Key", placeholder: "pk_live_xxx o pk_test_xxx" },
+      { key: "webhookSecret", label: "Webhook Secret", placeholder: "whsec_xxx", secret: true },
+    ],
+  },
+
+  async validateCredentials(credentials: Record<string, string>): Promise<boolean> {
+    try {
+      if (!credentials.secretKey) return false;
+      const stripe = new Stripe(credentials.secretKey, { apiVersion: "2025-05-27.basil" as any });
+      await stripe.balance.retrieve();
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  async createCheckout(req: CheckoutRequest, credentials: Record<string, string>): Promise<CheckoutResult> {
+    try {
+      if (!credentials.secretKey) return { error: "Secret Key no configurada" };
+      const stripe = new Stripe(credentials.secretKey, { apiVersion: "2025-05-27.basil" as any });
+
+      const amountInCents = Math.round(req.amount * 100);
+
+      const sessionParams: Stripe.Checkout.SessionCreateParams = {
+        mode: "payment",
+        line_items: req.items?.length
+          ? req.items.map((item) => ({
+              price_data: {
+                currency: req.currency.toLowerCase(),
+                product_data: { name: item.name },
+                unit_amount: Math.round(item.price * 100),
+              },
+              quantity: item.quantity,
+            }))
+          : [{
+              price_data: {
+                currency: req.currency.toLowerCase(),
+                product_data: { name: req.description || "Pago" },
+                unit_amount: amountInCents,
+              },
+              quantity: 1,
+            }],
+        customer_email: req.customerEmail,
+        success_url: `${process.env.NEXT_PUBLIC_URL || "https://jandosoft.vercel.app"}/s/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.NEXT_PUBLIC_URL || "https://jandosoft.vercel.app"}/s/payment-cancel`,
+        metadata: {
+          storeId: req.storeId,
+          storeName: req.storeName,
+          ownerEmail: req.ownerEmail,
+          customerEmail: req.customerEmail,
+          customerName: req.customerName || "",
+          description: req.description,
+          provider: "stripe",
+        },
+      };
+
+      const session = await stripe.checkout.sessions.create(sessionParams);
+      return { url: session.url || undefined, id: session.id };
+    } catch (err: any) {
+      return { error: err.message || "Error creating Stripe checkout" };
+    }
+  },
+};

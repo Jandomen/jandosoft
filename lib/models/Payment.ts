@@ -12,6 +12,8 @@ export interface IPayment extends Document {
   netAmount: number;
   stripePaymentIntentId: string;
   stripeAccountId: string;
+  provider: string;
+  externalId: string;
   status: string;
   description: string;
   createdAt: Date;
@@ -33,6 +35,8 @@ const PaymentSchema = new Schema<IPayment>({
   netAmount: { type: Number, default: 0 },
   stripePaymentIntentId: { type: String, default: "" },
   stripeAccountId: { type: String, default: "" },
+  provider: { type: String, default: "stripe" },
+  externalId: { type: String, default: "" },
   status: { type: String, default: "pending" },
   description: { type: String, default: "" },
   appointmentId: { type: Schema.Types.ObjectId, ref: "Appointment" },

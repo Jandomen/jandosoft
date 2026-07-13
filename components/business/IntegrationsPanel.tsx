@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plug, Send, MessageSquare, MessageCircle, Smartphone, Globe, Check, X, Loader2, Trash2, ExternalLink, Search, DollarSign } from "lucide-react";
+import { Plug, Send, MessageSquare, MessageCircle, Smartphone, Globe, Check, X, Loader2, Trash2, ExternalLink, Search, CreditCard, Wallet, Bitcoin, ShoppingBag, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/components/ui/Toast";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
@@ -11,12 +11,56 @@ const ICONS: Record<string, any> = {
   Send, MessageSquare, MessageCircle, Smartphone, Globe,
 };
 
+const PAYMENT_ICONS: Record<string, any> = {
+  stripe: CreditCard,
+  paypal: Wallet,
+  mercadopago: ShoppingBag,
+  nowpayments: Bitcoin,
+};
+
+const PAYMENT_COLORS: Record<string, string> = {
+  stripe: "#635BFF",
+  paypal: "#003087",
+  mercadopago: "#009EE3",
+  nowpayments: "#6C3EC1",
+};
+
 interface Integration {
   _id: string;
   platform: string;
   enabled: boolean;
   credentials: Record<string, string>;
 }
+
+interface PaymentIntegration {
+  provider: string;
+  enabled: boolean;
+  isDefault: boolean;
+  connectedAt?: string;
+  hasCredentials: boolean;
+  config: { id: string; label: string; icon: string; fields: { key: string; label: string; placeholder: string; secret?: boolean }[]; docsUrl?: string } | null;
+}
+
+const PAYMENT_FIELDS: Record<string, { key: string; label: string; placeholder: string; secret?: boolean }[]> = {
+  stripe: [
+    { key: "secretKey", label: "Secret Key", placeholder: "sk_live_xxx o sk_test_xxx", secret: true },
+    { key: "publishableKey", label: "Publishable Key", placeholder: "pk_live_xxx o pk_test_xxx" },
+    { key: "webhookSecret", label: "Webhook Secret", placeholder: "whsec_xxx", secret: true },
+  ],
+  paypal: [
+    { key: "clientId", label: "Client ID", placeholder: "AYSq3RDG..." },
+    { key: "clientSecret", label: "Client Secret", placeholder: "EGnHDxD...", secret: true },
+    { key: "mode", label: "Modo", placeholder: "sandbox o live" },
+  ],
+  mercadopago: [
+    { key: "accessToken", label: "Access Token", placeholder: "APP_USR-xxx", secret: true },
+    { key: "publicKey", label: "Public Key", placeholder: "APP_USR-xxx" },
+  ],
+  nowpayments: [
+    { key: "apiKey", label: "API Key", placeholder: "NOWPAYMENTS_API_KEY", secret: true },
+    { key: "ipnSecret", label: "IPN Secret", placeholder: "xxx", secret: true },
+  ],
+};
 
 export default function IntegrationsPanel({ storeId, userEmail }: { storeId: string; userEmail?: string }) {
   const { t } = useLanguage();
@@ -27,27 +71,26 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
   const [testing, setTesting] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [stripeLoading, setStripeLoading] = useState(false);
-  const [stripeOnboarded, setStripeOnboarded] = useState<boolean | null>(null);
+  const [paymentIntegrations, setPaymentIntegrations] = useState<PaymentIntegration[]>([]);
+  const [paymentLoading, setPaymentLoading] = useState(true);
+  const [paymentSaving, setPaymentSaving] = useState<string | null>(null);
+  const [expandedPayment, setExpandedPayment] = useState<string | null>(null);
+  const [paymentForm, setPaymentForm] = useState<Record<string, Record<string, string>>>({});
 
   useEffect(() => {
     fetchIntegrations();
+    fetchPaymentIntegrations();
   }, [storeId]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/stripe/account-status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ storeId }),
-        });
-        const d = await res.json();
-        if (d.error) { setStripeOnboarded(null); return; }
-        setStripeOnboarded(d.onboarded);
-      } catch { setStripeOnboarded(null); }
-    })();
-  }, [storeId]);
+  const fetchPaymentIntegrations = async () => {
+    setPaymentLoading(true);
+    try {
+      const res = await fetch(`/api/stores/${storeId}/payment-integrations`);
+      const data = await res.json();
+      setPaymentIntegrations(data.integrations || []);
+    } catch {}
+    setPaymentLoading(false);
+  };
 
   const fetchIntegrations = async () => {
     setLoading(true);
@@ -63,8 +106,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
   };
 
   const getConfig = (platform: string) => {
-    const existing = integrations.find(i => i.platform === platform);
-    return existing;
+    return integrations.find(i => i.platform === platform);
   };
 
   const saveIntegration = async (platform: string) => {
@@ -112,43 +154,55 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
     }
   };
 
-  const handleConnectStripe = async () => {
-    setStripeLoading(true);
+  const savePaymentProvider = async (provider: string) => {
+    setPaymentSaving(provider);
     try {
-      const res = await fetch("/api/stripe/create-account", {
+      const creds = paymentForm[provider] || {};
+      const res = await fetch(`/api/stores/${storeId}/payment-integrations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, email: userEmail }),
+        body: JSON.stringify({ storeId, provider, credentials: creds }),
       });
       const data = await res.json();
-      if (data.error) { showToast(data.error, "error"); return; }
-      const linkRes = await fetch("/api/stripe/onboarding-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId }),
-      });
-      const linkData = await linkRes.json();
-      if (linkData.url) window.location.href = linkData.url;
-    } catch (err: any) {
-      showToast(err?.message || "Error connecting Stripe", "error");
-    } finally { setStripeLoading(false); }
+      if (!res.ok) { showToast(data.error || "Error al guardar", "error"); return; }
+      showToast(`${provider} conectado correctamente`, "success");
+      setExpandedPayment(null);
+      await fetchPaymentIntegrations();
+    } catch {
+      showToast("Error de conexión", "error");
+    } finally {
+      setPaymentSaving(null);
+    }
   };
 
-  const handleDisconnectStripe = async () => {
-    setStripeLoading(true);
+  const togglePaymentDefault = async (provider: string) => {
     try {
-      const res = await fetch("/api/stripe/disconnect", {
-        method: "POST",
+      await fetch(`/api/stores/${storeId}/payment-integrations`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId }),
+        body: JSON.stringify({ storeId, provider, isDefault: true }),
       });
-      const data = await res.json();
-      if (data.success) {
-        setStripeOnboarded(null);
-        showToast("Stripe disconnected", "success");
-      }
-    } catch { showToast("Error disconnecting Stripe", "error"); }
-    finally { setStripeLoading(false); }
+      await fetchPaymentIntegrations();
+    } catch {}
+  };
+
+  const togglePaymentEnabled = async (provider: string, current: boolean) => {
+    try {
+      await fetch(`/api/stores/${storeId}/payment-integrations`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeId, provider, enabled: !current }),
+      });
+      await fetchPaymentIntegrations();
+    } catch {}
+  };
+
+  const deletePaymentProvider = async (provider: string) => {
+    try {
+      await fetch(`/api/stores/${storeId}/payment-integrations?provider=${provider}`, { method: "DELETE" });
+      showToast(`${provider} desconectado`, "success");
+      await fetchPaymentIntegrations();
+    } catch {}
   };
 
   const testConnection = async (platform: string) => {
@@ -156,7 +210,6 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
     try {
       const existing = getConfig(platform);
       const creds: Record<string, string> = {};
-      // Merge form data over existing credentials, so saved values are used if not re-typed
       const platformInfo = PLATFORM_INFO[platform];
       if (platformInfo) {
         for (const field of platformInfo.fields) {
@@ -200,44 +253,117 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
         <Plug className="w-6 h-6 max-[400px]:w-5 max-[400px]:h-5 inline mr-3 text-red-600" />{t("integrations.title")}
       </h3>
       <p className="text-xs font-medium text-zinc-400 italic -mt-4">
-        {t("integrations.desc")}
+        Configura los proveedores de pago de tu empresa y las integraciones con tus servicios favoritos.
       </p>
 
+      {/* PAYMENT PROVIDERS */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-lg font-black italic text-zinc-950 uppercase tracking-tight">Proveedores de Pago</h4>
+            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest italic">Conecta Stripe, PayPal, Mercado Pago o NOWPayments</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {["stripe", "paypal", "mercadopago", "nowpayments"].map((provider) => {
+            const pi = paymentIntegrations.find(p => p.provider === provider);
+            const Icon = PAYMENT_ICONS[provider] || CreditCard;
+            const isExpanded = expandedPayment === provider;
+            const fields = PAYMENT_FIELDS[provider] || [];
+
+            return (
+              <div key={provider}
+                className={`bg-white p-5 rounded-[2rem] border shadow-sm transition-all ${
+                  pi?.enabled ? "border-green-200 ring-1 ring-green-100" : "border-zinc-100"
+                }`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl" style={{ backgroundColor: pi?.enabled ? PAYMENT_COLORS[provider] + "15" : "#f4f4f5" }}>
+                      <Icon className="w-4 h-4" style={{ color: pi?.enabled ? PAYMENT_COLORS[provider] : "#a1a1aa" }} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black italic text-zinc-950 uppercase tracking-tighter">{provider === "mercadopago" ? "Mercado Pago" : provider === "nowpayments" ? "NOWPayments" : provider}</p>
+                      {pi?.enabled ? (
+                        <span className="text-[9px] font-bold italic uppercase text-green-500">
+                          {pi.isDefault ? "Conectado (Predeterminado)" : "Conectado"}
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-bold italic uppercase text-zinc-300">No conectado</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {pi?.enabled && (
+                      <motion.button whileTap={{ scale: 0.9 }}
+                        onClick={() => togglePaymentDefault(provider)}
+                        className={`p-1.5 rounded-lg transition-all ${pi.isDefault ? "bg-amber-50 text-amber-500" : "bg-zinc-50 text-zinc-300 hover:text-amber-500"}`}
+                        title="Predeterminado">
+                        <Star className="w-3.5 h-3.5" />
+                      </motion.button>
+                    )}
+                    {pi?.enabled && (
+                      <motion.button whileTap={{ scale: 0.9 }}
+                        onClick={() => togglePaymentEnabled(provider, true)}
+                        className="p-1.5 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-all">
+                        <X className="w-3.5 h-3.5" />
+                      </motion.button>
+                    )}
+                  </div>
+                </div>
+
+                {pi?.enabled && !isExpanded ? (
+                  <div className="flex gap-2">
+                    <button onClick={() => { setExpandedPayment(provider); }}
+                      className="px-4 py-2 bg-zinc-50 text-zinc-600 rounded-xl font-black text-[10px] italic hover:bg-zinc-100 transition-all">
+                      Editar
+                    </button>
+                    <button onClick={() => deletePaymentProvider(provider)}
+                      className="px-4 py-2 bg-red-50 text-red-400 rounded-xl font-black text-[10px] italic hover:bg-red-100 transition-all">
+                      Desconectar
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {fields.map(field => (
+                      <div key={field.key} className="space-y-1">
+                        <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{field.label}</label>
+                        <input type={field.secret ? "password" : "text"}
+                          value={paymentForm[provider]?.[field.key] ?? pi?.hasCredentials ? "••••••••" : ""}
+                          onChange={e => setPaymentForm(prev => ({ ...prev, [provider]: { ...prev[provider], [field.key]: e.target.value } }))}
+                          placeholder={field.placeholder}
+                          className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                      </div>
+                    ))}
+                    <div className="flex gap-2 pt-1">
+                      <motion.button whileTap={{ scale: 0.95 }}
+                        onClick={() => savePaymentProvider(provider)}
+                        disabled={paymentSaving === provider}
+                        className="px-5 py-2.5 bg-red-600 text-white rounded-xl font-black text-xs italic hover:bg-red-700 transition-all disabled:opacity-50 flex items-center gap-1.5">
+                        {paymentSaving === provider ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                        {paymentSaving === provider ? "Guardando..." : "Conectar"}
+                      </motion.button>
+                      <button onClick={() => setExpandedPayment(null)}
+                        className="px-4 py-2.5 bg-zinc-50 text-zinc-400 rounded-xl font-black text-xs italic hover:bg-zinc-100 transition-all">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="w-full h-px bg-zinc-100" />
+
+      {/* OTHER INTEGRATIONS */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
         <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
           placeholder={t("integrations.search_placeholder")}
           className="w-full bg-zinc-50 pl-11 pr-4 py-3 rounded-2xl border border-zinc-100 outline-none font-medium text-sm focus:bg-white focus:border-red-200 transition-all" />
-      </div>
-
-      {/* Stripe Connect card */}
-      <div className="bg-white p-6 rounded-[2.5rem] border border-zinc-100 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-xl ${stripeOnboarded ? "bg-green-50 text-green-600" : "bg-zinc-50 text-zinc-400"}`}>
-              <DollarSign className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-sm font-black italic text-zinc-950 uppercase tracking-tighter">{t("biz.config_stripe")}</p>
-              <span className={`text-[9px] font-bold italic uppercase ${stripeOnboarded ? "text-green-500" : "text-zinc-300"}`}>
-                {stripeOnboarded ? t("biz.config_stripe_connected") : t("biz.config_stripe_not_connected")}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {stripeOnboarded ? (
-              <button onClick={handleDisconnectStripe} disabled={stripeLoading} className="px-4 py-2.5 rounded-xl font-black text-xs italic transition-all flex items-center gap-1.5 bg-red-50 text-red-400 hover:bg-red-100 disabled:opacity-50">
-                {stripeLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                {stripeLoading ? t("integrations.saving") : t("biz.config_stripe_disconnect")}
-              </button>
-            ) : (
-              <button onClick={handleConnectStripe} disabled={stripeLoading} className="px-4 py-2.5 rounded-xl font-black text-xs italic transition-all flex items-center gap-1.5 bg-red-600 text-white hover:bg-red-700 shadow-lg disabled:opacity-50">
-                {stripeLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <DollarSign className="w-3.5 h-3.5" />}
-                {stripeLoading ? t("integrations.saving") : t("biz.config_stripe_connect")}
-              </button>
-            )}
-          </div>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
