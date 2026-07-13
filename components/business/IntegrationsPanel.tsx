@@ -12,6 +12,8 @@ import {
   SiInstagram, SiFacebook, SiX, SiThreads, SiYoutube,
   SiGooglemaps, SiMapbox, SiGmail, SiMessenger, SiTiktok,
   SiAnthropic, SiGooglegemini, SiOllama, SiDeepseek, SiOpenrouter,
+  SiMistralai, SiHuggingface, SiCloudflare, SiReplicate,
+  SiPerplexity, SiNvidia, SiLmstudio,
 } from "react-icons/si";
 import { TbBrandSlack, TbBrandTwilio } from "react-icons/tb";
 
@@ -63,6 +65,14 @@ const AI_PROVIDER_ICONS: Record<string, any> = {
   ollama: SiOllama,
   groq: Zap,
   deepseek: SiDeepseek,
+  mistral: SiMistralai,
+  xai: Brain,
+  perplexity: SiPerplexity,
+  huggingface: SiHuggingface,
+  cloudflare: SiCloudflare,
+  lmstudio: SiLmstudio,
+  nvidia: SiNvidia,
+  replicate: SiReplicate,
   custom: Plug,
 };
 
@@ -74,18 +84,34 @@ const AI_PROVIDER_COLORS: Record<string, string> = {
   ollama: "#ffffff",
   groq: "#f55036",
   deepseek: "#4d6bfe",
+  mistral: "#ff7000",
+  xai: "#1d9bf0",
+  perplexity: "#20b8cd",
+  huggingface: "#ff9d00",
+  cloudflare: "#f6821f",
+  lmstudio: "#9333ea",
+  nvidia: "#76b900",
+  replicate: "#3b82f6",
   custom: "#71717a",
 };
 
 const AI_PROVIDERS_LIST = [
-  { id: "openai", label: "OpenAI", models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1", "o3-mini"], docs: "https://platform.openai.com/api-keys", docsLabel: "Obtener API Key" },
-  { id: "anthropic", label: "Anthropic", models: ["claude-sonnet-4-20250514", "claude-3-5-haiku-20241022"], docs: "https://console.anthropic.com/settings/keys", docsLabel: "Obtener API Key" },
-  { id: "gemini", label: "Google Gemini", models: ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.5-pro"], docs: "https://aistudio.google.com/apikey", docsLabel: "Obtener API Key" },
-  { id: "openrouter", label: "OpenRouter", models: ["openai/gpt-4o-mini", "openai/gpt-4o", "anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat"], docs: "https://openrouter.ai/keys", docsLabel: "Obtener API Key" },
-  { id: "ollama", label: "Ollama (Local)", models: ["llama3.1", "mistral", "codellama", "phi3"], docs: "https://ollama.com/download", docsLabel: "Instalar Ollama" },
-  { id: "groq", label: "Groq", models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"], docs: "https://console.groq.com/keys", docsLabel: "Obtener API Key" },
-  { id: "deepseek", label: "DeepSeek", models: ["deepseek-chat", "deepseek-reasoner"], docs: "https://platform.deepseek.com/api_keys", docsLabel: "Obtener API Key" },
-  { id: "custom", label: "Custom OpenAI-Compatible", models: [], docs: "", docsLabel: "" },
+  { id: "openai", label: "OpenAI", pricing: "de pago", priceRef: "~$0.15-60/M tokens", models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1", "o3-mini"], docs: "https://platform.openai.com/api-keys", docsLabel: "Obtener API Key" },
+  { id: "anthropic", label: "Anthropic", pricing: "de pago", priceRef: "~$0.25-75/M tokens", models: ["claude-sonnet-4-20250514", "claude-3-5-haiku-20241022", "claude-opus-4-20250514"], docs: "https://console.anthropic.com/settings/keys", docsLabel: "Obtener API Key" },
+  { id: "gemini", label: "Google Gemini", pricing: "gratis", priceRef: "Tier gratuito generoso (15 RPM)", models: ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.5-pro"], docs: "https://aistudio.google.com/apikey", docsLabel: "Obtener API Key (gratis)" },
+  { id: "openrouter", label: "OpenRouter", pricing: "de pago", priceRef: "Agregador — 100+ modelos, paga por uso", models: ["openai/gpt-4o-mini", "openai/gpt-4o", "anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat", "meta-llama/llama-3.1-405b-instruct"], docs: "https://openrouter.ai/keys", docsLabel: "Obtener API Key" },
+  { id: "ollama", label: "Ollama (Local)", pricing: "gratis", priceRef: "100% gratis — corre en tu PC/servidor", models: ["llama3.1", "mistral", "codellama", "phi3", "gemma2", "qwen2.5"], docs: "https://ollama.com/download", docsLabel: "Descargar gratis" },
+  { id: "groq", label: "Groq", pricing: "gratis", priceRef: "Tier gratuito generoso — inferencia ultrarrápida", models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"], docs: "https://console.groq.com/keys", docsLabel: "Obtener API Key (gratis)" },
+  { id: "deepseek", label: "DeepSeek", pricing: "muy barato", priceRef: "~$0.14-2.19/M tokens — relación calidad/precio top", models: ["deepseek-chat", "deepseek-reasoner"], docs: "https://platform.deepseek.com/api_keys", docsLabel: "Obtener API Key" },
+  { id: "mistral", label: "Mistral AI", pricing: "de pago", priceRef: "~$0.15-8/M tokens — modelos europeos", models: ["mistral-large-latest", "mistral-small-latest", "codestral-latest", "open-mixtral-8x22b"], docs: "https://console.mistral.ai/api-keys/", docsLabel: "Obtener API Key" },
+  { id: "xai", label: "xAI (Grok)", pricing: "de pago", priceRef: "~$0.60-6/M tokens — de Elon Musk", models: ["grok-2", "grok-2-mini"], docs: "https://console.x.ai/", docsLabel: "Obtener API Key" },
+  { id: "perplexity", label: "Perplexity AI", pricing: "de pago", priceRef: "~$0.20-5/M tokens — respuestas con internet", models: ["llama-3.1-sonar-small-128k-online", "llama-3.1-sonar-large-128k-online"], docs: "https://www.perplexity.ai/settings/api", docsLabel: "Obtener API Key" },
+  { id: "huggingface", label: "Hugging Face", pricing: "gratis", priceRef: "Inference API gratuita — miles de modelos open-source", models: ["meta-llama/Meta-Llama-3.1-8B-Instruct", "mistralai/Mistral-7B-Instruct-v0.3", "Qwen/Qwen2.5-72B-Instruct"], docs: "https://huggingface.co/settings/tokens", docsLabel: "Obtener Token (gratis)" },
+  { id: "cloudflare", label: "Cloudflare Workers AI", pricing: "gratis", priceRef: "10K requests/día gratis — edge computing", models: ["@cf/meta/llama-3.1-8b-instruct", "@cf/mistral/mistral-7b-instruct-v0.2", "@cf/qwen/qwen1.5-14b-chat-awq"], docs: "https://dash.cloudflare.com/profile/api-tokens", docsLabel: "Obtener API Token (gratis)" },
+  { id: "lmstudio", label: "LM Studio", pricing: "gratis", priceRef: "100% gratis — interfaz gráfica local", models: ["lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF", "TheBloke/Mistral-7B-Instruct-v0.2-GGUF"], docs: "https://lmstudio.ai/download", docsLabel: "Descargar gratis" },
+  { id: "nvidia", label: "NVIDIA NIM", pricing: "gratis", priceRef: "1000 credits gratis — inferencia GPU NVIDIA", models: ["meta/llama-3.1-8b-instruct", "mistralai/mistral-7b-instruct-v0.3"], docs: "https://build.nvidia.com/", docsLabel: "Obtener API Key (gratis)" },
+  { id: "replicate", label: "Replicate", pricing: "de pago", priceRef: "~$0.00015-0.0070/s — model hosting", models: ["meta/meta-llama-3.1-8b-instruct", "mistralai/mistral-7b-instruct-v0.2"], docs: "https://replicate.com/account/api-tokens", docsLabel: "Obtener API Token" },
+  { id: "custom", label: "Custom OpenAI-Compatible", pricing: "variable", priceRef: "Cualquier servidor compatible con OpenAI API", models: [], docs: "", docsLabel: "" },
 ];
 
 interface Integration {
@@ -500,7 +526,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
       <div className="w-full h-px bg-zinc-100" />
 
       {/* AI PROVIDER */}
-      {(!searchQuery || ["openai", "anthropic", "gemini", "openrouter", "ollama", "groq", "deepseek", "custom", "ia", "ai", "proveedor de ia", "inteligencia artificial"].some(k => k.includes(searchQuery.toLowerCase()) || searchQuery.toLowerCase().includes(k))) && (
+      {(!searchQuery || ["openai", "anthropic", "gemini", "openrouter", "ollama", "groq", "deepseek", "mistral", "xai", "perplexity", "huggingface", "cloudflare", "lmstudio", "nvidia", "replicate", "custom", "ia", "ai", "proveedor de ia", "inteligencia artificial"].some(k => k.includes(searchQuery.toLowerCase()) || searchQuery.toLowerCase().includes(k))) && (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -554,21 +580,25 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
             <p className="text-[10px] font-bold text-zinc-400 italic">
               Elige un proveedor para que tu agente IA funcione con tu propia API key.
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               {AI_PROVIDERS_LIST.filter(p => !searchQuery || p.label.toLowerCase().includes(searchQuery.toLowerCase()) || p.id.includes(searchQuery.toLowerCase())).map(p => {
                 const I = AI_PROVIDER_ICONS[p.id];
+                const pricingColor = p.pricing === "gratis" ? "text-emerald-600 bg-emerald-50" : p.pricing === "muy barato" ? "text-amber-600 bg-amber-50" : p.pricing === "de pago" ? "text-zinc-500 bg-zinc-100" : "text-blue-600 bg-blue-50";
                 return (
-                  <button key={p.id} onClick={() => { setAiProviderId(p.id); setAiModel(p.models[0] || ""); setAiBaseUrl(p.id === "ollama" ? "http://localhost:11434/v1" : ""); }}
+                  <button key={p.id} onClick={() => { setAiProviderId(p.id); setAiModel(p.models[0] || ""); setAiBaseUrl(p.id === "ollama" ? "http://localhost:11434/v1" : p.id === "lmstudio" ? "http://localhost:1234/v1" : ""); }}
                     className={`p-3 rounded-xl border text-left transition-all ${
                       aiProviderId === p.id ? "border-red-200 bg-red-50 ring-1 ring-red-100" : "border-zinc-100 hover:bg-zinc-50"
                     }`}>
                     <div className="flex items-center gap-2 mb-1">
-                      {I && <I className="w-3.5 h-3.5" style={{ color: AI_PROVIDER_COLORS[p.id] }} />}
-                      <span className="text-[10px] font-black italic text-zinc-700 uppercase">{p.label}</span>
+                      {I && <I className="w-3.5 h-3.5 shrink-0" style={{ color: AI_PROVIDER_COLORS[p.id] }} />}
+                      <span className="text-[10px] font-black italic text-zinc-700 uppercase truncate">{p.label}</span>
                     </div>
+                    <span className={`inline-block px-1.5 py-0.5 rounded text-[7px] font-black italic uppercase ${pricingColor}`}>
+                      {p.pricing === "gratis" ? "Gratis" : p.pricing === "muy barato" ? "Muy barato" : p.pricing === "de pago" ? "Pago" : "Variable"}
+                    </span>
                     {p.docs && (
                       <a href={p.docs} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                        className="inline-flex items-center gap-1 text-[8px] font-bold text-purple-500 hover:text-purple-700 italic mt-1">
+                        className="inline-flex items-center gap-1 text-[8px] font-bold text-purple-500 hover:text-purple-700 italic mt-1.5">
                         <ExternalLink className="w-2.5 h-2.5" /> {p.docsLabel}
                       </a>
                     )}
@@ -619,6 +649,15 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
                 {aiSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                 {aiSaving ? "Guardando..." : "Conectar proveedor de IA"}
               </motion.button>
+              {(() => {
+                const selected = AI_PROVIDERS_LIST.find(p => p.id === aiProviderId);
+                if (!selected?.priceRef) return null;
+                return (
+                  <p className="text-[8px] font-bold text-zinc-400 italic">
+                    💰 {selected.priceRef}
+                  </p>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -724,7 +763,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
         {searchQuery && Object.entries(PLATFORM_INFO).filter(([platform, info]) =>
           platform.toLowerCase().includes(searchQuery.toLowerCase()) ||
           info.label.toLowerCase().includes(searchQuery.toLowerCase())
-        ).length === 0 && !["stripe", "paypal", "mercadopago", "nowpayments"].some(p => p.includes(searchQuery.toLowerCase())) && !["openai", "anthropic", "gemini", "openrouter", "ollama", "groq", "deepseek", "custom"].some(p => p.includes(searchQuery.toLowerCase())) && (
+        ).length === 0 && !["stripe", "paypal", "mercadopago", "nowpayments"].some(p => p.includes(searchQuery.toLowerCase())) && !["openai", "anthropic", "gemini", "openrouter", "ollama", "groq", "deepseek", "mistral", "xai", "perplexity", "huggingface", "cloudflare", "lmstudio", "nvidia", "replicate", "custom"].some(p => p.includes(searchQuery.toLowerCase())) && (
           <div className="col-span-full text-center py-12">
             <Plug className="w-8 h-8 text-zinc-200 mx-auto mb-3" />
             <p className="text-sm font-medium text-zinc-300 italic">{t("biz.no_search_results").replace("{query}", searchQuery)}</p>
