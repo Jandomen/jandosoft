@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plug, Send, Check, X, Loader2, Trash2, ExternalLink, Search, Star, Brain, Zap } from "lucide-react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useMemo } from "react";
+import {
+  Plug, Search, Brain, Zap, CreditCard, MessageSquare, Mail, MapPin, Share2, Cloud,
+} from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { PLATFORM_INFO } from "@/lib/integration-platforms";
+import IntegrationCard, { type IntegrationStatus } from "@/components/ui/IntegrationCard";
+import IntegrationDrawer from "@/components/ui/IntegrationDrawer";
 import {
   SiStripe, SiPaypal, SiMercadopago, SiBitcoin,
   SiTelegram, SiDiscord, SiWhatsapp,
@@ -17,118 +20,35 @@ import {
 } from "react-icons/si";
 import { TbBrandSlack, TbBrandTwilio } from "react-icons/tb";
 
-const PAYMENT_ICONS: Record<string, any> = {
-  stripe: SiStripe,
-  paypal: SiPaypal,
-  mercadopago: SiMercadopago,
-  nowpayments: SiBitcoin,
-};
-
-const PAYMENT_COLORS: Record<string, string> = {
-  stripe: "#635BFF",
-  paypal: "#003087",
-  mercadopago: "#009EE3",
-  nowpayments: "#6C3EC1",
-};
-
 const REACT_ICONS: Record<string, any> = {
-  SiTelegram, SiDiscord, SiWhatsapp,
-  SiInstagram, SiFacebook, SiX, SiThreads, SiYoutube,
-  SiGooglemaps, SiMapbox, SiGmail, SiMessenger, SiTiktok,
+  SiTelegram, SiDiscord, SiWhatsapp, SiInstagram, SiFacebook, SiX, SiThreads,
+  SiYoutube, SiGooglemaps, SiMapbox, SiGmail, SiMessenger, SiTiktok,
   TbBrandSlack, TbBrandTwilio,
 };
 
 const ICON_COLORS: Record<string, string> = {
-  telegram: "#26A5E4",
-  discord: "#5865F2",
-  slack: "#4A154B",
-  twilio: "#F22F46",
-  whatsapp: "#25D366",
-  whatsapp_business: "#25D366",
-  instagram: "#E4405F",
-  facebook: "#1877F2",
-  twitter: "#000000",
-  threads: "#000000",
-  youtube: "#FF0000",
-  google_maps: "#4285F4",
-  mapbox: "#4264FB",
-  gmail: "#EA4335",
-  messenger: "#00B2FF",
+  stripe: "#635BFF", paypal: "#003087", mercadopago: "#009EE3", nowpayments: "#6C3EC1",
+  telegram: "#26A5E4", discord: "#5865F2", slack: "#4A154B", twilio: "#F22F46",
+  whatsapp: "#25D366", whatsapp_business: "#25D366", instagram: "#E4405F",
+  facebook: "#1877F2", twitter: "#000000", threads: "#000000", youtube: "#FF0000",
+  google_maps: "#4285F4", mapbox: "#4264FB", gmail: "#EA4335", messenger: "#00B2FF",
   tiktok: "#000000",
+  openai: "#10a37f", anthropic: "#d4a574", gemini: "#4285f4", openrouter: "#6366f1",
+  ollama: "#ffffff", groq: "#f55036", deepseek: "#4d6bfe", mistral: "#ff7000",
+  xai: "#1d9bf0", perplexity: "#20b8cd", huggingface: "#ff9d00", cloudflare: "#f6821f",
+  lmstudio: "#9333ea", nvidia: "#76b900", replicate: "#3b82f6", custom: "#71717a",
 };
 
-const AI_PROVIDER_ICONS: Record<string, any> = {
-  openai: Brain,
-  anthropic: SiAnthropic,
-  gemini: SiGooglegemini,
-  openrouter: SiOpenrouter,
-  ollama: SiOllama,
-  groq: Zap,
-  deepseek: SiDeepseek,
-  mistral: SiMistralai,
-  xai: Brain,
-  perplexity: SiPerplexity,
-  huggingface: SiHuggingface,
-  cloudflare: SiCloudflare,
-  lmstudio: SiLmstudio,
-  nvidia: SiNvidia,
-  replicate: SiReplicate,
-  custom: Plug,
+const AI_ICONS: Record<string, any> = {
+  openai: Brain, anthropic: SiAnthropic, gemini: SiGooglegemini, openrouter: SiOpenrouter,
+  ollama: SiOllama, groq: Zap, deepseek: SiDeepseek, mistral: SiMistralai,
+  xai: Brain, perplexity: SiPerplexity, huggingface: SiHuggingface, cloudflare: SiCloudflare,
+  lmstudio: SiLmstudio, nvidia: SiNvidia, replicate: SiReplicate, custom: Plug,
 };
 
-const AI_PROVIDER_COLORS: Record<string, string> = {
-  openai: "#10a37f",
-  anthropic: "#d4a574",
-  gemini: "#4285f4",
-  openrouter: "#6366f1",
-  ollama: "#ffffff",
-  groq: "#f55036",
-  deepseek: "#4d6bfe",
-  mistral: "#ff7000",
-  xai: "#1d9bf0",
-  perplexity: "#20b8cd",
-  huggingface: "#ff9d00",
-  cloudflare: "#f6821f",
-  lmstudio: "#9333ea",
-  nvidia: "#76b900",
-  replicate: "#3b82f6",
-  custom: "#71717a",
+const PAYMENT_ICONS: Record<string, any> = {
+  stripe: SiStripe, paypal: SiPaypal, mercadopago: SiMercadopago, nowpayments: SiBitcoin,
 };
-
-const AI_PROVIDERS_LIST = [
-  { id: "openai", label: "OpenAI", pricing: "de pago", priceRef: "~$0.15-60/M tokens", models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1", "o3-mini"], docs: "https://platform.openai.com/api-keys", docsLabel: "Obtener API Key" },
-  { id: "anthropic", label: "Anthropic", pricing: "de pago", priceRef: "~$0.25-75/M tokens", models: ["claude-sonnet-4-20250514", "claude-3-5-haiku-20241022", "claude-opus-4-20250514"], docs: "https://console.anthropic.com/settings/keys", docsLabel: "Obtener API Key" },
-  { id: "gemini", label: "Google Gemini", pricing: "gratis", priceRef: "Tier gratuito generoso (15 RPM)", models: ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.5-pro"], docs: "https://aistudio.google.com/apikey", docsLabel: "Obtener API Key (gratis)" },
-  { id: "openrouter", label: "OpenRouter", pricing: "de pago", priceRef: "Agregador — 100+ modelos, paga por uso", models: ["openai/gpt-4o-mini", "openai/gpt-4o", "anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat", "meta-llama/llama-3.1-405b-instruct"], docs: "https://openrouter.ai/keys", docsLabel: "Obtener API Key" },
-  { id: "ollama", label: "Ollama (Local)", pricing: "gratis", priceRef: "100% gratis — corre en tu PC/servidor", models: ["llama3.1", "mistral", "codellama", "phi3", "gemma2", "qwen2.5"], docs: "https://ollama.com/download", docsLabel: "Descargar gratis" },
-  { id: "groq", label: "Groq", pricing: "gratis", priceRef: "Tier gratuito generoso — inferencia ultrarrápida", models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"], docs: "https://console.groq.com/keys", docsLabel: "Obtener API Key (gratis)" },
-  { id: "deepseek", label: "DeepSeek", pricing: "muy barato", priceRef: "~$0.14-2.19/M tokens — relación calidad/precio top", models: ["deepseek-chat", "deepseek-reasoner"], docs: "https://platform.deepseek.com/api_keys", docsLabel: "Obtener API Key" },
-  { id: "mistral", label: "Mistral AI", pricing: "de pago", priceRef: "~$0.15-8/M tokens — modelos europeos", models: ["mistral-large-latest", "mistral-small-latest", "codestral-latest", "open-mixtral-8x22b"], docs: "https://console.mistral.ai/api-keys/", docsLabel: "Obtener API Key" },
-  { id: "xai", label: "xAI (Grok)", pricing: "de pago", priceRef: "~$0.60-6/M tokens — de Elon Musk", models: ["grok-2", "grok-2-mini"], docs: "https://console.x.ai/", docsLabel: "Obtener API Key" },
-  { id: "perplexity", label: "Perplexity AI", pricing: "de pago", priceRef: "~$0.20-5/M tokens — respuestas con internet", models: ["llama-3.1-sonar-small-128k-online", "llama-3.1-sonar-large-128k-online"], docs: "https://www.perplexity.ai/settings/api", docsLabel: "Obtener API Key" },
-  { id: "huggingface", label: "Hugging Face", pricing: "gratis", priceRef: "Inference API gratuita — miles de modelos open-source", models: ["meta-llama/Meta-Llama-3.1-8B-Instruct", "mistralai/Mistral-7B-Instruct-v0.3", "Qwen/Qwen2.5-72B-Instruct"], docs: "https://huggingface.co/settings/tokens", docsLabel: "Obtener Token (gratis)" },
-  { id: "cloudflare", label: "Cloudflare Workers AI", pricing: "gratis", priceRef: "10K requests/día gratis — edge computing", models: ["@cf/meta/llama-3.1-8b-instruct", "@cf/mistral/mistral-7b-instruct-v0.2", "@cf/qwen/qwen1.5-14b-chat-awq"], docs: "https://dash.cloudflare.com/profile/api-tokens", docsLabel: "Obtener API Token (gratis)" },
-  { id: "lmstudio", label: "LM Studio", pricing: "gratis", priceRef: "100% gratis — interfaz gráfica local", models: ["lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF", "TheBloke/Mistral-7B-Instruct-v0.2-GGUF"], docs: "https://lmstudio.ai/download", docsLabel: "Descargar gratis" },
-  { id: "nvidia", label: "NVIDIA NIM", pricing: "gratis", priceRef: "1000 credits gratis — inferencia GPU NVIDIA", models: ["meta/llama-3.1-8b-instruct", "mistralai/mistral-7b-instruct-v0.3"], docs: "https://build.nvidia.com/", docsLabel: "Obtener API Key (gratis)" },
-  { id: "replicate", label: "Replicate", pricing: "de pago", priceRef: "~$0.00015-0.0070/s — model hosting", models: ["meta/meta-llama-3.1-8b-instruct", "mistralai/mistral-7b-instruct-v0.2"], docs: "https://replicate.com/account/api-tokens", docsLabel: "Obtener API Token" },
-  { id: "custom", label: "Custom OpenAI-Compatible", pricing: "variable", priceRef: "Cualquier servidor compatible con OpenAI API", models: [], docs: "", docsLabel: "" },
-];
-
-interface Integration {
-  _id: string;
-  platform: string;
-  enabled: boolean;
-  credentials: Record<string, string>;
-}
-
-interface PaymentIntegration {
-  provider: string;
-  enabled: boolean;
-  isDefault: boolean;
-  connectedAt?: string;
-  hasCredentials: boolean;
-  config: { id: string; label: string; icon: string; fields: { key: string; label: string; placeholder: string; secret?: boolean }[]; docsUrl?: string } | null;
-}
 
 const PAYMENT_FIELDS: Record<string, { key: string; label: string; placeholder: string; secret?: boolean }[]> = {
   stripe: [
@@ -151,103 +71,172 @@ const PAYMENT_FIELDS: Record<string, { key: string; label: string; placeholder: 
   ],
 };
 
+const AI_PROVIDERS_LIST = [
+  { id: "openai", label: "OpenAI", desc: "GPT-4o, GPT-4.1, o3-mini", pricing: "de pago", priceRef: "~$0.15-60/M tokens", models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1", "o3-mini"], docs: "https://platform.openai.com/api-keys" },
+  { id: "anthropic", label: "Anthropic", desc: "Claude Sonnet, Haiku, Opus", pricing: "de pago", priceRef: "~$0.25-75/M tokens", models: ["claude-sonnet-4-20250514", "claude-3-5-haiku-20241022", "claude-opus-4-20250514"], docs: "https://console.anthropic.com/settings/keys" },
+  { id: "gemini", label: "Google Gemini", desc: "Flash, Pro — tier gratuito", pricing: "gratis", priceRef: "Tier gratuito generoso (15 RPM)", models: ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.5-pro"], docs: "https://aistudio.google.com/apikey" },
+  { id: "openrouter", label: "OpenRouter", desc: "100+ modelos, paga por uso", pricing: "de pago", priceRef: "Agregador multi-modelo", models: ["openai/gpt-4o-mini", "openai/gpt-4o", "anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat"], docs: "https://openrouter.ai/keys" },
+  { id: "ollama", label: "Ollama", desc: "100% local y gratis", pricing: "gratis", priceRef: "Gratis — corre en tu PC", models: ["llama3.1", "mistral", "codellama", "phi3", "gemma2"], docs: "https://ollama.com/download" },
+  { id: "groq", label: "Groq", desc: "Inferencia ultrarrápida", pricing: "gratis", priceRef: "Tier gratuito generoso", models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"], docs: "https://console.groq.com/keys" },
+  { id: "deepseek", label: "DeepSeek", desc: "Relación calidad/precio top", pricing: "muy barato", priceRef: "~$0.14-2.19/M tokens", models: ["deepseek-chat", "deepseek-reasoner"], docs: "https://platform.deepseek.com/api_keys" },
+  { id: "mistral", label: "Mistral AI", desc: "Modelos europeos", pricing: "de pago", priceRef: "~$0.15-8/M tokens", models: ["mistral-large-latest", "mistral-small-latest", "codestral-latest"], docs: "https://console.mistral.ai/api-keys/" },
+  { id: "xai", label: "xAI (Grok)", desc: "Modelos de Elon Musk", pricing: "de pago", priceRef: "~$0.60-6/M tokens", models: ["grok-2", "grok-2-mini"], docs: "https://console.x.ai/" },
+  { id: "perplexity", label: "Perplexity", desc: "Respuestas con internet", pricing: "de pago", priceRef: "~$0.20-5/M tokens", models: ["llama-3.1-sonar-small-128k-online"], docs: "https://www.perplexity.ai/settings/api" },
+  { id: "huggingface", label: "Hugging Face", desc: "Miles de modelos open-source", pricing: "gratis", priceRef: "Inference API gratuita", models: ["meta-llama/Meta-Llama-3.1-8B-Instruct"], docs: "https://huggingface.co/settings/tokens" },
+  { id: "cloudflare", label: "Cloudflare AI", desc: "10K requests/día gratis", pricing: "gratis", priceRef: "10K requests/día gratis", models: ["@cf/meta/llama-3.1-8b-instruct"], docs: "https://dash.cloudflare.com/profile/api-tokens" },
+  { id: "lmstudio", label: "LM Studio", desc: "Interfaz gráfica local", pricing: "gratis", priceRef: "Gratis — interfaz local", models: [], docs: "https://lmstudio.ai/download" },
+  { id: "nvidia", label: "NVIDIA NIM", desc: "GPU inference gratis", pricing: "gratis", priceRef: "1000 credits gratis", models: ["meta/llama-3.1-8b-instruct"], docs: "https://build.nvidia.com/" },
+  { id: "replicate", label: "Replicate", desc: "Model hosting", pricing: "de pago", priceRef: "~$0.00015/s", models: ["meta/meta-llama-3.1-8b-instruct"], docs: "https://replicate.com/account/api-tokens" },
+  { id: "custom", label: "Custom", desc: "Cualquier servidor OpenAI-compatible", pricing: "variable", priceRef: "Variable", models: [], docs: "" },
+];
+
+type CategoryDef = { id: string; label: string; emoji: string; icon: any };
+
+const CATEGORIES: CategoryDef[] = [
+  { id: "payment", label: "Pasarelas de pago", emoji: "💳", icon: CreditCard },
+  { id: "ai", label: "Proveedores de IA", emoji: "🤖", icon: Brain },
+  { id: "messaging", label: "Mensajería", emoji: "📲", icon: MessageSquare },
+  { id: "email", label: "Correo", emoji: "📧", icon: Mail },
+  { id: "maps", label: "Mapas y ubicación", emoji: "🗺️", icon: MapPin },
+  { id: "social", label: "Redes sociales", emoji: "🔗", icon: Share2 },
+  { id: "cloud", label: "Almacenamiento", emoji: "☁️", icon: Cloud },
+];
+
+interface IntegrationDef {
+  id: string;
+  category: string;
+  label: string;
+  desc: string;
+  icon: any;
+  iconColor: string;
+  docsUrl?: string;
+  status: IntegrationStatus;
+  connectedInfo?: string;
+  fields: { key: string; label: string; placeholder: string; secret?: boolean }[];
+}
+
+interface Integration {
+  _id: string;
+  platform: string;
+  enabled: boolean;
+  credentials: Record<string, string>;
+}
+
+interface PaymentIntegration {
+  provider: string;
+  enabled: boolean;
+  isDefault: boolean;
+  connectedAt?: string;
+  hasCredentials: boolean;
+}
+
+function buildIntegrationsList(
+  integrations: Integration[],
+  paymentIntegrations: PaymentIntegration[],
+  aiProvider: any,
+): IntegrationDef[] {
+  const list: IntegrationDef[] = [];
+
+  const getPlatStatus = (platform: string): IntegrationStatus => {
+    const existing = integrations.find(i => i.platform === platform);
+    if (!existing) return "disconnected";
+    return existing.enabled ? "connected" : "disconnected";
+  };
+
+  const getPlatInfo = (platform: string): string => {
+    const existing = integrations.find(i => i.platform === platform);
+    if (!existing?.enabled) return "";
+    return `Configurado — ${Object.keys(existing.credentials).filter(k => existing.credentials[k]).length} campos`;
+  };
+
+  const getPayStatus = (provider: string): IntegrationStatus => {
+    const pi = paymentIntegrations.find(p => p.provider === provider);
+    return pi?.enabled ? "connected" : "disconnected";
+  };
+
+  const getPayInfo = (provider: string): string => {
+    const pi = paymentIntegrations.find(p => p.provider === provider);
+    if (!pi?.enabled) return "";
+    return pi.isDefault ? "Conectado — Predeterminado" : "Conectado";
+  };
+
+  list.push(
+    { id: "stripe", category: "payment", label: "Stripe", desc: "Pagos con tarjeta de crédito y débito mundialmente", icon: SiStripe, iconColor: "#635BFF", docsUrl: "https://dashboard.stripe.com/apikeys", status: getPlatStatus("stripe") === "connected" ? "connected" : getPayStatus("stripe"), connectedInfo: getPayInfo("stripe") || getPlatInfo("stripe"), fields: PAYMENT_FIELDS.stripe },
+    { id: "paypal", category: "payment", label: "PayPal", desc: "Pagos seguros con PayPal y tarjetas", icon: SiPaypal, iconColor: "#003087", docsUrl: "https://developer.paypal.com/dashboard/applications", status: getPayStatus("paypal"), connectedInfo: getPayInfo("paypal"), fields: PAYMENT_FIELDS.paypal },
+    { id: "mercadopago", category: "payment", label: "Mercado Pago", desc: "Pagos en Latinoamérica — cuotas, QR, transferencias", icon: SiMercadopago, iconColor: "#009EE3", docsUrl: "https://www.mercadopago.com.ar/developers", status: getPayStatus("mercadopago"), connectedInfo: getPayInfo("mercadopago"), fields: PAYMENT_FIELDS.mercadopago },
+    { id: "nowpayments", category: "payment", label: "NOWPayments", desc: "Acepta Bitcoin, Ethereum y 150+ criptomonedas", icon: SiBitcoin, iconColor: "#6C3EC1", docsUrl: "https://nowpayments.io/api", status: getPayStatus("nowpayments"), connectedInfo: getPayInfo("nowpayments"), fields: PAYMENT_FIELDS.nowpayments },
+  );
+
+  for (const ai of AI_PROVIDERS_LIST) {
+    const connected = aiProvider?.enabled && aiProvider?.provider === ai.id;
+    list.push({
+      id: `ai_${ai.id}`, category: "ai", label: ai.label, desc: ai.desc,
+      icon: AI_ICONS[ai.id] || Brain, iconColor: ICON_COLORS[ai.id] || "#71717a",
+      docsUrl: ai.docs, status: connected ? "connected" : "disconnected",
+      connectedInfo: connected ? `Modelo: ${aiProvider.model}` : "",
+      fields: [
+        ...(ai.id !== "ollama" ? [{ key: "apiKey", label: "API Key", placeholder: `Tu API key de ${ai.label}`, secret: true }] : []),
+        ...(ai.id === "ollama" || ai.id === "lmstudio" || ai.id === "custom" ? [{ key: "baseUrl", label: "Base URL", placeholder: ai.id === "ollama" ? "http://localhost:11434/v1" : ai.id === "lmstudio" ? "http://localhost:1234/v1" : "https://tu-servidor.com/v1" }] : []),
+        ...(ai.models.length > 0 ? [{ key: "model", label: "Modelo", placeholder: ai.models[0] }] : [{ key: "model", label: "Modelo", placeholder: "nombre-del-modelo" }]),
+      ],
+    });
+  }
+
+  for (const [platform, info] of Object.entries(PLATFORM_INFO)) {
+    let category = "social";
+    if (["telegram", "discord", "slack", "whatsapp", "whatsapp_business", "messenger"].includes(platform)) category = "messaging";
+    else if (["gmail"].includes(platform)) category = "email";
+    else if (["google_maps", "mapbox"].includes(platform)) category = "maps";
+    else if (["youtube", "tiktok"].includes(platform)) category = "social";
+
+    list.push({
+      id: `plat_${platform}`, category, label: info.label,
+      desc: `Integra ${info.label} con tu negocio`,
+      icon: REACT_ICONS[info.icon] || Plug,
+      iconColor: ICON_COLORS[platform] || "#71717a",
+      docsUrl: info.docs,
+      status: getPlatStatus(platform),
+      connectedInfo: getPlatInfo(platform),
+      fields: info.fields,
+    });
+  }
+
+  return list;
+}
+
 export default function IntegrationsPanel({ storeId, userEmail }: { storeId: string; userEmail?: string }) {
   const { t } = useLanguage();
   const { showToast } = useToast();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState<Record<string, string>>({});
-  const [testing, setTesting] = useState<string | null>(null);
-  const [saving, setSaving] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentIntegrations, setPaymentIntegrations] = useState<PaymentIntegration[]>([]);
-  const [paymentLoading, setPaymentLoading] = useState(true);
-  const [paymentSaving, setPaymentSaving] = useState<string | null>(null);
-  const [expandedPayment, setExpandedPayment] = useState<string | null>(null);
-  const [paymentForm, setPaymentForm] = useState<Record<string, Record<string, string>>>({});
   const [aiProvider, setAiProvider] = useState<any>(null);
-  const [aiLoading, setAiLoading] = useState(true);
-  const [aiSaving, setAiSaving] = useState(false);
-  const [aiProviderId, setAiProviderId] = useState("openai");
-  const [aiApiKey, setAiApiKey] = useState("");
-  const [aiBaseUrl, setAiBaseUrl] = useState("");
-  const [aiModel, setAiModel] = useState("");
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedIntegration, setSelectedIntegration] = useState<IntegrationDef | null>(null);
+  const [drawerForm, setDrawerForm] = useState<Record<string, string>>({});
+  const [drawerSaving, setDrawerSaving] = useState(false);
+  const [drawerTesting, setDrawerTesting] = useState(false);
 
   useEffect(() => {
-    fetchIntegrations();
-    fetchPaymentIntegrations();
-    fetchAIProvider();
+    Promise.all([fetchIntegrations(), fetchPaymentIntegrations(), fetchAIProvider()]);
   }, [storeId]);
 
   const fetchAIProvider = async () => {
-    setAiLoading(true);
     try {
       const res = await fetch(`/api/stores/${storeId}/ai-provider`);
       const data = await res.json();
-      if (data.aiProvider) {
-        setAiProvider(data.aiProvider);
-        setAiProviderId(data.aiProvider.provider || "openai");
-        setAiModel(data.aiProvider.model || "");
-        setAiBaseUrl(data.aiProvider.baseUrl || "");
-      }
-    } catch {}
-    setAiLoading(false);
-  };
-
-  const saveAIProvider = async () => {
-    setAiSaving(true);
-    try {
-      const providerConfig = AI_PROVIDERS_LIST.find(p => p.id === aiProviderId);
-      const res = await fetch(`/api/stores/${storeId}/ai-provider`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          storeId,
-          provider: aiProviderId,
-          apiKey: aiApiKey,
-          baseUrl: aiBaseUrl || (aiProviderId === "ollama" ? "http://localhost:11434/v1" : ""),
-          model: aiModel || providerConfig?.models?.[0] || "",
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) { showToast(data.error || "Error al guardar", "error"); return; }
-      showToast("Proveedor de IA configurado correctamente", "success");
-      setAiApiKey("");
-      await fetchAIProvider();
-    } catch {
-      showToast("Error de conexión", "error");
-    } finally {
-      setAiSaving(false);
-    }
-  };
-
-  const toggleAIProvider = async (enabled: boolean) => {
-    try {
-      await fetch(`/api/stores/${storeId}/ai-provider`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, enabled }),
-      });
-      await fetchAIProvider();
-    } catch {}
-  };
-
-  const deleteAIProvider = async () => {
-    try {
-      await fetch(`/api/stores/${storeId}/ai-provider?storeId=${storeId}`, { method: "DELETE" });
-      setAiProvider(null);
-      showToast("Proveedor de IA desconectado", "success");
+      if (data.aiProvider) setAiProvider(data.aiProvider);
     } catch {}
   };
 
   const fetchPaymentIntegrations = async () => {
-    setPaymentLoading(true);
     try {
       const res = await fetch(`/api/stores/${storeId}/payment-integrations`);
       const data = await res.json();
       setPaymentIntegrations(data.integrations || []);
     } catch {}
-    setPaymentLoading(false);
   };
 
   const fetchIntegrations = async () => {
@@ -256,140 +245,145 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
       const res = await fetch(`/api/integrations?storeId=${storeId}`);
       const data = await res.json();
       if (data.success) setIntegrations(data.integrations);
-    } catch {
-      showToast(t("integrations.error_load"), "error");
-    } finally {
-      setLoading(false);
-    }
+    } catch { showToast(t("integrations.error_load"), "error"); }
+    setLoading(false);
   };
 
-  const getConfig = (platform: string) => {
-    return integrations.find(i => i.platform === platform);
-  };
+  const allIntegrations = useMemo(
+    () => buildIntegrationsList(integrations, paymentIntegrations, aiProvider),
+    [integrations, paymentIntegrations, aiProvider]
+  );
 
-  const saveIntegration = async (platform: string) => {
-    setSaving(platform);
-    try {
-      const res = await fetch("/api/integrations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, platform, credentials: formData }),
-      });
-      const data = await res.json();
-      if (!res.ok) { showToast(data.error || t("integrations.error_save"), "error"); return; }
-      showToast(t("integrations.configured").replace("{platform}", PLATFORM_INFO[platform]?.label || ""), "success");
-      await fetchIntegrations();
-    } catch {
-      showToast(t("integrations.error_connection"), "error");
-    } finally {
-      setSaving(null);
-    }
-  };
+  const filteredIntegrations = useMemo(() => {
+    if (!searchQuery) return allIntegrations;
+    const q = searchQuery.toLowerCase();
+    return allIntegrations.filter(i =>
+      i.label.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q) || i.category.includes(q)
+    );
+  }, [allIntegrations, searchQuery]);
 
-  const deleteIntegration = async (platform: string) => {
-    try {
-      const res = await fetch(`/api/integrations?storeId=${storeId}&platform=${platform}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) { showToast(data.error || t("integrations.error_delete"), "error"); return; }
-      showToast(t("integrations.deleted").replace("{platform}", PLATFORM_INFO[platform]?.label || ""), "success");
-      await fetchIntegrations();
-    } catch {
-      showToast(t("integrations.error_connection"), "error");
-    }
-  };
+  const visibleCategories = useMemo(() => {
+    const catIds = new Set(filteredIntegrations.map(i => i.category));
+    return CATEGORIES.filter(c => catIds.has(c.id));
+  }, [filteredIntegrations]);
 
-  const toggleEnabled = async (platform: string, current: boolean) => {
-    try {
-      const res = await fetch("/api/integrations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, platform, credentials: formData, enabled: !current }),
-      });
-      if (!res.ok) { showToast(t("integrations.error_toggle"), "error"); return; }
-      await fetchIntegrations();
-    } catch {
-      showToast(t("integrations.error_connection"), "error");
-    }
-  };
-
-  const savePaymentProvider = async (provider: string) => {
-    setPaymentSaving(provider);
-    try {
-      const creds = paymentForm[provider] || {};
-      const res = await fetch(`/api/stores/${storeId}/payment-integrations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, provider, credentials: creds }),
-      });
-      const data = await res.json();
-      if (!res.ok) { showToast(data.error || "Error al guardar", "error"); return; }
-      showToast(`${provider} conectado correctamente`, "success");
-      setExpandedPayment(null);
-      await fetchPaymentIntegrations();
-    } catch {
-      showToast("Error de conexión", "error");
-    } finally {
-      setPaymentSaving(null);
-    }
-  };
-
-  const togglePaymentDefault = async (provider: string) => {
-    try {
-      await fetch(`/api/stores/${storeId}/payment-integrations`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, provider, isDefault: true }),
-      });
-      await fetchPaymentIntegrations();
-    } catch {}
-  };
-
-  const togglePaymentEnabled = async (provider: string, current: boolean) => {
-    try {
-      await fetch(`/api/stores/${storeId}/payment-integrations`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, provider, enabled: !current }),
-      });
-      await fetchPaymentIntegrations();
-    } catch {}
-  };
-
-  const deletePaymentProvider = async (provider: string) => {
-    try {
-      await fetch(`/api/stores/${storeId}/payment-integrations?provider=${provider}`, { method: "DELETE" });
-      showToast(`${provider} desconectado`, "success");
-      await fetchPaymentIntegrations();
-    } catch {}
-  };
-
-  const testConnection = async (platform: string) => {
-    setTesting(platform);
-    try {
-      const existing = getConfig(platform);
-      const creds: Record<string, string> = {};
-      const platformInfo = PLATFORM_INFO[platform];
-      if (platformInfo) {
-        for (const field of platformInfo.fields) {
-          creds[field.key] = formData[field.key] ?? existing?.credentials?.[field.key] ?? "";
-        }
+  const openDrawer = (integration: IntegrationDef) => {
+    setSelectedIntegration(integration);
+    const initial: Record<string, string> = {};
+    if (integration.id.startsWith("plat_")) {
+      const platform = integration.id.replace("plat_", "");
+      const existing = integrations.find(i => i.platform === platform);
+      if (existing) {
+        for (const f of integration.fields) initial[f.key] = existing.credentials[f.key] || "";
       }
+    }
+    if (integration.id.startsWith("ai_")) {
+      const aiId = integration.id.replace("ai_", "");
+      if (aiProvider?.provider === aiId) {
+        initial.apiKey = "";
+        initial.baseUrl = aiProvider.baseUrl || "";
+        initial.model = aiProvider.model || "";
+      } else {
+        const aiDef = AI_PROVIDERS_LIST.find(p => p.id === aiId);
+        initial.baseUrl = aiId === "ollama" ? "http://localhost:11434/v1" : aiId === "lmstudio" ? "http://localhost:1234/v1" : "";
+        initial.model = aiDef?.models?.[0] || "";
+      }
+    }
+    if (["stripe", "paypal", "mercadopago", "nowpayments"].includes(integration.id)) {
+      const pi = paymentIntegrations.find(p => p.provider === integration.id);
+      if (!pi?.hasCredentials) {
+        for (const f of integration.fields) initial[f.key] = "";
+      }
+    }
+    setDrawerForm(initial);
+    setDrawerOpen(true);
+  };
+
+  const saveFromDrawer = async () => {
+    if (!selectedIntegration) return;
+    setDrawerSaving(true);
+    const id = selectedIntegration.id;
+
+    try {
+      if (id.startsWith("plat_")) {
+        const platform = id.replace("plat_", "");
+        const res = await fetch("/api/integrations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ storeId, platform, credentials: drawerForm }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || t("integrations.error_save"), "error"); return; }
+        showToast(`${selectedIntegration.label} conectado correctamente`, "success");
+        await fetchIntegrations();
+      } else if (id.startsWith("ai_")) {
+        const aiId = id.replace("ai_", "");
+        const aiDef = AI_PROVIDERS_LIST.find(p => p.id === aiId);
+        const res = await fetch(`/api/stores/${storeId}/ai-provider`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            storeId, provider: aiId,
+            apiKey: drawerForm.apiKey || "",
+            baseUrl: drawerForm.baseUrl || (aiId === "ollama" ? "http://localhost:11434/v1" : aiId === "lmstudio" ? "http://localhost:1234/v1" : ""),
+            model: drawerForm.model || aiDef?.models?.[0] || "",
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || "Error al guardar", "error"); return; }
+        showToast(`${selectedIntegration.label} configurado correctamente`, "success");
+        await fetchAIProvider();
+      } else if (["stripe", "paypal", "mercadopago", "nowpayments"].includes(id)) {
+        const res = await fetch(`/api/stores/${storeId}/payment-integrations`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ storeId, provider: id, credentials: drawerForm }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || "Error al guardar", "error"); return; }
+        showToast(`${selectedIntegration.label} conectado correctamente`, "success");
+        await fetchPaymentIntegrations();
+      }
+      setDrawerOpen(false);
+    } catch { showToast("Error de conexión", "error"); }
+    setDrawerSaving(false);
+  };
+
+  const disconnectFromDrawer = async () => {
+    if (!selectedIntegration) return;
+    const id = selectedIntegration.id;
+    try {
+      if (id.startsWith("plat_")) {
+        const platform = id.replace("plat_", "");
+        await fetch(`/api/integrations?storeId=${storeId}&platform=${platform}`, { method: "DELETE" });
+        await fetchIntegrations();
+      } else if (id.startsWith("ai_")) {
+        await fetch(`/api/stores/${storeId}/ai-provider?storeId=${storeId}`, { method: "DELETE" });
+        setAiProvider(null);
+      } else if (["stripe", "paypal", "mercadopago", "nowpayments"].includes(id)) {
+        await fetch(`/api/stores/${storeId}/payment-integrations?provider=${id}`, { method: "DELETE" });
+        await fetchPaymentIntegrations();
+      }
+      showToast(`${selectedIntegration.label} desconectado`, "success");
+      setDrawerOpen(false);
+    } catch { showToast("Error de conexión", "error"); }
+  };
+
+  const testFromDrawer = async () => {
+    if (!selectedIntegration || !selectedIntegration.id.startsWith("plat_")) return;
+    setDrawerTesting(true);
+    const platform = selectedIntegration.id.replace("plat_", "");
+    try {
       const res = await fetch("/api/integrations/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ platform, credentials: creds }),
+        body: JSON.stringify({ platform, credentials: drawerForm }),
       });
       const data = await res.json();
-      if (data.success) {
-        showToast(t("integrations.test_success").replace("{platform}", PLATFORM_INFO[platform]?.label || ""), "success");
-      } else {
-        showToast(t("integrations.test_error").replace("{platform}", PLATFORM_INFO[platform]?.label || "").replace("{error}", data.error || "Error"), "error");
-      }
-    } catch {
-      showToast(t("integrations.error_connection"), "error");
-    } finally {
-      setTesting(null);
-    }
+      if (data.success) showToast(`${selectedIntegration.label} conectado correctamente`, "success");
+      else showToast(`Error: ${data.error || "Falló la prueba"}`, "error");
+    } catch { showToast("Error de conexión", "error"); }
+    setDrawerTesting(false);
   };
 
   if (loading) {
@@ -398,8 +392,8 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
         <h3 className="text-2xl max-[400px]:text-xl font-black italic text-zinc-950 uppercase tracking-tighter">
           <Plug className="w-6 h-6 max-[400px]:w-5 max-[400px]:h-5 inline mr-3 text-red-600" />{t("integrations.title")}
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-40 bg-zinc-50 rounded-[2rem] animate-pulse" />)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-40 bg-zinc-50 rounded-[2rem] animate-pulse" />)}
         </div>
       </div>
     );
@@ -407,365 +401,77 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
 
   return (
     <div className="space-y-8">
-      <h3 className="text-2xl max-[400px]:text-xl font-black italic text-zinc-950 uppercase tracking-tighter">
-        <Plug className="w-6 h-6 max-[400px]:w-5 max-[400px]:h-5 inline mr-3 text-red-600" />{t("integrations.title")}
-      </h3>
-      <p className="text-xs font-medium text-zinc-400 italic -mt-4">
-        Configura los proveedores de pago de tu empresa y las integraciones con tus servicios favoritos.
-      </p>
+      <div>
+        <h3 className="text-2xl max-[400px]:text-xl font-black italic text-zinc-950 uppercase tracking-tighter">
+          <Plug className="w-6 h-6 max-[400px]:w-5 max-[400px]:h-5 inline mr-3 text-red-600" />{t("integrations.title")}
+        </h3>
+        <p className="text-xs font-medium text-zinc-400 italic -mt-1">
+          Conecta servicios, pasaeros de pago, IA y más a tu negocio.
+        </p>
+      </div>
 
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
         <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-          placeholder={t("integrations.search_placeholder")}
+          placeholder="Buscar integraciones..."
           className="w-full bg-zinc-50 pl-11 pr-4 py-3 rounded-2xl border border-zinc-100 outline-none font-medium text-sm focus:bg-white focus:border-red-200 transition-all" />
       </div>
 
-      {/* PAYMENT PROVIDERS */}
-      {(!searchQuery || ["stripe", "paypal", "mercadopago", "nowpayments"].some(p => p.includes(searchQuery.toLowerCase()))) && (
-      <div className="space-y-4">
-        <div>
-          <h4 className="text-lg font-black italic text-zinc-950 uppercase tracking-tight">Proveedores de Pago</h4>
-          <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest italic">Conecta Stripe, PayPal, Mercado Pago o NOWPayments</p>
+      {visibleCategories.map(cat => {
+        const catIntegrations = filteredIntegrations.filter(i => i.category === cat.id);
+        if (catIntegrations.length === 0) return null;
+        const CatIcon = cat.icon;
+        return (
+          <div key={cat.id} className="space-y-4">
+            <div className="flex items-center gap-2">
+              <CatIcon className="w-4 h-4 text-zinc-400" />
+              <h4 className="text-sm font-black italic text-zinc-950 uppercase tracking-tight">{cat.label}</h4>
+              <span className="text-[9px] font-bold text-zinc-300 italic">({catIntegrations.length})</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {catIntegrations.map(integration => (
+                <IntegrationCard
+                  key={integration.id}
+                  icon={integration.icon}
+                  iconColor={integration.iconColor}
+                  label={integration.label}
+                  description={integration.desc}
+                  status={integration.status}
+                  connectedLabel={integration.connectedInfo}
+                  onClick={() => openDrawer(integration)}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      {filteredIntegrations.length === 0 && (
+        <div className="text-center py-16">
+          <Plug className="w-10 h-10 text-zinc-200 mx-auto mb-3" />
+          <p className="text-sm font-medium text-zinc-300 italic">No se encontraron integraciones para &quot;{searchQuery}&quot;</p>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {["stripe", "paypal", "mercadopago", "nowpayments"].map((provider) => {
-            const pi = paymentIntegrations.find(p => p.provider === provider);
-            const Icon = PAYMENT_ICONS[provider] || SiBitcoin;
-            const isExpanded = expandedPayment === provider;
-            const fields = PAYMENT_FIELDS[provider] || [];
-
-            return (
-              <div key={provider}
-                className={`bg-white p-5 rounded-[2rem] border shadow-sm transition-all ${
-                  pi?.enabled ? "border-green-200 ring-1 ring-green-100" : "border-zinc-100"
-                }`}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl" style={{ backgroundColor: pi?.enabled ? PAYMENT_COLORS[provider] + "15" : "#f4f4f5" }}>
-                      <Icon className="w-5 h-5" style={{ color: pi?.enabled ? PAYMENT_COLORS[provider] : "#a1a1aa" }} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-black italic text-zinc-950 uppercase tracking-tighter">{provider === "mercadopago" ? "Mercado Pago" : provider === "nowpayments" ? "NOWPayments" : provider}</p>
-                      {pi?.enabled ? (
-                        <span className="text-[9px] font-bold italic uppercase text-green-500">
-                          {pi.isDefault ? "Conectado (Predeterminado)" : "Conectado"}
-                        </span>
-                      ) : (
-                        <span className="text-[9px] font-bold italic uppercase text-zinc-300">No conectado</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {pi?.enabled && (
-                      <motion.button whileTap={{ scale: 0.9 }}
-                        onClick={() => togglePaymentDefault(provider)}
-                        className={`p-2 rounded-lg transition-all ${pi.isDefault ? "bg-amber-50 text-amber-500" : "bg-zinc-50 text-zinc-300 hover:text-amber-500"}`}
-                        title="Predeterminado">
-                        <Star className="w-3.5 h-3.5" />
-                      </motion.button>
-                    )}
-                    {pi?.enabled && (
-                      <motion.button whileTap={{ scale: 0.9 }}
-                        onClick={() => togglePaymentEnabled(provider, true)}
-                        className="p-2 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-all">
-                        <X className="w-3.5 h-3.5" />
-                      </motion.button>
-                    )}
-                  </div>
-                </div>
-
-                {pi?.enabled && !isExpanded ? (
-                  <div className="flex gap-2">
-                    <button onClick={() => { setExpandedPayment(provider); }}
-                      className="px-4 py-2.5 bg-zinc-50 text-zinc-600 rounded-xl font-black text-[10px] italic hover:bg-zinc-100 transition-all">
-                      Editar
-                    </button>
-                    <button onClick={() => deletePaymentProvider(provider)}
-                      className="px-4 py-2.5 bg-red-50 text-red-400 rounded-xl font-black text-[10px] italic hover:bg-red-100 transition-all">
-                      Desconectar
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {fields.map(field => (
-                      <div key={field.key} className="space-y-1">
-                        <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{field.label}</label>
-                        <input type={field.secret ? "password" : "text"}
-                          value={paymentForm[provider]?.[field.key] ?? pi?.hasCredentials ? "••••••••" : ""}
-                          onChange={e => setPaymentForm(prev => ({ ...prev, [provider]: { ...prev[provider], [field.key]: e.target.value } }))}
-                          placeholder={field.placeholder}
-                          className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                      </div>
-                    ))}
-                    <div className="flex gap-2 pt-1">
-                      <motion.button whileTap={{ scale: 0.95 }}
-                        onClick={() => savePaymentProvider(provider)}
-                        disabled={paymentSaving === provider}
-                        className="px-5 py-2.5 bg-red-600 text-white rounded-xl font-black text-xs italic hover:bg-red-700 transition-all disabled:opacity-50 flex items-center gap-1.5">
-                        {paymentSaving === provider ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                        {paymentSaving === provider ? "Guardando..." : "Conectar"}
-                      </motion.button>
-                      <button onClick={() => setExpandedPayment(null)}
-                        className="px-4 py-2.5 bg-zinc-50 text-zinc-400 rounded-xl font-black text-xs italic hover:bg-zinc-100 transition-all">
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
       )}
 
-      <div className="w-full h-px bg-zinc-100" />
-
-      {/* AI PROVIDER */}
-      {(!searchQuery || ["openai", "anthropic", "gemini", "openrouter", "ollama", "groq", "deepseek", "mistral", "xai", "perplexity", "huggingface", "cloudflare", "lmstudio", "nvidia", "replicate", "custom", "ia", "ai", "proveedor de ia", "inteligencia artificial"].some(k => k.includes(searchQuery.toLowerCase()) || searchQuery.toLowerCase().includes(k))) && (
-      <div className="space-y-4">
-        <div>
-          <h4 className="text-lg font-black italic text-zinc-950 uppercase tracking-tight flex items-center gap-2">
-            <Brain className="w-5 h-5 text-purple-600" /> Proveedor de IA
-          </h4>
-          <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest italic">
-            Configura tu propia API de inteligencia artificial para el agente
-          </p>
-        </div>
-
-        {aiProvider?.enabled ? (
-          <div className="bg-white p-5 rounded-[2rem] border border-green-200 ring-1 ring-green-100 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl" style={{ backgroundColor: (AI_PROVIDER_COLORS[aiProvider.provider] || "#71717a") + "15" }}>
-                  {(() => { const I = AI_PROVIDER_ICONS[aiProvider.provider]; return I ? <I className="w-5 h-5" style={{ color: AI_PROVIDER_COLORS[aiProvider.provider] }} /> : <Brain className="w-5 h-5" />; })()}
-                </div>
-                <div>
-                  <p className="text-sm font-black italic text-zinc-950 uppercase tracking-tighter">
-                    {AI_PROVIDERS_LIST.find(p => p.id === aiProvider.provider)?.label || aiProvider.provider}
-                  </p>
-                  <span className="text-[9px] font-bold italic uppercase text-green-500">
-                    Activo — Modelo: {aiProvider.model}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <motion.button whileTap={{ scale: 0.9 }}
-                  onClick={() => toggleAIProvider(false)}
-                  className="p-2 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-all"
-                  title="Desactivar">
-                  <X className="w-3.5 h-3.5" />
-                </motion.button>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => { setAiProvider(null); }}
-                className="px-4 py-2.5 bg-zinc-50 text-zinc-600 rounded-xl font-black text-[10px] italic hover:bg-zinc-100 transition-all">
-                Cambiar proveedor
-              </button>
-              <button onClick={deleteAIProvider}
-                className="px-4 py-2.5 bg-red-50 text-red-400 rounded-xl font-black text-[10px] italic hover:bg-red-100 transition-all">
-                Desconectar
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white p-5 rounded-[2rem] border border-zinc-100 shadow-sm space-y-4">
-            <p className="text-[10px] font-bold text-zinc-400 italic">
-              Elige un proveedor para que tu agente IA funcione con tu propia API key.
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {AI_PROVIDERS_LIST.filter(p => !searchQuery || p.label.toLowerCase().includes(searchQuery.toLowerCase()) || p.id.includes(searchQuery.toLowerCase())).map(p => {
-                const I = AI_PROVIDER_ICONS[p.id];
-                const pricingColor = p.pricing === "gratis" ? "text-emerald-600 bg-emerald-50" : p.pricing === "muy barato" ? "text-amber-600 bg-amber-50" : p.pricing === "de pago" ? "text-zinc-500 bg-zinc-100" : "text-blue-600 bg-blue-50";
-                return (
-                  <button key={p.id} onClick={() => { setAiProviderId(p.id); setAiModel(p.models[0] || ""); setAiBaseUrl(p.id === "ollama" ? "http://localhost:11434/v1" : p.id === "lmstudio" ? "http://localhost:1234/v1" : ""); }}
-                    className={`p-3 rounded-xl border text-left transition-all ${
-                      aiProviderId === p.id ? "border-red-200 bg-red-50 ring-1 ring-red-100" : "border-zinc-100 hover:bg-zinc-50"
-                    }`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      {I && <I className="w-3.5 h-3.5 shrink-0" style={{ color: AI_PROVIDER_COLORS[p.id] }} />}
-                      <span className="text-[10px] font-black italic text-zinc-700 uppercase truncate">{p.label}</span>
-                    </div>
-                    <span className={`inline-block px-1.5 py-0.5 rounded text-[7px] font-black italic uppercase ${pricingColor}`}>
-                      {p.pricing === "gratis" ? "Gratis" : p.pricing === "muy barato" ? "Muy barato" : p.pricing === "de pago" ? "Pago" : "Variable"}
-                    </span>
-                    {p.docs && (
-                      <a href={p.docs} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                        className="inline-flex items-center gap-1 text-[8px] font-bold text-purple-500 hover:text-purple-700 italic mt-1.5">
-                        <ExternalLink className="w-2.5 h-2.5" /> {p.docsLabel}
-                      </a>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="space-y-3">
-              {aiProviderId !== "ollama" && (
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">API Key</label>
-                  <input type="password" value={aiApiKey} onChange={e => setAiApiKey(e.target.value)}
-                    placeholder="Tu API key del proveedor"
-                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                </div>
-              )}
-              {(aiProviderId === "ollama" || aiProviderId === "custom") && (
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Base URL</label>
-                  <input type="text" value={aiBaseUrl} onChange={e => setAiBaseUrl(e.target.value)}
-                    placeholder={aiProviderId === "ollama" ? "http://localhost:11434/v1" : "https://tu-servidor.com/v1"}
-                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                </div>
-              )}
-              <div className="space-y-1">
-                <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Modelo</label>
-                {(() => {
-                  const pc = AI_PROVIDERS_LIST.find(p => p.id === aiProviderId);
-                  if (pc && pc.models.length > 0) {
-                    return (
-                      <select value={aiModel} onChange={e => setAiModel(e.target.value)}
-                        className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm">
-                        {pc.models.map(m => <option key={m} value={m}>{m}</option>)}
-                      </select>
-                    );
-                  }
-                  return (
-                    <input type="text" value={aiModel} onChange={e => setAiModel(e.target.value)}
-                      placeholder="nombre-del-modelo"
-                      className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                  );
-                })()}
-              </div>
-              <motion.button whileTap={{ scale: 0.95 }}
-                onClick={saveAIProvider} disabled={aiSaving || (!aiApiKey && aiProviderId !== "ollama")}
-                className="px-5 py-2.5 bg-purple-600 text-white rounded-xl font-black text-xs italic hover:bg-purple-700 transition-all disabled:opacity-50 flex items-center gap-1.5">
-                {aiSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                {aiSaving ? "Guardando..." : "Conectar proveedor de IA"}
-              </motion.button>
-              {(() => {
-                const selected = AI_PROVIDERS_LIST.find(p => p.id === aiProviderId);
-                if (!selected?.priceRef) return null;
-                return (
-                  <p className="text-[8px] font-bold text-zinc-400 italic">
-                    💰 {selected.priceRef}
-                  </p>
-                );
-              })()}
-            </div>
-          </div>
-        )}
-      </div>
-      )}
-
-      <div className="w-full h-px bg-zinc-100" />
-
-      {/* OTHER INTEGRATIONS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Object.entries(PLATFORM_INFO).filter(([platform, info]) =>
-          !searchQuery || platform.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          info.label.toLowerCase().includes(searchQuery.toLowerCase())
-        ).map(([platform, info]) => {
-          const existing = getConfig(platform);
-          const Icon = REACT_ICONS[info.icon] || Plug;
-          const iconColor = ICON_COLORS[platform] || "#71717a";
-
-          return (
-            <div key={platform}
-              className={`bg-white p-5 rounded-[2rem] border shadow-sm transition-all ${
-                existing?.enabled ? "border-green-200 ring-1 ring-green-100" : "border-zinc-100"
-              }`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl" style={{ backgroundColor: existing?.enabled ? iconColor + "15" : "#f4f4f5" }}>
-                    <Icon className="w-5 h-5" style={{ color: existing?.enabled ? iconColor : "#a1a1aa" }} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-black italic text-zinc-950 uppercase tracking-tighter">{info.label}</p>
-                    {existing && (
-                      <span className={`text-[9px] font-bold italic uppercase ${existing.enabled ? "text-green-500" : "text-zinc-300"}`}>
-                        {existing.enabled ? t("integrations.connected") : t("integrations.disconnected")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {existing && (
-                  <div className="flex items-center gap-1">
-                    <motion.button whileTap={{ scale: 0.9 }}
-                      onClick={() => toggleEnabled(platform, existing.enabled)}
-                      className={`p-2 rounded-lg transition-all ${
-                        existing.enabled ? "bg-green-50 text-green-600" : "bg-zinc-50 text-zinc-300"
-                      }`}>
-                      {existing.enabled ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-                    </motion.button>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                {info.fields.map(field => (
-                  <div key={field.key} className="space-y-1">
-                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{field.label}</label>
-                    <input type={field.secret ? "password" : "text"}
-                      value={formData[field.key] ?? existing?.credentials?.[field.key] ?? ""}
-                      onChange={e => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
-                      placeholder={field.placeholder}
-                      className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                  </div>
-                ))}
-                <div className="flex gap-2 pt-1 flex-wrap">
-                  <motion.button whileTap={{ scale: 0.95 }}
-                    onClick={() => saveIntegration(platform)} disabled={saving === platform}
-                    className="px-5 py-2.5 bg-red-600 text-white rounded-xl font-black text-xs italic hover:bg-red-700 transition-all disabled:opacity-50 flex items-center gap-1.5">
-                    {saving === platform ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                    {saving === platform ? t("integrations.saving") : t("integrations.save")}
-                  </motion.button>
-                  {existing && (
-                    <>
-                      <motion.button whileTap={{ scale: 0.95 }}
-                        onClick={() => testConnection(platform)} disabled={testing === platform}
-                        className="px-4 py-2.5 bg-zinc-100 text-zinc-600 rounded-xl font-black text-[10px] italic hover:bg-zinc-200 transition-all disabled:opacity-50 flex items-center gap-1.5">
-                        {testing === platform ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                        {t("integrations.test")}
-                      </motion.button>
-                      <motion.button whileTap={{ scale: 0.95 }}
-                        onClick={() => toggleEnabled(platform, existing.enabled)}
-                        className={`px-4 py-2.5 rounded-xl font-black text-[10px] italic transition-all flex items-center gap-1.5 ${
-                          existing.enabled ? "bg-rose-50 text-rose-600 hover:bg-rose-100" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
-                        }`}>
-                        {existing.enabled ? <X className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
-                        {existing.enabled ? t("integrations.disconnect") : t("integrations.connect")}
-                      </motion.button>
-                      <motion.button whileTap={{ scale: 0.9 }}
-                        onClick={() => deleteIntegration(platform)}
-                        className="p-2.5 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-all">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </motion.button>
-                    </>
-                  )}
-                  {info.docs && (
-                    <a href={info.docs} target="_blank" rel="noopener noreferrer"
-                      className="px-4 py-2.5 bg-zinc-50 text-zinc-400 rounded-xl font-black text-[10px] italic hover:bg-zinc-100 transition-all flex items-center gap-1.5">
-                      <ExternalLink className="w-3 h-3" /> {t("integrations.guide")}
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        {searchQuery && Object.entries(PLATFORM_INFO).filter(([platform, info]) =>
-          platform.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          info.label.toLowerCase().includes(searchQuery.toLowerCase())
-        ).length === 0 && !["stripe", "paypal", "mercadopago", "nowpayments"].some(p => p.includes(searchQuery.toLowerCase())) && !["openai", "anthropic", "gemini", "openrouter", "ollama", "groq", "deepseek", "mistral", "xai", "perplexity", "huggingface", "cloudflare", "lmstudio", "nvidia", "replicate", "custom"].some(p => p.includes(searchQuery.toLowerCase())) && (
-          <div className="col-span-full text-center py-12">
-            <Plug className="w-8 h-8 text-zinc-200 mx-auto mb-3" />
-            <p className="text-sm font-medium text-zinc-300 italic">{t("biz.no_search_results").replace("{query}", searchQuery)}</p>
-          </div>
-        )}
-      </div>
+      <IntegrationDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        icon={selectedIntegration?.icon || Plug}
+        iconColor={selectedIntegration?.iconColor || "#71717a"}
+        label={selectedIntegration?.label || ""}
+        description={selectedIntegration?.desc}
+        docsUrl={selectedIntegration?.docsUrl}
+        connected={selectedIntegration?.status === "connected"}
+        connectedInfo={selectedIntegration?.connectedInfo}
+        fields={selectedIntegration?.fields || []}
+        formValues={drawerForm}
+        onFormChange={(key, value) => setDrawerForm(prev => ({ ...prev, [key]: value }))}
+        onSave={saveFromDrawer}
+        onDisconnect={selectedIntegration?.status === "connected" ? disconnectFromDrawer : undefined}
+        onTest={selectedIntegration?.status === "connected" && selectedIntegration?.id.startsWith("plat_") ? testFromDrawer : undefined}
+        saving={drawerSaving}
+        testing={drawerTesting}
+      />
     </div>
   );
 }
