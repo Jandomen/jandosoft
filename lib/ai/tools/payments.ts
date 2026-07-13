@@ -156,15 +156,14 @@ export async function executePaymentTool(name: string, args: any, store: any, us
     const storeId = store?._id || store?.id;
     if (!storeId) return { error: "No store selected" };
     const { Store } = await import("@/lib/models/Store");
+    const { createProviderCheckout } = await import("@/lib/payment-providers/registry");
     await connectDB();
     const s = await Store.findById(storeId);
     if (!s) return { error: "Store not found" };
-    if (!s.stripeAccountId || !s.paymentsEnabled) {
-      return { error: "Esta empresa no tiene Stripe conectado o los pagos no están habilitados. Conecta Stripe desde el panel." };
+    const integrations = s.paymentIntegrations?.filter((i: any) => i.enabled) || [];
+    if (integrations.length === 0) {
+      return { error: "Esta empresa no tiene proveedores de pago conectados. Configura uno desde Integraciones." };
     }
-    const { stripe } = await import("@/lib/stripe");
-    const baseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
-    const currency = (args.currency || "usd").toLowerCase();
 
     let totalAmount = args.amount;
     let description = args.description || "";
@@ -174,38 +173,20 @@ export async function executePaymentTool(name: string, args: any, store: any, us
     }
     if (!totalAmount) return { error: "Debes proporcionar un amount o items" };
 
-    const amountInCents = Math.round(totalAmount * 100);
-    const feePercent = s.platformFeePercent ?? 5;
-    const applicationFee = Math.round(amountInCents * (feePercent / 100));
-
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"],
-      line_items: [{
-        price_data: {
-          currency,
-          product_data: { name: description?.substring(0, 150) || "Pago Jandosoft" },
-          unit_amount: amountInCents,
-        },
-        quantity: 1,
-      }],
-      customer_email: args.customerEmail,
-      success_url: `${baseUrl}/?stripe_success={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/?stripe_cancel=1`,
-      payment_intent_data: {
-        transfer_data: { destination: s.stripeAccountId },
-        application_fee_amount: applicationFee,
-        metadata: {
-          storeId: s._id.toString(), storeName: s.name, ownerEmail: s.ownerEmail,
-          customerEmail: args.customerEmail, customerName: args.customerName || "",
-        },
-      },
-      metadata: {
-        customerEmail: args.customerEmail, customerName: args.customerName || "", storeId: s._id.toString(),
-      },
+    const result = await createProviderCheckout(integrations, {
+      storeId: String(storeId),
+      storeName: s.name,
+      ownerEmail: s.ownerEmail,
+      amount: totalAmount,
+      currency: args.currency || "usd",
+      description: description?.substring(0, 150) || "Pago",
+      customerEmail: args.customerEmail,
+      customerName: args.customerName || "",
+      items: args.items,
     });
 
-    return { success: true, message: `Link de pago generado: ${session.url}`, checkoutUrl: session.url };
+    if (result.error) return { error: result.error };
+    return { success: true, message: `Link de pago generado: ${result.url}`, checkoutUrl: result.url };
   }
 
   if (name === "list_payments") {

@@ -24,7 +24,7 @@ export async function getPublicStore(slug: string) {
       store = await Store.findOne({ slugHistory: slug }).lean();
     }
     if (!store) return null;
-    const { customers, orders, stripeAccountId, platformFeePercent, ...publicData } = store as any;
+    const { customers, orders, platformFeePercent, ...publicData } = store as any;
     // Serialize to plain object to safely pass to Client Components
     return JSON.parse(JSON.stringify(publicData));
   } catch {

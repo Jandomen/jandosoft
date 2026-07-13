@@ -6,7 +6,7 @@ export interface StoreContext {
   industry?: string;
   type?: string;
   slug?: string;
-  stripeEnabled: boolean;
+  paymentsEnabled: boolean;
   ownerEmail?: string;
   organizationId?: string;
 }
@@ -137,7 +137,7 @@ export function buildContext(ctxReq: ContextRequest, store: any): BuiltContext {
         industry: store.industry,
         type: store.type,
         slug: store.slug,
-        stripeEnabled: !!(store.stripeAccountId && store.paymentsEnabled),
+        paymentsEnabled: !!(store.paymentIntegrations?.length > 0),
         ownerEmail: store.ownerEmail,
         organizationId: store.organizationId,
       }
@@ -153,7 +153,7 @@ export function buildContext(ctxReq: ContextRequest, store: any): BuiltContext {
   sections.push(
     `Nombre: ${store.name || "N/A"} | Tipo: ${store.type || "N/A"} | Industria: ${store.industry || "N/A"}`
   );
-  sections.push(`Stripe: ${storeContext?.stripeEnabled ? "Conectado" : "No conectado"}`);
+  sections.push(`Pagos: ${storeContext?.paymentsEnabled ? "Activos" : "No configurados"}`);
   sections.push(`SUSCRIPCIÓN: ${(sub?.plan || "free").toUpperCase()}`);
   sections.push(
     `Productos: ${productsCount} / ${effectiveMaxProducts}${productsCount >= effectiveMaxProducts ? " (COMPLETO)" : productsCount >= effectiveMaxProducts * 0.8 ? " (cerca del límite)" : ""}`

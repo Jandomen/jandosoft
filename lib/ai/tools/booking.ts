@@ -105,32 +105,23 @@ export async function executeBookingTool(name: string, args: any, store: any, us
     });
 
     let paymentUrl = "";
-    if (servicePrice > 0 && store && (store as any).stripeAccountId && (store as any).paymentsEnabled) {
+    if (servicePrice > 0 && store) {
       try {
-        const { default: Stripe } = await import("stripe");
-        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-        const session = await stripe.checkout.sessions.create({
-          mode: "payment",
-          line_items: [{
-            price_data: {
-              currency: "usd",
-              product_data: { name: `${args.serviceName || "Servicio"} - ${args.customerName}` },
-              unit_amount: Math.round(servicePrice * 100),
-            },
-            quantity: 1,
-          }],
-          metadata: {
-            appointmentId: String(appointment._id),
+        const integrations = (store as any).paymentIntegrations?.filter((i: any) => i.enabled) || [];
+        if (integrations.length > 0) {
+          const { createProviderCheckout } = await import("@/lib/payment-providers/registry");
+          const result = await createProviderCheckout(integrations, {
             storeId: String(storeId),
-            type: "appointment_payment",
-          },
-          payment_intent_data: {
-            transfer_data: { destination: (store as any).stripeAccountId },
-          },
-          success_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://jandosoft.vercel.app"}/s/${(store as any).slug || ""}?payment=success`,
-          cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://jandosoft.vercel.app"}/s/${(store as any).slug || ""}?payment=cancelled`,
-        });
-        paymentUrl = session.url || "";
+            storeName: (store as any).name,
+            ownerEmail: (store as any).ownerEmail,
+            amount: servicePrice,
+            currency: "usd",
+            description: `${args.serviceName || "Servicio"} - ${args.customerName}`,
+            customerEmail: args.customerEmail || "",
+            customerName: args.customerName || "",
+          });
+          paymentUrl = result.url || "";
+        }
         if (paymentUrl) {
           await Appointment.findByIdAndUpdate(appointment._id, { $set: { stripePaymentUrl: paymentUrl, paymentStatus: "pending" } });
         }

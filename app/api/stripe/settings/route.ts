@@ -27,7 +27,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({
       paymentsEnabled: store.paymentsEnabled,
       platformFeePercent: store.platformFeePercent,
-      stripeAccountId: store.stripeAccountId,
     });
   } catch (error: any) {
     console.error("Error updating stripe settings:", error);

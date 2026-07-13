@@ -79,7 +79,7 @@ export function cachedStoreData(store: any): any {
     isPublic: store.isPublic,
     publicAI: store.publicAI,
     currency: store.currency,
-    stripeAccountId: store.stripeAccountId,
+    paymentIntegrations: store.paymentIntegrations,
     paymentsEnabled: store.paymentsEnabled,
     platformFeePercent: store.platformFeePercent,
     ownerEmail: store.ownerEmail,

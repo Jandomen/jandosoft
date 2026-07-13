@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
               platformFee,
               netAmount,
               stripePaymentIntentId: piId,
-              stripeAccountId: metadata.stripeAccountId || "",
+              provider: "stripe",
               status: "completed",
               description: `Pago de cita: ${appointment?.service?.name || "Servicio"}`,
               appointmentId: appointment?._id,
@@ -140,12 +140,9 @@ export async function POST(req: NextRequest) {
           }
         } else if (metadata.storeId) {
           if (piId) {
-            const pi = await stripe.paymentIntents.retrieve(piId);
-            const feePercent = parseFloat(metadata.platformFeePercent || "5");
             const amount = (session.amount_total || 0) / 100;
-            const platformFee = pi.application_fee_amount
-              ? pi.application_fee_amount / 100
-              : Math.round(amount * (feePercent / 100));
+            const feePercent = parseFloat(metadata.platformFeePercent || "5");
+            const platformFee = Math.round(amount * (feePercent / 100));
             const netAmount = amount - platformFee;
 
             const payment = await Payment.create({
@@ -159,7 +156,7 @@ export async function POST(req: NextRequest) {
               platformFee,
               netAmount,
               stripePaymentIntentId: piId,
-              stripeAccountId: (pi.transfer_data as any)?.destination || "",
+              provider: "stripe",
               status: "completed",
               description: session.metadata?.items || session.custom_fields?.[0]?.text?.value || "",
             });
@@ -260,7 +257,7 @@ export async function POST(req: NextRequest) {
         if (piMetadata.storeId && !piMetadata.from_checkout) {
           const feePercent = parseFloat(piMetadata.platformFeePercent || "5");
           const amount = pi.amount / 100;
-          const platformFee = (pi.application_fee_amount || Math.round(amount * (feePercent / 100))) / 100;
+          const platformFee = Math.round(amount * (feePercent / 100));
           const netAmount = amount - platformFee;
 
           const payment = await Payment.create({
@@ -274,7 +271,7 @@ export async function POST(req: NextRequest) {
             platformFee,
             netAmount,
             stripePaymentIntentId: pi.id,
-            stripeAccountId: pi.transfer_data?.destination || "",
+            provider: "stripe",
             status: "completed",
             description: pi.description || "",
           });
