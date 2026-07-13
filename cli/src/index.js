@@ -47,7 +47,7 @@ async function showMenu() {
     choices.push({ name: `${chalk.cyan('◆')}  ${chalk.bold('Configuración')}      ${chalk.dim('sin sesión')}`, value: 'config', short: 'Config' });
   } else {
     choices.push({ name: `${chalk.green('●')}  ${chalk.bold('Mi Perfil')}          ${chalk.dim(email)}`, value: 'me', short: 'Perfil' });
-    choices.push({ name: `${chalk.green('●')}  ${chalk.bold('Mis Tiendas')}`, value: 'stores', short: 'Tiendas' });
+    choices.push({ name: `${chalk.green('●')}  ${chalk.bold('Mis Empresas')}`, value: 'stores', short: 'Empresas' });
     choices.push({ name: `${chalk.green('●')}  ${chalk.bold('Organización')}`, value: 'org', short: 'Org' });
     choices.push(new inquirer.Separator());
     choices.push({ name: `${chalk.magenta('◆')}  ${chalk.bold('AI Chat')}            ${chalk.dim('IA de Jandosoft')}`, value: 'chat', short: 'Chat' });

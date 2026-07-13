@@ -104,9 +104,12 @@ export default function CommunicationsPanel({ storeId }: { storeId: string }) {
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex items-center gap-3 md:gap-4 flex-wrap">
-        <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">
-          Comunicaciones
-        </h3>
+        <div>
+          <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">
+            Comunicaciones
+          </h3>
+          <p className="text-[8px] font-wallpoet tracking-[0.2em] text-red-600 uppercase">JANDOSOFT</p>
+        </div>
         <div className="flex gap-1 ml-auto">
           <button onClick={() => setTab("email")}
             className={cn("flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black italic transition-all",

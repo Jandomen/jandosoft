@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Wallpoet } from "next/font/google";
 import "./globals.css";
 import { verifyEmailConfig } from "@/lib/email-verify";
+import { Providers } from "./Providers";
 
 if (process.env.NODE_ENV !== "production") {
   verifyEmailConfig();
@@ -17,9 +18,23 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+const wallpoet = Wallpoet({
+  weight: "400",
+  variable: "--font-wallpoet",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "Jandosoft Solutions | Software & Web Dev Premium",
+  title: "Jandosoft",
   description: "Plataforma de desarrollo y gestión de software de alto impacto. aplicaciones móviles y sitios web premium para empresas de alto nivel.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+    ],
+    apple: [
+      { url: "/favicon.ico" },
+    ],
+  },
 };
 
 export default function RootLayout({
@@ -30,9 +45,12 @@ export default function RootLayout({
   return (
     <html lang="es" className="scroll-smooth">
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased selection:bg-brand/20`}
+        className={`${inter.variable} ${jetbrainsMono.variable} ${wallpoet.variable} antialiased selection:bg-brand/20`}
       >
-        {children}
+        <Providers>
+          {children}
+         
+        </Providers>
       </body>
     </html>
   );

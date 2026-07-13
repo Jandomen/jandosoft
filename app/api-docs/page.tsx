@@ -10,14 +10,14 @@ const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Bool
 const ENDPOINTS = [
   {
     method: "GET", path: "/api/v1/store", color: "bg-emerald-500",
-    desc: "Obtiene la información de tu tienda.",
+    desc: "Obtiene la información de tu empresa.",
     scopes: ["store:read"],
     example: `curl -H "Authorization: Bearer jsk_live_xxx_yyyy" \\
   https://jandosoft.com/api/v1/store`,
     response: `{
   "store": {
-    "name": "Mi Tienda",
-    "slug": "mi-tienda",
+    "name": "Mi Empresa",
+    "slug": "mi-empresa",
     "desc": "Descripción...",
     "industry": "retail",
     "type": "products",
@@ -27,7 +27,7 @@ const ENDPOINTS = [
   },
   {
     method: "GET", path: "/api/v1/products", color: "bg-blue-500",
-    desc: "Lista todos los productos de tu tienda.",
+    desc: "Lista todos los productos de tu empresa.",
     scopes: ["products:read"],
     example: `curl -H "Authorization: Bearer jsk_live_xxx_yyyy" \\
   https://jandosoft.com/api/v1/products`,
@@ -47,7 +47,7 @@ const ENDPOINTS = [
   },
   {
     method: "POST", path: "/api/v1/products", color: "bg-blue-600",
-    desc: "Crea un nuevo producto en tu tienda.",
+    desc: "Crea un nuevo producto en tu empresa.",
     scopes: ["products:write"],
     example: `curl -X POST \\
   -H "Authorization: Bearer jsk_live_xxx_yyyy" \\
@@ -68,7 +68,7 @@ const ENDPOINTS = [
   },
   {
     method: "GET", path: "/api/v1/customers", color: "bg-purple-500",
-    desc: "Lista todos los clientes CRM de tu tienda.",
+    desc: "Lista todos los clientes CRM de tu empresa.",
     scopes: ["customers:read"],
     example: `curl -H "Authorization: Bearer jsk_live_xxx_yyyy" \\
   https://jandosoft.com/api/v1/customers`,
@@ -88,7 +88,7 @@ const ENDPOINTS = [
   },
   {
     method: "GET", path: "/api/v1/orders", color: "bg-amber-500",
-    desc: "Lista todos los pedidos de tu tienda.",
+    desc: "Lista todos los pedidos de tu empresa.",
     scopes: ["orders:read"],
     example: `curl -H "Authorization: Bearer jsk_live_xxx_yyyy" \\
   https://jandosoft.com/api/v1/orders`,
@@ -107,7 +107,7 @@ const ENDPOINTS = [
   },
   {
     method: "GET", path: "/api/v1/analytics", color: "bg-rose-500",
-    desc: "Obtiene métricas clave de tu tienda.",
+    desc: "Obtiene métricas clave de tu empresa.",
     scopes: ["analytics:read"],
     example: `curl -H "Authorization: Bearer jsk_live_xxx_yyyy" \\
   https://jandosoft.com/api/v1/analytics`,
@@ -131,8 +131,8 @@ const SCOPES = [
   { id: "orders:read", label: "Leer pedidos" },
   { id: "orders:write", label: "Gestionar pedidos" },
   { id: "analytics:read", label: "Ver analytics" },
-  { id: "store:read", label: "Ver info de tienda" },
-  { id: "store:write", label: "Editar tienda" },
+  { id: "store:read", label: "Ver info de empresa" },
+  { id: "store:write", label: "Editar empresa" },
 ];
 
 export default function ApiDocsPage() {

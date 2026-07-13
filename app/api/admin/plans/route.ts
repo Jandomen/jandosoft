@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { PlanConfig, DEFAULT_PLANS, DEFAULT_FREE_PLAN } from "@/lib/models/PlanConfig";
 import { invalidatePlanCache } from "@/lib/plan-config";
+import { verifyAdminAuth } from "@/lib/admin-middleware";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const authResult = await verifyAdminAuth(req);
+  if ("error" in authResult) return authResult.error;
+
   try {
     await connectDB();
     let config = await PlanConfig.findOne().lean();
@@ -25,6 +29,9 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  const authResult = await verifyAdminAuth(req);
+  if ("error" in authResult) return authResult.error;
+
   try {
     const body = await req.json();
     await connectDB();

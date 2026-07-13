@@ -83,7 +83,6 @@ export async function POST(req: NextRequest) {
         quantity: 1,
       }],
       customer_email: customerEmail,
-      customer_name: customerName || undefined,
       success_url: `${baseUrl}/?stripe_success={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/?stripe_cancel=1`,
       metadata: {

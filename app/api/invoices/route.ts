@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Invoice } from "@/lib/models/Invoice";
-import { Customer } from "@/lib/models/Customer";
+import { Organization } from "@/lib/models/Organization";
 import { getAuthFromCookies, getAuthFromHeaders } from "@/lib/auth";
+import {
+  computeInvoiceHash,
+  generateQRContent,
+  getNextInvoiceNumber,
+} from "@/lib/verifactu";
 
 export const dynamic = "force-dynamic";
 
@@ -51,17 +56,57 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const body = await req.json();
 
-    const last = await Invoice.findOne().sort({ createdAt: -1 }).lean();
-    let nextNum = 1;
-    if (last) {
-      const parts = (last as any).invoiceNumber.split("-");
-      nextNum = parseInt(parts[parts.length - 1] || "0") + 1;
-    }
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(nextNum).padStart(4, "0")}`;
+    const org = auth
+      ? await Organization.findById(auth.organizationId).lean()
+      : null;
+
+    const series = org?.invoiceSeries || "";
+    const taxId = org?.taxId || body.taxId || "";
+    const verifactuEnabled = org?.verifactuEnabled || false;
+
+    const lastInvoice = await Invoice.findOne({ series })
+      .sort({ createdAt: -1 })
+      .lean();
+    const invoiceNumber = getNextInvoiceNumber(lastInvoice as any, series);
+    const previousHash = (lastInvoice as any)?.invoiceHash || "INICIAL";
+
+    const vatRate = body.vatRate || 21;
+    const baseAmount = body.baseAmount ?? (body.amount / (1 + vatRate / 100));
+    const vatAmount = body.vatAmount ?? (body.amount - baseAmount);
+    const issuedAt = new Date();
+
+    const hashData = {
+      series,
+      invoiceNumber,
+      taxId,
+      recipientTaxId: body.recipientTaxId || body.userEmail || "",
+      recipientName: body.recipientName || body.userName || "",
+      baseAmount: Math.round(baseAmount * 100) / 100,
+      vatAmount: Math.round(vatAmount * 100) / 100,
+      vatRate,
+      totalAmount: body.amount,
+      currency: body.currency || "EUR",
+      issuedAt,
+      items: body.items || [],
+    };
+
+    const invoiceHash = computeInvoiceHash(hashData, previousHash);
+    const verifactuQR = verifactuEnabled
+      ? generateQRContent(taxId, invoiceNumber, series, issuedAt, baseAmount, vatAmount, invoiceHash, previousHash)
+      : "";
 
     const invoice = await Invoice.create({
       ...body,
       invoiceNumber,
+      series,
+      taxId,
+      previousHash,
+      invoiceHash,
+      verifactuQR,
+      baseAmount: Math.round(baseAmount * 100) / 100,
+      vatAmount: Math.round(vatAmount * 100) / 100,
+      vatRate,
+      signedAt: issuedAt,
       organizationId: auth?.organizationId || null,
     });
 

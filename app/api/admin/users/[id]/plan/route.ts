@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
+import { verifyAdminAuth } from "@/lib/admin-middleware";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const authResult = await verifyAdminAuth(req);
+  if ("error" in authResult) return authResult.error;
+
   try {
     const { id } = await params;
     const body = await req.json();

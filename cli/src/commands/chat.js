@@ -34,21 +34,21 @@ async function createStoreInline() {
   const maxStores = { free: 3, basic: 10, enterprise: 999 }[plan] || 3;
   const storeCount = userData.organization?.storesCount || 0;
 
-  console.log(`\n ${chalk.bold('🆕 Crear nueva tienda')}`);
-  console.log(`   ${chalk.dim(`Plan:`)} ${chalk.cyan(plan.toUpperCase())} ${chalk.dim(`— ${storeCount}/${maxStores} tiendas`)}`);
+  console.log(`\n ${chalk.bold('🆕 Crear nueva empresa')}`);
+  console.log(`   ${chalk.dim(`Plan:`)} ${chalk.cyan(plan.toUpperCase())} ${chalk.dim(`— ${storeCount}/${maxStores} empresas`)}`);
 
   if (storeCount >= maxStores) {
-    console.log(` ${chalk.red('🚫')} ${chalk.red.bold(`Límite de ${maxStores} tiendas alcanzado.`)}`);
-    console.log(` ${chalk.dim('  Haz upgrade de tu plan para crear más tiendas.')}\n`);
+    console.log(` ${chalk.red('🚫')} ${chalk.red.bold(`Límite de ${maxStores} empresas alcanzado.`)}`);
+    console.log(` ${chalk.dim('  Haz upgrade de tu plan para crear más empresas.')}\n`);
     return null;
   }
   if (storeCount >= maxStores * 0.8) {
-    console.log(` ${chalk.yellow('⚠️')} ${chalk.yellow(`Estás usando ${storeCount}/${maxStores} tiendas — cerca del límite.`)}\n`);
+    console.log(` ${chalk.yellow('⚠️')} ${chalk.yellow(`Estás usando ${storeCount}/${maxStores} empresas — cerca del límite.`)}\n`);
   }
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   const name = await new Promise((resolve) => {
-    rl.question(` ${chalk.cyan('‣ Nombre de la tienda:')} `, (answer) => { rl.close(); resolve(answer.trim()); });
+    rl.question(` ${chalk.cyan('‣ Nombre de la empresa:')} `, (answer) => { rl.close(); resolve(answer.trim()); });
   });
 
   if (!name) { console.log(` ${chalk.yellow(' Nombre requerido.')}\n`); return null; }
@@ -66,7 +66,7 @@ async function createStoreInline() {
       return null;
     }
     const store = data.store || data;
-    console.log(` ${chalk.green('✓')} Tienda ${chalk.bold(store.name)} creada.\n`);
+    console.log(` ${chalk.green('✓')} Empresa ${chalk.bold(store.name)} creada.\n`);
     return store;
   } catch (err) {
     console.log(` ${chalk.red('✖ Error de conexión:')} ${err.message}\n`);
@@ -101,9 +101,9 @@ async function pickStoreOrGeneric() {
     {
       type: 'list',
       name: 'choice',
-      message: `${chalk.bold('¿Sobre qué tienda quieres consultar?')}`,
+      message: `${chalk.bold('¿Sobre qué empresa quieres consultar?')}`,
       choices: [
-        { name: `  ${chalk.cyan('💬')}  ${chalk.bold('Chat genérico sin tienda')}`, value: 'generic', short: 'Genérico' },
+        { name: `  ${chalk.cyan('💬')}  ${chalk.bold('Chat genérico sin empresa')}`, value: 'generic', short: 'Genérico' },
         { name: `  ${chalk.red('◆')}  ${chalk.bold('Volver')}`, value: 'back', short: 'Volver' },
       ],
       prefix: '',
@@ -134,7 +134,7 @@ async function pickStoreOrGeneric() {
         productsCount: (s.products || []).length,
       })),
     };
-    console.log(` ${chalk.dim(` Cuenta: ${(user.subscription || 'free').toUpperCase()} — ${genericCtx._subscription.maxStores} tiendas máx, ${stores.length} tienda(s) actual(es)`)}\n`);
+    console.log(` ${chalk.dim(` Cuenta: ${(user.subscription || 'free').toUpperCase()} — ${genericCtx._subscription.maxStores} empresas máx, ${stores.length} empresa(s) actual(es)`)}\n`);
     return genericCtx;
   }
 
@@ -162,7 +162,7 @@ function chatSession(store) {
       }
     }
     console.log(` ${chalk.dim(' Escribe tu mensaje o')} ${chalk.yellow('/exit')} ${chalk.dim('para salir')}`);
-    console.log(` ${chalk.dim(' Usa')} ${chalk.yellow('/store')} ${chalk.dim('para cambiar de tienda')}\n`);
+    console.log(` ${chalk.dim(' Usa')} ${chalk.yellow('/store')} ${chalk.dim('para cambiar de empresa')}\n`);
 
     const rl = readline.createInterface({
       input: process.stdin,

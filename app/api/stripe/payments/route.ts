@@ -1,38 +1,72 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Payment } from "@/lib/models/Payment";
+import { NowPaymentsPayment } from "@/lib/models/NowPaymentsPayment";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const storeId = searchParams.get("storeId");
     const email = searchParams.get("email");
+    const ownerEmail = searchParams.get("ownerEmail");
+    const customerEmail = searchParams.get("customerEmail");
+    const search = searchParams.get("search") || "";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "50");
 
     await connectDB();
 
     let filter: any = {};
     if (storeId) filter.storeId = storeId;
     if (email) filter.ownerEmail = email;
+    if (ownerEmail) filter.ownerEmail = ownerEmail;
+    if (customerEmail) filter.customerEmail = customerEmail;
+    if (search) {
+      filter.$or = [
+        { customerEmail: { $regex: search, $options: "i" } },
+        { customerName: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+        { receiptNumber: { $regex: search, $options: "i" } },
+      ];
+    }
 
-    const payments = await Payment.find(filter)
-      .sort({ createdAt: -1 })
-      .lean();
+    const [stripePayments, nowPayments] = await Promise.all([
+      Payment.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+      NowPaymentsPayment.find(
+        customerEmail ? { customerEmail } : {}
+      ).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    ]);
 
-    const totalRevenue = payments
-      .filter((p: any) => p.status === "completed")
-      .reduce((sum: number, p: any) => sum + p.amount, 0);
+    const allPayments = [
+      ...stripePayments.map((p: any) => ({
+        ...p,
+        source: "stripe",
+        displayAmount: p.amount,
+        displayCurrency: (p.currency || "usd").toUpperCase(),
+        displayDescription: p.description || "Pago en tienda",
+        displayPaymentMethod: "Tarjeta (Stripe)",
+      })),
+      ...nowPayments.map((p: any) => ({
+        ...p,
+        source: "nowpayments",
+        displayAmount: p.priceAmount,
+        displayCurrency: (p.priceCurrency || "usd").toUpperCase(),
+        displayDescription: `Pago cripto - Order #${p.orderId}`,
+        displayPaymentMethod: `Cripto (${p.payCurrency || "BTC"})`,
+      })),
+    ].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    const totalFees = payments
-      .filter((p: any) => p.status === "completed")
-      .reduce((sum: number, p: any) => sum + p.platformFee, 0);
+    const total = allPayments.length;
 
-    const totalNet = payments
-      .filter((p: any) => p.status === "completed")
-      .reduce((sum: number, p: any) => sum + p.netAmount, 0);
+    const totalRevenue = allPayments
+      .filter((p: any) => p.status === "completed" || p.paymentStatus === "finished" || p.paymentStatus === "confirmed")
+      .reduce((sum: number, p: any) => sum + (p.displayAmount || 0), 0);
 
     return NextResponse.json({
-      payments,
-      stats: { totalRevenue, totalFees, totalNet, count: payments.length },
+      payments: allPayments.slice(0, limit),
+      stats: { totalRevenue, count: total },
+      page,
+      totalPages: Math.ceil(total / limit),
     });
   } catch (error: any) {
     console.error("Error fetching payments:", error);

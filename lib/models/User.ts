@@ -19,6 +19,7 @@ export interface IUser extends Document {
   verificationTokenExpiry?: Date | null;
   resetPasswordToken?: string | null;
   resetPasswordTokenExpiry?: Date | null;
+  isSuperAdmin?: boolean;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -40,6 +41,7 @@ const UserSchema = new Schema<IUser>({
   verificationTokenExpiry: { type: Date, default: null },
   resetPasswordToken: { type: String, default: null },
   resetPasswordTokenExpiry: { type: Date, default: null },
+  isSuperAdmin: { type: Boolean, default: false },
 }, { timestamps: true });
 
 export const User = mongoose.models.User || mongoose.model<IUser>("User", UserSchema);

@@ -3,8 +3,64 @@ import { connectDB } from "@/lib/mongodb";
 import { Store } from "@/lib/models/Store";
 import { User } from "@/lib/models/User";
 import { Payment } from "@/lib/models/Payment";
+import { Appointment } from "@/lib/models/Appointment";
 import { stripe } from "@/lib/stripe";
 import { getPlanConfig } from "@/lib/plan-config";
+import { generatePaymentReceiptPDF } from "@/lib/pdf-utils";
+import { sendPaymentReceiptEmail, sendPaymentReceivedNotificationEmail } from "@/lib/email-service";
+
+function generateReceiptNumber(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `RCP-${y}${m}${d}-${rand}`;
+}
+
+async function sendReceiptForPayment(payment: any) {
+  try {
+    const receiptNumber = generateReceiptNumber();
+    const pdfBuffer = await generatePaymentReceiptPDF({
+      receiptNumber,
+      customerName: payment.customerName || payment.customerEmail,
+      customerEmail: payment.customerEmail,
+      amount: payment.amount,
+      currency: payment.currency?.toUpperCase() || "USD",
+      description: payment.description || "Pago en tienda",
+      paymentMethod: "Tarjeta (Stripe)",
+      storeName: payment.storeName,
+      paymentId: payment._id?.toString(),
+    });
+    await sendPaymentReceiptEmail({
+      to: payment.customerEmail,
+      customerName: payment.customerName || "Cliente",
+      amount: payment.amount,
+      currency: payment.currency?.toUpperCase() || "USD",
+      description: payment.description || "Pago en tienda",
+      storeName: payment.storeName || "Jandosoft",
+      receiptPdf: pdfBuffer,
+      storeId: payment.storeId?.toString(),
+    });
+    if (payment.ownerEmail && payment.ownerEmail !== payment.customerEmail) {
+      await sendPaymentReceivedNotificationEmail({
+        to: payment.ownerEmail,
+        storeName: payment.storeName || "Jandosoft",
+        customerName: payment.customerName || payment.customerEmail,
+        amount: payment.amount,
+        currency: payment.currency?.toUpperCase() || "USD",
+        date: new Date().toLocaleDateString(),
+        storeId: payment.storeId?.toString(),
+      }).catch((err) => console.error("[Receipt] Error notifying owner:", err));
+    }
+    await Payment.findByIdAndUpdate(payment._id, {
+      receiptNumber,
+      receiptSentAt: new Date(),
+    });
+  } catch (err) {
+    console.error("[Receipt] Error sending receipt:", err);
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -51,6 +107,37 @@ export async function POST(req: NextRequest) {
               }
             );
           }
+        } else if (metadata.type === "appointment_payment" && metadata.appointmentId) {
+          if (piId) {
+            const amount = (session.amount_total || 0) / 100;
+            await Appointment.findByIdAndUpdate(metadata.appointmentId, {
+              $set: {
+                paymentStatus: "paid",
+                stripePaymentIntentId: piId,
+              },
+            });
+            const feePercent = parseFloat(metadata.platformFeePercent || "5");
+            const platformFee = Math.round(amount * (feePercent / 100));
+            const netAmount = amount - platformFee;
+            const appointment = await Appointment.findById(metadata.appointmentId);
+            const appointmentPayment = await Payment.create({
+              storeId: metadata.storeId,
+              storeName: metadata.storeName || "",
+              ownerEmail: metadata.ownerEmail || "",
+              customerEmail: metadata.customerEmail || session.customer_email || "",
+              customerName: appointment?.customerInfo?.name || metadata.customerName || "",
+              amount,
+              currency: session.currency || "usd",
+              platformFee,
+              netAmount,
+              stripePaymentIntentId: piId,
+              stripeAccountId: metadata.stripeAccountId || "",
+              status: "completed",
+              description: `Pago de cita: ${appointment?.service?.name || "Servicio"}`,
+              appointmentId: appointment?._id,
+            });
+            await sendReceiptForPayment(appointmentPayment);
+          }
         } else if (metadata.storeId) {
           if (piId) {
             const pi = await stripe.paymentIntents.retrieve(piId);
@@ -61,7 +148,7 @@ export async function POST(req: NextRequest) {
               : Math.round(amount * (feePercent / 100));
             const netAmount = amount - platformFee;
 
-            await Payment.create({
+            const payment = await Payment.create({
               storeId: metadata.storeId,
               storeName: metadata.storeName || "",
               ownerEmail: metadata.ownerEmail || "",
@@ -76,6 +163,7 @@ export async function POST(req: NextRequest) {
               status: "completed",
               description: session.metadata?.items || session.custom_fields?.[0]?.text?.value || "",
             });
+            await sendReceiptForPayment(payment);
           }
         }
         break;
@@ -175,7 +263,7 @@ export async function POST(req: NextRequest) {
           const platformFee = (pi.application_fee_amount || Math.round(amount * (feePercent / 100))) / 100;
           const netAmount = amount - platformFee;
 
-          await Payment.create({
+          const payment = await Payment.create({
             storeId: piMetadata.storeId,
             storeName: piMetadata.storeName || "",
             ownerEmail: piMetadata.ownerEmail || "",
@@ -190,6 +278,7 @@ export async function POST(req: NextRequest) {
             status: "completed",
             description: pi.description || "",
           });
+          await sendReceiptForPayment(payment);
         }
         break;
       }

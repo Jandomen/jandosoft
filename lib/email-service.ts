@@ -226,6 +226,37 @@ export async function sendPaymentReceivedNotificationEmail(params: EmailBase & {
   return result;
 }
 
+export async function sendPaymentReceiptEmail(params: EmailBase & {
+  customerName: string;
+  amount: number;
+  currency: string;
+  description: string;
+  storeName: string;
+  receiptPdf: Uint8Array;
+}) {
+  const subject = `Recibo de Pago — ${params.storeName}`;
+  const html = paymentConfirmationEmailHtml({
+    customerName: params.customerName,
+    amount: params.amount,
+    currency: params.currency,
+    description: params.description,
+    date: new Date().toLocaleDateString(),
+    storeName: params.storeName,
+  });
+  const result = await sendEmail({
+    to: params.to, subject, html,
+    storeId: params.storeId,
+    attachments: [{ filename: `Recibo_${params.storeName.replace(/\s+/g, "_")}.pdf`, content: params.receiptPdf }],
+  });
+  await logEmail({
+    to: params.to, subject, messageId: result.messageId,
+    status: result.success ? "sent" : "failed",
+    storeId: params.storeId, organizationId: params.organizationId,
+    template: "payment-receipt", error: result.error,
+  });
+  return result;
+}
+
 export async function sendCampaignEmail(params: EmailBase & {
   subject: string;
   content: string;

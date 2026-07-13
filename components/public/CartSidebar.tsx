@@ -310,7 +310,7 @@ export default function CartSidebar({
                   </motion.button>
                 ) : (
                   <p className="text-[10px] text-zinc-500 font-bold italic text-center">
-                    El pago no está habilitado para esta tienda.
+                    El pago no está habilitado para esta empresa.
                   </p>
                 )}
               </div>

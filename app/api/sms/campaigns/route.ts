@@ -40,7 +40,7 @@ export const POST = withAuth(async (req: NextRequest, auth, body) => {
 
   const store = await Store.findOne({ organizationId: auth.organizationId }).lean();
   if (!store) {
-    return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
+    return NextResponse.json({ error: "Empresa no encontrada" }, { status: 404 });
   }
 
   let customerFilter: any = { storeId: store._id, phone: { $exists: true, $ne: "" } };

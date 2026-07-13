@@ -2,11 +2,8 @@ const BASE_URL = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
 
 const BRAND = `
   <div style="text-align:center;margin-bottom:28px;">
-    <div style="background:#ef4444;width:56px;height:56px;border-radius:16px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;">
-      <span style="color:#fff;font-size:28px;font-weight:900;font-style:italic;letter-spacing:-1px;">J</span>
-    </div>
-    <h1 style="font-size:30px;font-weight:900;font-style:italic;letter-spacing:-1px;color:#fff;margin:0;">JANDOSOFT</h1>
-    <p style="font-size:10px;font-weight:700;color:#a0a0a0;letter-spacing:4px;text-transform:uppercase;margin:6px 0 0;">Cloud Business Suite</p>
+    <h1 style="font-family:'Arial Black',Impact,'Helvetica Neue',Arial,sans-serif;font-size:26px;font-weight:900;letter-spacing:6px;text-transform:uppercase;color:#ef4444;margin:0 0 2px;">JANDOSOFT</h1>
+    <p style="font-family:'Arial Black',Impact,'Helvetica Neue',Arial,sans-serif;font-size:9px;font-weight:700;color:#666;letter-spacing:4px;text-transform:uppercase;margin:0;">Cloud Business Suite</p>
   </div>
 `;
 
@@ -45,7 +42,7 @@ export function welcomeEmailHtml(userName: string): string {
       <p style="font-size:14px;color:#ccc;line-height:1.7;margin:0 0 16px;">Hola <strong style="color:#fff;">${userName}</strong>,</p>
       <p style="font-size:14px;color:#ccc;line-height:1.7;margin:0 0 16px;">Tu cuenta ha sido creada exitosamente. Ya puedes empezar a gestionar tu negocio con todas las herramientas que Jandosoft pone a tu disposición.</p>
       <div style="text-align:center;margin:28px 0;">
-        <a href="${BASE_URL}/s" style="display:inline-block;padding:14px 36px;background:#ef4444;color:#fff;border-radius:14px;font-weight:900;font-size:14px;text-decoration:none;font-style:italic;letter-spacing:0.5px;">IR A MI DASHBOARD</a>
+        <a href="${BASE_URL}/" style="display:inline-block;padding:14px 36px;background:#ef4444;color:#fff;border-radius:14px;font-weight:900;font-size:14px;text-decoration:none;font-style:italic;letter-spacing:0.5px;">IR A MI DASHBOARD</a>
       </div>
     `
   );
@@ -169,7 +166,7 @@ export function paymentConfirmationEmailHtml(params: {
       <p style="font-size:14px;color:#ccc;line-height:1.7;margin:0 0 16px;">Hemos recibido tu pago correctamente. Aquí están los detalles:</p>
       <div style="background:#1a1a1a;border-radius:16px;padding:20px;margin:20px 0;">
         <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
-          <span style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;">Tienda</span>
+          <span style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;">Empresa</span>
           <span style="font-size:13px;color:#fff;font-weight:700;">${params.storeName}</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
@@ -234,7 +231,7 @@ export function newClientNotificationEmailHtml(params: {
   return wrap(
     "Nuevo Cliente Registrado",
     `
-      <p style="font-size:14px;color:#ccc;line-height:1.7;margin:0 0 16px;">Se ha registrado un nuevo cliente en tu tienda <strong style="color:#fff;">${params.storeName}</strong>:</p>
+      <p style="font-size:14px;color:#ccc;line-height:1.7;margin:0 0 16px;">Se ha registrado un nuevo cliente en tu empresa <strong style="color:#fff;">${params.storeName}</strong>:</p>
       <div style="background:#1a1a1a;border-radius:16px;padding:20px;margin:20px 0;">
         <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
           <span style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;">Nombre</span>
@@ -263,7 +260,7 @@ export function paymentReceivedNotificationEmailHtml(params: {
   return wrap(
     "Pago Recibido",
     `
-      <p style="font-size:14px;color:#ccc;line-height:1.7;margin:0 0 16px;">Has recibido un nuevo pago en tu tienda <strong style="color:#fff;">${params.storeName}</strong>:</p>
+      <p style="font-size:14px;color:#ccc;line-height:1.7;margin:0 0 16px;">Has recibido un nuevo pago en tu empresa <strong style="color:#fff;">${params.storeName}</strong>:</p>
       <div style="background:#1a1a1a;border-radius:16px;padding:20px;margin:20px 0;">
         <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
           <span style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;">Cliente</span>

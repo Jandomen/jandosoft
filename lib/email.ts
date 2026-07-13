@@ -7,13 +7,14 @@ export function checkDailyLimitReached(sentToday: number): boolean {
 }
 
 export async function sendEmail({
-  to, subject, html,
+  to, subject, html, attachments,
 }: {
   to: string;
   subject: string;
   html: string;
   replyTo?: string;
   storeId?: string;
+  attachments?: { filename: string; content: Buffer | Uint8Array }[];
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   if (!SMTP_ENABLED) {
     console.warn(
@@ -34,11 +35,17 @@ export async function sendEmail({
       },
     });
 
+    const mailAttachments = attachments?.map((a) => ({
+      filename: a.filename,
+      content: a.content instanceof Buffer ? a.content : Buffer.from(a.content),
+    }));
+
     const info = await transporter.sendMail({
       from: `"${process.env.SMTP_FROM_NAME || "Jandosoft"}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
       to,
       subject,
       html,
+      attachments: mailAttachments,
     });
 
     return { success: true, messageId: info.messageId };

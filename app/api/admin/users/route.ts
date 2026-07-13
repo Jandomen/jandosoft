@@ -1,10 +1,14 @@
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { Store } from "@/lib/models/Store";
+import { verifyAdminAuth } from "@/lib/admin-middleware";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
+  const authResult = await verifyAdminAuth(req);
+  if ("error" in authResult) return authResult.error;
+
   try {
     await connectDB();
 

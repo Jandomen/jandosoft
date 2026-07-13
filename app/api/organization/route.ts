@@ -18,13 +18,17 @@ export const PATCH = withAuth(async (req, auth, body) => {
     return NextResponse.json({ error: "No tienes permisos" }, { status: 403 });
   }
   await connectDB();
-  const { name } = body;
-  if (!name) {
+  const allowed = ["name", "taxId", "businessName", "address", "invoiceSeries", "verifactuEnabled"];
+  const update: Record<string, any> = {};
+  for (const key of allowed) {
+    if (body[key] !== undefined) update[key] = body[key];
+  }
+  if (!update.name) {
     return NextResponse.json({ error: "Nombre requerido" }, { status: 400 });
   }
   const org = await Organization.findByIdAndUpdate(
     auth.organizationId,
-    { name },
+    { $set: update },
     { new: true }
   ).lean();
   return NextResponse.json({ organization: org });

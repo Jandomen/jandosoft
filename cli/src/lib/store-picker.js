@@ -12,7 +12,7 @@ async function selectStore() {
   const stores = data.stores || [];
 
   if (stores.length === 0) {
-    console.log(` ${chalk.yellow(' No tienes tiendas aún.')}\n`);
+    console.log(` ${chalk.yellow(' No tienes empresas aún.')}\n`);
     return null;
   }
 
@@ -24,14 +24,14 @@ async function selectStore() {
   }));
 
   choices.push(new inquirer.Separator());
-  choices.push({ name: `  ${chalk.cyan('＋')}  ${chalk.bold('Crear nueva tienda')}`, value: '__create__', short: 'Crear' });
+  choices.push({ name: `  ${chalk.cyan('＋')}  ${chalk.bold('Crear nueva empresa')}`, value: '__create__', short: 'Crear' });
   choices.push({ name: `  ${chalk.red('◆')}  ${chalk.bold('Volver')}`, value: '__back__', short: 'Volver' });
 
   const { storeId } = await inquirer.prompt([
     {
       type: 'list',
       name: 'storeId',
-      message: `${chalk.bold('Selecciona una tienda')}`,
+      message: `${chalk.bold('Selecciona una empresa')}`,
       choices,
       pageSize: 12,
       prefix: '',

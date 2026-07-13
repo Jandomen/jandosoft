@@ -15,6 +15,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const storeId = searchParams.get("storeId");
     const search = searchParams.get("search") || "";
+    const status = searchParams.get("status") || "";
+    const category = searchParams.get("category") || "";
+    const source = searchParams.get("source") || "";
 
     if (!storeId) return NextResponse.json({ error: "storeId requerido" }, { status: 400 });
 
@@ -23,8 +26,11 @@ export async function GET(req: NextRequest) {
     let filter: any = { storeId };
     if (search) {
       const regex = new RegExp(search, "i");
-      filter.$or = [{ name: regex }, { email: regex }, { phone: regex }];
+      filter.$or = [{ name: regex }, { email: regex }, { phone: regex }, { address: regex }, { tags: regex }];
     }
+    if (status) filter.status = status;
+    if (category) filter.category = category;
+    if (source) filter.source = source;
 
     const customers = await Customer.find(filter).sort({ createdAt: -1 }).lean();
     return NextResponse.json({ customers });
@@ -40,7 +46,7 @@ export async function POST(req: NextRequest) {
     if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const body = await req.json();
-    const { storeId, name, email, phone, tags, notes } = body;
+    const { storeId, name, email, phone, address, coordinates, category, status, source, industry, tags, notes } = body;
 
     if (!storeId || !name?.trim()) {
       return NextResponse.json({ error: "storeId y name son requeridos" }, { status: 400 });
@@ -53,6 +59,12 @@ export async function POST(req: NextRequest) {
       name: name.trim(),
       email: email || "",
       phone: phone || "",
+      address: address || "",
+      coordinates: coordinates || null,
+      category: category || "",
+      status: status || "lead",
+      source: source || "manual",
+      industry: industry || "",
       tags: tags || [],
       notes: notes || "",
     });

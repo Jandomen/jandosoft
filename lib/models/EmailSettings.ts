@@ -18,7 +18,7 @@ export interface IEmailSettings extends Document {
 }
 
 const EmailSettingsSchema = new Schema<IEmailSettings>({
-  storeId: { type: Schema.Types.ObjectId, ref: "Store", required: true, unique: true, index: true },
+  storeId: { type: Schema.Types.ObjectId, ref: "Store", default: null, index: true },
   organizationId: { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
   fromEmail: { type: String, default: "noreply@jandosoft.com" },
   fromName: { type: String, default: "Jandosoft" },

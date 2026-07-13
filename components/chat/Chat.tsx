@@ -1,22 +1,25 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, User, Loader2, Sparkles, Trash2, Mic, MicOff, Paperclip, Store, BarChart3, ShoppingCart, TrendingUp, Zap, Menu, Plus, MessageSquare, MoreHorizontal, Globe } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, Trash2, Mic, MicOff, Store, BarChart3, ShoppingCart, TrendingUp, Zap, Menu, Plus, MessageSquare, MoreHorizontal, Globe, ArrowRight, CreditCard } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useVoiceInput } from "@/lib/hooks/useVoiceInput";
 import { readFileAsText, formatFileMessage, readImageAsBase64, isImageFile, getImageFromClipboard } from "@/lib/utils/readFile";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { useConversations, type StoredMessage } from "@/lib/hooks/useConversations";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
-const SUGGESTED_ACTIONS = [
-  { label: "Configurar mi tienda", icon: <Store className="w-3.5 h-3.5" /> },
-  { label: "Crear un producto", icon: <ShoppingCart className="w-3.5 h-3.5" /> },
-  { label: "Analizar ventas", icon: <BarChart3 className="w-3.5 h-3.5" /> },
-  { label: "Automatizar tareas", icon: <Zap className="w-3.5 h-3.5" /> },
-];
+export default function Chat({ maxMessages = 10, context, userStores, onStoresChange }: { maxMessages?: number; context?: { storeName?: string; industry?: string; storeType?: string; description?: string; email?: string; plan?: string }; userStores?: any[]; onStoresChange?: (stores: any[]) => void }) {
+  const { t } = useLanguage();
 
-export default function Chat({ maxMessages = 10, context }: { maxMessages?: number; context?: { storeName?: string; industry?: string; storeType?: string; description?: string; email?: string; plan?: string } }) {
+  const SUGGESTED_ACTIONS = [
+    { label: t("chat.configure_store"), icon: <Store className="w-3.5 h-3.5" /> },
+    { label: t("chat.create_product"), icon: <ShoppingCart className="w-3.5 h-3.5" /> },
+    { label: t("chat.analyze_sales"), icon: <BarChart3 className="w-3.5 h-3.5" /> },
+    { label: t("chat.automate_tasks"), icon: <Zap className="w-3.5 h-3.5" /> },
+  ];
+
   const {
     convos, activeId, createConversation, deleteConversation,
     switchConversation, loadMessages, saveMessages, updateTitle
@@ -85,7 +88,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
     const firstUser = messages.find(m => m.role === "user");
     if (firstUser) {
       const convo = convos.find(c => c.id === activeId);
-      if (convo && convo.title === "Nueva conversación") {
+      if (convo && convo.title === t("chat.new_conversation")) {
         const title = firstUser.content.length > 45
           ? firstUser.content.slice(0, 42) + "..."
           : firstUser.content;
@@ -96,9 +99,6 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
 
   const canSend = serverRemaining === null || serverRemaining > 0;
   const displayRemaining = serverRemaining ?? maxMessages;
-  const voice = useVoiceInput();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const hasUserMessages = messages.some(m => m.role === "user");
 
   // Scroll detection
@@ -121,30 +121,6 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
     }
   }, [messages, isLoading, isAtBottom]);
 
-  useEffect(() => {
-    if (voice.transcript) {
-      setInput(voice.transcript);
-    }
-  }, [voice.transcript]);
-
-  const handleAttachFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      if (isImageFile(file.name)) {
-        const b64 = await readImageAsBase64(file);
-        setAttachedImages(prev => [...prev, b64]);
-      } else {
-        const content = await readFileAsText(file);
-        const msg = formatFileMessage(file.name, content);
-        setMessages(prev => [...prev, { role: "user", content: msg, timestamp: Date.now() }]);
-      }
-    } catch (err: any) {
-      setMessages(prev => [...prev, { role: "bot", content: `⚠️ ${err.message}`, timestamp: Date.now() }]);
-    }
-    e.target.value = "";
-  };
-
   const uploadImage = async (b64: string): Promise<string> => {
     const blob = await fetch(b64).then(r => r.blob());
     const fd = new FormData();
@@ -153,6 +129,126 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
     const data = await res.json();
     return data.url || b64;
   };
+
+  const buildCopilotPrompt = useCallback(() => {
+    const stores = Array.isArray(userStores) ? userStores : [];
+    const storesList = stores.map((s: any) => `- "${s.name}" (ID: ${s._id || s.id}, tipo: ${s.type || "general"}, industria: ${s.industry || ""})`).join("\n");
+    return `Eres el Business Copilot de Jandosoft. Ayudas al usuario a administrar su negocio mediante lenguaje natural.
+
+DATOS DEL USUARIO:
+- Email: ${context?.email || "No autenticado"}
+- Plan: ${context?.plan || "Free"}
+- Empresas actuales (${stores.length}):
+${storesList || "  (ninguna aún)"}
+
+INSTRUCCIÓN CRÍTICA — Puedes ejecutar acciones reales. Para ello, SIEMPRE debes incluir al final de tu respuesta un bloque JSON con las acciones. El JSON es la ÚNICA forma de ejecutar algo.
+
+FORMATO EXACTO del JSON (copia esto textualmente ajustando valores):
+\`\`\`json
+{"actions":[
+  {"type":"createStore","name":"Nombre de la empresa","desc":"Descripción","industry":"servicios","businessType":"general"}
+]}
+\`\`\`
+
+⚠️ IMPORTANTE: el campo "type" DENTRO de cada acción es el TIPO DE ACCIÓN (createStore, updateStore, deleteStore). NO lo confundas con el "Tipo de empresa" del usuario. El tipo de empresa se pasa como "businessType".
+
+TIPOS DE ACCIÓN (valores de "type"):
+- createStore: crea una empresa. Parámetros: name, desc, industry, businessType
+- updateStore: actualiza empresa. Parámetros: id, data {name, desc, industry, businessType}
+- deleteStore: elimina empresa. Parámetros: id
+
+VALORES DE "industry": tecnologia | comercio | servicios | salud | educacion | otro
+VALORES DE "businessType": general | ventas | saas | crm | tienda | educacion | otro
+
+EJEMPLO COMPLETO de flujo:
+Usuario: "Crea una empresa de servicios llamada Mi Despacho"
+Tu respuesta: "Voy a crear la empresa con estos datos:\n- Nombre: Mi Despacho\n- Industria: Servicios\n- Tipo: General\n\n¿Confirmas que deseas crearla?"
+(SIN JSON — esperas confirmación)
+
+Usuario: "Sí, confirma"
+Tu respuesta: "¡Creando empresa!" seguido de:
+\`\`\`json
+{"actions":[{"type":"createStore","name":"Mi Despacho","desc":"","industry":"servicios","businessType":"general"}]}
+\`\`\`
+
+NUNCA incluyas el JSON sin haber recibido confirmación explícita del usuario.
+Después de ejecutar, SIEMPRE confirma el resultado en tu mensaje.`;
+  }, [context?.email, context?.plan, userStores]);
+
+  const executeActions = useCallback(async (actions: any[]): Promise<string> => {
+    const results: string[] = [];
+    const asyncOps: Promise<void>[] = [];
+
+    for (const action of actions) {
+      switch (action.type) {
+        case "createStore": {
+          const typeLabels: Record<string, string> = {
+            general: "General", ventas: "Sistema de Ventas", saas: "SaaS",
+            crm: "CRM", tienda: "Empresa Online", educacion: "Plataforma Educativa", otro: "Otro",
+          };
+          const bizType = action.businessType || action.type || "general";
+          const res = await fetch("/api/stores", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: action.name,
+              desc: action.desc || "",
+              industry: action.industry || "otro",
+              type: bizType,
+              typeLabel: typeLabels[bizType] || "General",
+              createdAt: new Date().toISOString(),
+              ownerEmail: context?.email,
+            }),
+          });
+          const data = await res.json();
+          if (data.store) {
+            onStoresChange?.([...(Array.isArray(userStores) ? userStores : []), data.store]);
+            results.push(`✅ Empresa "${data.store.name}" creada con éxito (ID: ${data.store._id || data.store.id}, Slug: ${data.store.slug})`);
+          } else {
+            results.push(`❌ Error al crear empresa: ${data.error || "Error desconocido"}`);
+          }
+          break;
+        }
+        case "updateStore": {
+          const id = action.id;
+          const res = await fetch(`/api/stores/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(action.data || {}),
+          });
+          const data = await res.json();
+          if (data.store) {
+            const updated = (Array.isArray(userStores) ? userStores : []).map((s: any) =>
+              (s._id === id || s.id === id) ? { ...s, ...data.store } : s
+            );
+            onStoresChange?.(updated);
+            results.push(`✅ Empresa "${data.store.name || id}" actualizada`);
+          } else {
+            results.push(`❌ Error al actualizar empresa: ${data.error || "Error desconocido"}`);
+          }
+          break;
+        }
+        case "deleteStore": {
+          const id = action.id;
+          const res = await fetch(`/api/stores/${id}`, { method: "DELETE" });
+          const data = await res.json();
+          if (res.ok) {
+            const remaining = (Array.isArray(userStores) ? userStores : []).filter((s: any) => s._id !== id && s.id !== id);
+            onStoresChange?.(remaining);
+            results.push(`✅ Empresa eliminada`);
+          } else {
+            results.push(`❌ Error al eliminar empresa: ${data.error || "Error desconocido"}`);
+          }
+          break;
+        }
+        default:
+          results.push(`⚠️ Acción "${action.type}" no implementada aún.`);
+      }
+    }
+
+    await Promise.all(asyncOps);
+    return results.join("\n");
+  }, [context?.email, userStores, onStoresChange]);
 
   const handleSend = useCallback(async (text?: string) => {
     const msg = text || input;
@@ -175,17 +271,29 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
     const userMessage: StoredMessage = { role: "user", content: fullMsg, timestamp: Date.now() };
     const updated = [...messages, userMessage];
     setMessages(updated);
+    if (messages.length === 0) {
+      window.dispatchEvent(new CustomEvent("tour:action:first_message"));
+    }
 
     try {
-      const payload: any = {
-        messages: updated.map(m => ({
+      const isLogged = !!context?.email;
+      const payload: any = { context };
+
+      if (isLogged) {
+        const copilotPrompt = buildCopilotPrompt();
+        payload.messages = [
+          { role: "system", content: copilotPrompt },
+          ...updated.map(m => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }))
+        ];
+        payload.overrideSystem = true;
+      } else {
+        payload.messages = updated.map(m => ({
           role: m.role === "user" ? "user" : "assistant",
           content: m.content
-        })),
-        context
-      };
-      if (guestId.current) {
-        payload.guestId = guestId.current;
+        }));
+        if (guestId.current) {
+          payload.guestId = guestId.current;
+        }
       }
 
       const response = await fetch("/api/chat", {
@@ -202,16 +310,42 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
         setIsPublic(true);
       }
       if (data.text) {
-        setMessages(prev => [...prev, { role: "bot", content: data.text, timestamp: Date.now() }]);
+        let botContent = data.text;
+
+        // Parse and execute actions from JSON blocks
+        if (isLogged) {
+          const jsonMatch = botContent.match(/```json\n?([\s\S]*?)```/);
+          if (jsonMatch) {
+            try {
+              const parsed = JSON.parse(jsonMatch[1].trim());
+              if (parsed.actions && Array.isArray(parsed.actions) && parsed.actions.length > 0) {
+                const actionTypes = parsed.actions.map((a: any) => a.type).join(", ");
+                setMessages(prev => [...prev, { role: "bot" as const, content: `⚡ Ejecutando: ${actionTypes}...`, timestamp: Date.now() }]);
+                const actionResult = await executeActions(parsed.actions);
+                setMessages(prev => prev.filter(m => !(m.role === "bot" && m.content?.startsWith("⚡ Ejecutando"))));
+                botContent = botContent.replace(jsonMatch[0], "").trim();
+                if (actionResult) {
+                  botContent += `\n\n—\n*${actionResult}*`;
+                }
+              }
+            } catch (e) {
+              // JSON parse failed — show response as-is
+            }
+          }
+        }
+
+        setMessages(prev => [...prev, { role: "bot", content: botContent, timestamp: Date.now() }]);
       } else if (data.error) {
         setMessages(prev => [...prev, { role: "bot", content: `Error: ${data.error}`, timestamp: Date.now() }]);
       }
     } catch {
-      setMessages(prev => [...prev, { role: "bot", content: "Lo siento, hubo un error al conectar con el servidor.", timestamp: Date.now() }]);
+      setMessages(prev => [...prev, { role: "bot", content: t("chat.server_error"), timestamp: Date.now() }]);
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, canSend, messages, context, attachedImages]);
+  }, [input, isLoading, canSend, messages, context, attachedImages, buildCopilotPrompt, executeActions]);
+
+  const voice = useVoiceInput({ autoSend: true, onResult: handleSend });
 
   const handleNewChat = () => {
     createConversation();
@@ -231,7 +365,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
   };
 
   const handleClear = () => {
-    const firstBot = messages.length > 0 && messages[0]?.role === "bot" ? messages[0] : { role: "bot" as const, content: "¡Hola! Soy el asistente IA de Jandosoft. ¿En qué puedo ayudarte hoy?", timestamp: Date.now() };
+    const firstBot = messages.length > 0 && messages[0]?.role === "bot" ? messages[0] : { role: "bot" as const, content: t("chat.welcome"), timestamp: Date.now() };
     setMessages([firstBot as StoredMessage]);
     if (activeId) saveMessages(activeId, [firstBot as StoredMessage]);
   };
@@ -264,7 +398,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
             className="w-full flex items-center gap-2 px-3 py-2.5 md:px-4 md:py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl md:rounded-2xl text-xs md:text-sm font-black italic transition-all shadow-lg shadow-red-100"
           >
             <Plus className="w-4 h-4 md:w-5 md:h-5" />
-            Nueva conversación
+            {t("chat.new_conversation")}
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-2 md:p-3 space-y-1">
@@ -295,7 +429,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
                     className="w-full text-left px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2"
                   >
                     <Trash2 className="w-3 h-3" />
-                    Eliminar
+                    {t("chat.delete")}
                   </button>
                 </div>
               )}
@@ -317,12 +451,12 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
             <Bot className="w-5 h-5 max-[340px]:w-4 max-[340px]:h-4 md:w-6 md:h-6" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm max-[340px]:text-xs font-black italic text-zinc-950 uppercase tracking-tight truncate">Jandosoft AI</h3>
+            <h3 className="text-sm max-[340px]:text-xs font-black italic text-zinc-950 uppercase tracking-tight truncate">{t("chat.title")}</h3>
             <div className="flex items-center gap-1">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               {isPublic && <Globe className="w-2.5 h-2.5 text-emerald-500 shrink-0" />}
               <span className="text-[8px] max-[340px]:text-[7.5px] font-black text-zinc-400 uppercase tracking-widest max-[340px]:tracking-wider italic whitespace-nowrap">
-                {displayRemaining} Mensajes restantes
+                {t("chat.messages_remaining", "{count} Mensajes restantes").replace("{count}", String(displayRemaining))}
               </span>
             </div>
           </div>
@@ -354,7 +488,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
               transition={{ delay: 0.1, duration: 0.4 }}
               className="text-xl md:text-2xl font-black italic text-zinc-950 tracking-tighter text-center"
             >
-              ¿En qué puedo ayudarte?
+              {t("chat.empty_title")}
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, y: 10 }}
@@ -362,7 +496,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
               transition={{ delay: 0.2, duration: 0.4 }}
               className="text-xs md:text-sm text-zinc-400 font-medium mt-1 md:mt-2 text-center max-w-xs"
             >
-              Pregúntame sobre tu negocio, productos, ventas o automatizaciones.
+              {t("chat.empty_desc")}
             </motion.p>
 
             {context?.storeName && (
@@ -441,7 +575,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
                     ? "bg-zinc-950 text-white dark:bg-white/10 dark:text-white dark:backdrop-blur-md rounded-tr-none px-3.5 py-2.5 max-[340px]:px-2.5 max-[340px]:py-2 md:px-4 md:py-3"
                     : "bg-cyan-50 border border-cyan-200 text-cyan-800 dark:bg-cyan-500/10 dark:border-cyan-400/20 dark:text-cyan-100 rounded-tl-none shadow-sm px-4 py-3 max-[340px]:px-2.5 max-[340px]:py-2 md:px-5 md:py-4"
                 )}>
-                  {m.role === "user" ? m.content : <MarkdownRenderer content={m.content} />}
+                  {m.role === "user" ? m.content : <BotMessage content={m.content} context={context} />}
                 </div>
               </motion.div>
             ))}
@@ -456,7 +590,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
                 </div>
                 <div className="px-4 py-3 max-[340px]:px-2.5 max-[340px]:py-2 md:px-5 md:py-4 rounded-2xl bg-cyan-50 border border-cyan-200 text-cyan-800 dark:bg-cyan-500/10 dark:border-cyan-400/20 dark:text-cyan-100 text-xs md:text-sm italic font-medium shadow-sm">
                   <span className="inline-flex items-center gap-1">
-                    Pensando
+                    {t("chat.thinking")}
                     <span className="animate-pulse">.</span>
                     <span className="animate-pulse" style={{ animationDelay: "0.2s" }}>.</span>
                     <span className="animate-pulse" style={{ animationDelay: "0.4s" }}>.</span>
@@ -474,7 +608,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
           <div className="flex gap-2 mb-2 overflow-x-auto pb-1">
             {attachedImages.map((b64, i) => (
               <div key={i} className="relative shrink-0 group">
-                <img src={b64} alt={`imagen ${i+1}`} className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border border-zinc-200" />
+                <img src={b64} alt={t("chat.image_alt", "imagen {n}").replace("{n}", String(i+1))} className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border border-zinc-200" />
                 <button
                   onClick={() => removeImage(i)}
                   className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
@@ -489,7 +623,7 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
           <input
             ref={inputRef}
             type="text"
-            placeholder={!canSend ? (isPublic ? "Límite de 5 preguntas alcanzado (vuelve en 6h)" : "Límite de 10 preguntas alcanzado (vuelve en 24h)") : "Pega una imagen (Ctrl+V) o pregunta algo..."}
+            placeholder={!canSend ? (isPublic ? t("chat.placeholder_limit_anon") : t("chat.placeholder_limit_user")) : t("chat.placeholder_default")}
             disabled={!canSend}
             className={cn(
               "w-full bg-zinc-50 max-[400px]:p-3 max-[340px]:p-2.5 max-[400px]:text-xs text-sm p-4 md:p-5 pr-20 md:pr-24 rounded-xl md:rounded-2xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 focus:ring-2 focus:ring-red-600/5 transition-all shadow-sm disabled:opacity-50 disabled:bg-zinc-100",
@@ -500,16 +634,6 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
             onKeyDown={e => e.key === "Enter" && handleSend()}
           />
           <div className="absolute right-1 md:right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 md:gap-1">
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading || !canSend}
-              className="w-8 h-8 max-[340px]:w-7 max-[340px]:h-7 rounded-xl flex items-center justify-center text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-all disabled:opacity-50 shrink-0"
-            >
-              <Paperclip className="w-3.5 h-3.5 max-[340px]:w-3 max-[340px]:h-3 md:w-4 md:h-4" />
-            </motion.button>
-            <input ref={fileInputRef} type="file" accept="image/*,.json,.csv,.tsv,.txt,.xml,.yaml,.yml,.md,.log,.env,.sql,.html,.css,.js,.ts,.jsx,.tsx,.py,.rb,.php,.java,.go,.rs,.sh" className="hidden" onChange={handleAttachFile} />
             {voice.isSupported && (
               <motion.button
                 whileTap={{ scale: 0.9 }}
@@ -533,9 +657,80 @@ export default function Chat({ maxMessages = 10, context }: { maxMessages?: numb
           </div>
         </div>
         <p className="text-center mt-2 md:mt-3 text-[7px] md:text-[9px] font-black text-zinc-300 uppercase tracking-widest italic">
-          Jandosoft AI puede cometer errores. Verifica la información importante.
+          {t("chat.disclaimer")}
         </p>
       </div>
+    </div>
+  );
+}
+
+const CHECKOUT_RE = /\[\[CHECKOUT:([^\]]+)\]\]/g;
+
+function BotMessage({ content, context }: { content: string; context?: { email?: string } }) {
+  const [plans, setPlans] = useState<any[] | null>(null);
+  const [buyingId, setBuyingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/plans").then(r => r.ok ? r.json() : null).then(d => { if (d?.plans) setPlans(d.plans); }).catch(() => {});
+  }, []);
+
+  const planIds: string[] = [];
+  const cleanedContent = content.replace(CHECKOUT_RE, (_, id) => { planIds.push(id); return ""; }).trim();
+
+  const handleBuy = async (planId: string) => {
+    if (!context?.email) return;
+    if (!plans) return;
+    const plan = plans.find((p: any) => p.id === planId);
+    if (!plan) return;
+    setBuyingId(planId);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerEmail: context.email,
+          customerName: context.email.split("@")[0],
+          description: `Plan ${plan.name} - Jandosoft`,
+          planId: plan.id,
+          priceId: plan.stripePriceId,
+          amount: plan.price,
+          currency: "usd",
+        }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch (e) {
+      console.error("Checkout error", e);
+    } finally {
+      setBuyingId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <MarkdownRenderer content={cleanedContent} />
+      {planIds.length > 0 && plans && (
+        <div className="flex flex-wrap gap-2 pt-1">
+          {planIds.map((pid) => {
+            const plan = plans.find((p: any) => p.id === pid);
+            if (!plan) return null;
+            return (
+              <button
+                key={pid}
+                onClick={() => handleBuy(pid)}
+                disabled={buyingId === pid}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl text-xs font-black italic uppercase tracking-wider hover:bg-red-700 transition-all shadow-lg shadow-red-200 disabled:opacity-50"
+              >
+                {buyingId === pid ? (
+                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Procesando</>
+                ) : (
+                  <><CreditCard className="w-3.5 h-3.5" /> Pagar {plan.name} — ${plan.price}/mes <ArrowRight className="w-3.5 h-3.5" /></>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

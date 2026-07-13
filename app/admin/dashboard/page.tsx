@@ -11,8 +11,6 @@ export default function AdminDashboardPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
   const [currency, setCurrency] = useState("USD");
-  const [products, setProducts] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem(ADMIN_SESSION_KEY);
@@ -55,9 +53,6 @@ export default function AdminDashboardPage() {
       <AdminView
         currency={currency}
         setCurrency={setCurrency}
-        products={products}
-        setProducts={setProducts}
-        transactions={transactions}
         onLogout={handleLogout}
       />
     </div>

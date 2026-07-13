@@ -58,6 +58,7 @@ export default function EmailAdminSection() {
         <div>
           <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">Correo <span className="text-red-600">Inteligente</span></h3>
           <p className="text-[9px] md:text-[10px] font-bold text-zinc-400 uppercase tracking-widest italic">Correo · Automatización · Campañas</p>
+          <p className="text-[8px] font-wallpoet tracking-[0.2em] text-red-600 uppercase mt-0.5">JANDOSOFT</p>
         </div>
       </div>
 

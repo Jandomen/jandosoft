@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const store = await Store.findOne({ slug }).lean();
     if (!store) {
-      return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
+      return NextResponse.json({ error: "Empresa no encontrada" }, { status: 404 });
     }
 
     const storeId = store._id;

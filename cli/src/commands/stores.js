@@ -45,7 +45,7 @@ async function showStoreDashboard(store) {
       { name: `  ${chalk.cyan('🔧')}  ${chalk.bold('Servicios')}     ${chalk.dim(`(${(s.services || []).length})`)}`, value: 'services', short: 'Servicios' },
       { name: `  ${chalk.cyan('📊')}  ${chalk.bold('Analíticas')}`, value: 'analytics', short: 'Analytics' },
       new inquirer.Separator(),
-      { name: `  ${chalk.red('◆')}  ${chalk.bold('Volver a tiendas')}`, value: '__back__', short: 'Volver' },
+      { name: `  ${chalk.red('◆')}  ${chalk.bold('Volver a empresas')}`, value: '__back__', short: 'Volver' },
     ];
 
     const { option } = await inquirer.prompt([
@@ -88,7 +88,7 @@ async function showStoreDashboard(store) {
 }
 
 function showStoreInfo(s, plan) {
-  console.log(`\n ${chalk.bold('📋 Información de la tienda')}\n`);
+  console.log(`\n ${chalk.bold('📋 Información de la empresa')}\n`);
   console.log(`   ${chalk.dim('🏪 Nombre:')}     ${chalk.bold(s.name)}`);
   console.log(`   ${chalk.dim('🔗 Slug:')}      ${s.slug || '—'}`);
   console.log(`   ${chalk.dim('📝 Descripción:')} ${s.desc || '—'}`);
@@ -193,7 +193,7 @@ async function showAnalytics(store) {
     }
     console.log('');
   } catch {
-    console.log(` ${chalk.yellow(' Analíticas no disponibles para esta tienda.')}\n`);
+    console.log(` ${chalk.yellow(' Analíticas no disponibles para esta empresa.')}\n`);
   }
 }
 
@@ -225,7 +225,7 @@ async function createStore(args) {
       output: process.stdout,
     });
     name = await new Promise((resolve) => {
-      rl.question(` ${chalk.cyan('‣ Nombre de la tienda:')} `, (answer) => {
+      rl.question(` ${chalk.cyan('‣ Nombre de la empresa:')} `, (answer) => {
         rl.close();
         resolve(answer.trim());
       });
@@ -237,13 +237,13 @@ async function createStore(args) {
     return;
   }
 
-  console.log(` ${chalk.dim(` Creando tienda "${name}"...`)}`);
+  console.log(` ${chalk.dim(` Creando empresa "${name}"...`)}`);
 
   try {
     const data = await request('POST', '/api/stores', { name });
     const store = data.store || data;
 
-    console.log(`\n ${chalk.green.bold('✓ Tienda creada exitosamente')}`);
+    console.log(`\n ${chalk.green.bold('✓ Empresa creada exitosamente')}`);
     console.log(`   ${chalk.dim('🏪 Nombre:')} ${chalk.bold(store.name)}`);
     console.log(`   ${chalk.dim('🔗 Slug:')}   ${store.slug}`);
     console.log(`   ${chalk.dim('🌐 URL:')}    ${chalk.cyan(`https://jandosoft.vercel.app/s/${store.slug}`)}\n`);

@@ -13,11 +13,11 @@ import {
   Building2,
   X,
   CheckCircle2,
-  Zap,
   Bot,
   Layers,
+  Mail,
+  Zap,
   ArrowRight,
-  Globe,
   CalendarDays,
   List,
   Loader2,
@@ -37,6 +37,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { generateInvoicePDF } from "@/lib/pdf-utils";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { LanguageCarousel } from "@/components/ui/LanguageCarousel";
+import { useTheme } from "@/components/public/ThemeProvider";
+import { FREE_PLAN } from "@/lib/plans";
 
 interface UserDashboardProps {
   user: {
@@ -44,6 +47,7 @@ interface UserDashboardProps {
     subscription: string | null;
     subscriptionExpiry: Date | null;
     isSuspended: boolean;
+    emailVerified?: boolean;
   };
 
   userStores: any[];
@@ -57,8 +61,6 @@ interface UserDashboardProps {
   onDeleteStore?: (storeId: string | number) => void;
 }
 
-const MAX_FREE_STORES = 3;
-
 export default function UserDashboard({
   user,
   userStores,
@@ -69,7 +71,8 @@ export default function UserDashboard({
   onEditStore,
   onDeleteStore,
 }: UserDashboardProps) {
-  const { language, setLanguage, t } = useLanguage();
+  const { t } = useLanguage();
+  const { theme, toggle } = useTheme();
   const expiryDate = user.subscriptionExpiry
     ? new Date(user.subscriptionExpiry)
     : null;
@@ -103,6 +106,12 @@ export default function UserDashboard({
   const [step, setStep] = useState(1);
 
   const [myInvoices, setMyInvoices] = useState<any[]>([]);
+  const [myPayments, setMyPayments] = useState<any[]>([]);
+  const [paymentSearch, setPaymentSearch] = useState("");
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [storeSearch, setStoreSearch] = useState("");
+  const [storePage, setStorePage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const isFree = !user.subscription || isExpired;
 
@@ -113,10 +122,19 @@ export default function UserDashboard({
   const storeCount = stores.length;
 
   const maxStores = isFree
-    ? MAX_FREE_STORES
+    ? FREE_PLAN.limits.maxStores
     : 999;
 
   const atLimit = storeCount >= maxStores;
+
+  const filteredStores = stores.filter(s =>
+    !storeSearch || s.name?.toLowerCase().includes(storeSearch.toLowerCase()) ||
+    s.industry?.toLowerCase().includes(storeSearch.toLowerCase()) ||
+    (s.typeLabel || s.type || "")?.toLowerCase().includes(storeSearch.toLowerCase())
+  );
+  const totalPages = Math.max(1, Math.ceil(filteredStores.length / PAGE_SIZE));
+  const safePage = Math.min(storePage, totalPages);
+  const pagedStores = filteredStores.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const editingStore = editingStoreId
     ? stores.find(
@@ -140,6 +158,40 @@ export default function UserDashboard({
         .catch(() => {});
     }
   }, [user?.email]);
+
+  useEffect(() => {
+    if (user?.email) {
+      setLoadingPayments(true);
+      fetch(`/api/stripe/payments?customerEmail=${encodeURIComponent(user.email)}`)
+        .then((res) => res.json())
+        .then((data) => setMyPayments(data.payments || []))
+        .catch(() => {})
+        .finally(() => setLoadingPayments(false));
+    }
+  }, [user?.email]);
+
+  const filteredPayments = myPayments.filter((p: any) =>
+    !paymentSearch ||
+    p.customerEmail?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+    p.customerName?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+    p.description?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+    p.receiptNumber?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+    p.displayDescription?.toLowerCase().includes(paymentSearch.toLowerCase())
+  );
+
+  const downloadReceipt = async (paymentId: string) => {
+    try {
+      const res = await fetch(`/api/receipts/${paymentId}`);
+      if (!res.ok) throw new Error("Error");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Recibo_${paymentId.slice(-8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
+  };
 
   const [appointments, setAppointments] = useState<any[]>([]);
   const [apptLoading, setApptLoading] = useState(true);
@@ -263,8 +315,8 @@ export default function UserDashboard({
   const upcomingAppts = appointments.filter(a => a.date >= todayStr && (a.status === "pending" || a.status === "confirmed"));
 
   const [apptViewMode, setApptViewMode] = useState<"list" | "calendar">("calendar");
-  const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-  const DAYS = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+  const MONTHS = [t("appointments.month_1"),t("appointments.month_2"),t("appointments.month_3"),t("appointments.month_4"),t("appointments.month_5"),t("appointments.month_6"),t("appointments.month_7"),t("appointments.month_8"),t("appointments.month_9"),t("appointments.month_10"),t("appointments.month_11"),t("appointments.month_12")];
+  const DAYS = [t("appointments.day_0"),t("appointments.day_1"),t("appointments.day_2"),t("appointments.day_3"),t("appointments.day_4"),t("appointments.day_5"),t("appointments.day_6")];
 
   const now = new Date();
   const [calYear, setCalYear] = useState(now.getFullYear());
@@ -325,12 +377,13 @@ export default function UserDashboard({
       return;
 
     const typeLabels: Record<string, string> = {
-      ventas: "Sistema de Ventas",
-      saas: "SaaS",
-      crm: "CRM",
-      tienda: "Tienda Online",
-      educacion: "Plataforma Educativa",
-      otro: "Otro",
+      general: t("user.store_type_general"),
+      ventas: t("user.store_type_sales"),
+      saas: t("user.store_type_saas"),
+      crm: t("user.store_type_crm"),
+      tienda: t("user.store_type_online"),
+      educacion: t("user.store_type_educational"),
+      otro: t("user.store_type_other"),
     };
 
     if (editingStoreId && editingStore) {
@@ -400,12 +453,69 @@ export default function UserDashboard({
     );
   }
 
+  const [verifyResending, setVerifyResending] = useState(false);
+  const [verifyResent, setVerifyResent] = useState(false);
+
+  const handleResendVerification = async () => {
+    setVerifyResending(true);
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (data.success) setVerifyResent(true);
+    } catch {}
+    setVerifyResending(false);
+  };
+
   return (
     <div className="w-full max-w-6xl mx-auto space-y-5 max-[400px]:space-y-5 space-y-6 sm:space-y-10 pb-20 px-3 sm:px-6">
 
+      {/* EMAIL VERIFICATION BANNER */}
+      {user.emailVerified === false && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 p-4 sm:p-5 rounded-[2rem] sm:rounded-[2.5rem]"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-rose-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg">
+                <Mail className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-black italic text-rose-900">Verifica tu correo electrónico</p>
+                <p className="text-[10px] font-medium text-rose-600 italic">{t("user.verify_warning")}</p>
+              </div>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              {verifyResent ? (
+                <span className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-100 text-emerald-700 rounded-xl text-[10px] font-bold italic">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Reenviado
+                </span>
+              ) : (
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleResendVerification}
+                  disabled={verifyResending}
+                  className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-bold italic hover:bg-rose-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50"
+                >
+                  {verifyResending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Mail className="w-3.5 h-3.5" />
+                  )}
+                  {t("user.resend_verification")}
+                </motion.button>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* HEADER */}
 
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 max-[400px]:gap-5 gap-6 bg-zinc-950 p-5 sm:p-8 lg:p-10 rounded-[2rem] sm:rounded-[3rem] text-white shadow-3xl relative overflow-hidden">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 max-[400px]:gap-5 gap-6 bg-zinc-950 p-5 sm:p-8 lg:p-10 rounded-[2rem] sm:rounded-[3rem] text-white shadow-3xl relative">
 
         <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/20 rounded-full blur-[100px] -mr-32 -mt-32" />
 
@@ -424,21 +534,28 @@ export default function UserDashboard({
 
             <div className="flex flex-wrap items-center gap-1.5 max-[400px]:gap-1.5 gap-2 mt-1.5 max-[400px]:mt-1.5 mt-2">
 
-              <span
+              <motion.span
+                key={user.subscription || "free"}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
                 className={cn(
-                  "px-2 max-[400px]:px-2 px-3 py-1 rounded-full text-[9px] max-[400px]:text-[9px] text-[10px] font-black uppercase tracking-wide sm:tracking-widest italic",
+                  "px-2 max-[400px]:px-2 px-3 py-1 rounded-full text-[9px] max-[400px]:text-[9px] text-[10px] font-black uppercase tracking-wide sm:tracking-widest italic inline-flex items-center gap-1.5",
                   user.subscription
                     ? "bg-red-600 text-white"
                     : "bg-zinc-800 text-zinc-400"
                 )}
               >
-                  {user.subscription
-                    ? `${t("user.plan")} ${user.subscription.toUpperCase()}`
-                    : t("user.free")}
-              </span>
+                {user.subscription && <Zap className="w-2.5 h-2.5" />}
+                {user.subscription
+                  ? `${t("user.plan")} ${user.subscription.toUpperCase()}`
+                  : t("user.free")}
+              </motion.span>
 
               {user.subscription && (
-                <span
+                <motion.span
+                  key={isExpired ? "expired" : "active"}
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
                   className={cn(
                     "flex items-center gap-1 text-[9px] max-[400px]:text-[9px] text-[10px] font-black uppercase tracking-wide sm:tracking-widest italic",
                     isExpired
@@ -450,7 +567,7 @@ export default function UserDashboard({
                   {isExpired
                     ? t("user.expired")
                     : t("user.days_left").replace("{n}", String(daysLeft))}
-                </span>
+                </motion.span>
               )}
             </div>
           </div>
@@ -458,20 +575,24 @@ export default function UserDashboard({
 
         <div className="relative z-10 flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
 
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/10">
-            <Globe className="w-3.5 h-3.5 text-white/60" />
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as any)}
-              className="bg-transparent text-[10px] font-black italic text-white outline-none cursor-pointer uppercase tracking-wider"
-            >
-              <option className="text-zinc-950" value="es">Español</option>
-              <option className="text-zinc-950" value="en">English</option>
-              <option className="text-zinc-950" value="fr">Français</option>
-              <option className="text-zinc-950" value="zh">中文</option>
-              <option className="text-zinc-950" value="hi">हिन्दी</option>
-            </select>
-          </div>
+          <LanguageCarousel />
+
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={toggle}
+            className="flex items-center justify-center w-10 h-10 bg-white/10 backdrop-blur-xl rounded-xl border border-white/10 hover:bg-white/20 transition-all shrink-0"
+            aria-label={theme === "dark" ? "Modo claro" : "Modo oscuro"}
+          >
+            {theme === "dark" ? (
+              <svg className="w-4 h-4 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            )}
+          </motion.button>
 
           <motion.button
             whileTap={{ scale: 0.95 }}
@@ -575,8 +696,9 @@ export default function UserDashboard({
             </p>
           </div>
 
-          {!atLimit && (
+          {!atLimit ? (
             <motion.button
+              data-tour="create_btn"
               whileTap={{ scale: 0.95 }}
               onClick={openCreateStore}
               className="w-full sm:w-auto px-5 max-[400px]:px-5 px-6 py-2.5 max-[400px]:py-2.5 py-3 bg-red-600 text-white rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs italic hover:bg-red-700 transition-all shadow-xl flex items-center justify-center gap-2"
@@ -584,12 +706,28 @@ export default function UserDashboard({
               <Plus className="w-3.5 h-3.5 max-[400px]:w-3.5 max-[400px]:h-3.5 w-4 h-4" />
               {t("user.new_store")}
             </motion.button>
+          ) : (
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onNavigate("pricing")}
+              className="w-full sm:w-auto px-5 max-[400px]:px-5 px-6 py-2.5 max-[400px]:py-2.5 py-3 bg-amber-500 text-white rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs italic hover:bg-amber-600 transition-all shadow-xl flex items-center justify-center gap-2"
+            >
+              <Zap className="w-3.5 h-3.5 max-[400px]:w-3.5 max-[400px]:h-3.5 w-4 h-4" />
+              {t("user.upgrade")}
+            </motion.button>
           )}
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
+          <input type="text" value={storeSearch} onChange={e => { setStoreSearch(e.target.value); setStorePage(1); }}
+            placeholder={t("biz.search_stores")}
+            className="w-full bg-zinc-50 pl-11 pr-4 py-3 rounded-2xl border border-zinc-100 outline-none font-bold text-sm focus:bg-white focus:border-red-200 transition-all italic" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
 
-          {stores.map((store) => (
+          {pagedStores.length > 0 ? pagedStores.map((store) => (
             <motion.div
               key={store._id || store.id}
               initial={{ opacity: 0, y: 20 }}
@@ -641,8 +779,29 @@ export default function UserDashboard({
                 <ArrowRight className="w-3 h-3 max-[400px]:w-3 max-[400px]:h-3 w-3.5 h-3.5" />
               </div>
             </motion.div>
-          ))}
+          )          ) : (
+            <div className="col-span-full text-center py-12">
+              <Store className="w-10 h-10 text-zinc-200 mx-auto mb-3" />
+              <p className="text-sm font-bold text-zinc-300 italic">{storeSearch ? t("biz.no_search_results").replace("{query}", storeSearch) : t("user.no_stores_yet")}</p>
+            </div>
+          )}
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button onClick={() => setStorePage(p => Math.max(1, p - 1))} disabled={safePage <= 1}
+              className="p-2 rounded-xl bg-zinc-50 text-zinc-400 hover:bg-zinc-100 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-[11px] font-black italic text-zinc-400">
+              {safePage} / {totalPages}
+            </span>
+            <button onClick={() => setStorePage(p => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages}
+              className="p-2 rounded-xl bg-zinc-50 text-zinc-400 hover:bg-zinc-100 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* AGENDA */}
@@ -651,10 +810,10 @@ export default function UserDashboard({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 max-[400px]:gap-3 gap-4">
           <div>
             <h3 className="text-xl max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tight">
-              Agenda
+              {t("appointments.title")}
             </h3>
             <p className="text-[9px] max-[400px]:text-[9px] text-[10px] font-black text-zinc-400 uppercase tracking-wide sm:tracking-widest mt-0.5 max-[400px]:mt-0.5 mt-1 italic">
-              {apptStats.today} hoy · {apptStats.upcoming} próximas
+              {apptStats.today} {t("appointments.stat_today")} · {apptStats.upcoming} {t("appointments.stat_upcoming")}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -663,13 +822,13 @@ export default function UserDashboard({
                 className={cn("px-3 py-1.5 rounded-lg text-[9px] font-black italic transition-all flex items-center gap-1.5",
                   apptViewMode === "list" ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
                 )}>
-                <List className="w-3 h-3" /> Lista
+                <List className="w-3 h-3" /> {t("appointments.view_list")}
               </button>
               <button onClick={() => setApptViewMode("calendar")}
                 className={cn("px-3 py-1.5 rounded-lg text-[9px] font-black italic transition-all flex items-center gap-1.5",
                   apptViewMode === "calendar" ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
                 )}>
-                <CalendarDays className="w-3 h-3" /> Calendario
+                <CalendarDays className="w-3 h-3" /> {t("appointments.view_calendar")}
               </button>
             </div>
             <motion.button
@@ -678,7 +837,7 @@ export default function UserDashboard({
               className="px-4 py-1.5 bg-red-600 text-white rounded-xl font-black text-[9px] italic hover:bg-red-700 transition-all shadow-lg flex items-center justify-center gap-1.5"
             >
               <Plus className="w-3 h-3" />
-              NUEVA
+              {t("appointments.new_btn")}
             </motion.button>
           </div>
         </div>
@@ -686,12 +845,12 @@ export default function UserDashboard({
         {/* Stats mini cards */}
         <div className="grid grid-cols-4 gap-2 sm:gap-3">
           {[
-            { label: "Hoy", value: apptStats.today, color: "text-red-600", bg: "bg-red-50" },
-            { label: "Próximas", value: apptStats.upcoming, color: "text-amber-600", bg: "bg-amber-50" },
-            { label: "Completadas", value: apptStats.completed, color: "text-emerald-600", bg: "bg-emerald-50" },
-            { label: "Canceladas", value: apptStats.cancelled, color: "text-zinc-600", bg: "bg-zinc-50" },
-          ].map(stat => (
-            <div key={stat.label} className={`${stat.bg} rounded-2xl p-3 sm:p-4 text-center border border-transparent`}>
+            { label: t("appointments.stat_today"), value: apptStats.today, color: "text-red-600", bg: "bg-red-50" },
+            { label: t("appointments.stat_upcoming"), value: apptStats.upcoming, color: "text-amber-600", bg: "bg-amber-50" },
+            { label: t("appointments.stat_completed"), value: apptStats.completed, color: "text-emerald-600", bg: "bg-emerald-50" },
+            { label: t("appointments.stat_cancelled"), value: apptStats.cancelled, color: "text-zinc-600", bg: "bg-zinc-50" },
+          ].map((stat, i) => (
+            <div key={i} className={`${stat.bg} rounded-2xl p-3 sm:p-4 text-center border border-transparent`}>
               <p className={`text-lg sm:text-2xl font-black italic ${stat.color}`}>{stat.value}</p>
               <p className="text-[7px] sm:text-[8px] font-black italic uppercase text-zinc-400 tracking-wider">{stat.label}</p>
             </div>
@@ -706,7 +865,7 @@ export default function UserDashboard({
         ) : apptViewMode === "list" ? (
           appointments.length === 0 ? (
             <div className="py-12 text-center italic font-black uppercase tracking-widest text-zinc-200">
-              No tienes citas agendadas
+              {t("appointments.list_empty")}
             </div>
           ) : (
             <div className="space-y-2">
@@ -723,14 +882,14 @@ export default function UserDashboard({
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-black italic text-zinc-950 truncate">
-                        {a.customerInfo?.name || "Sin nombre"}
+                        {a.customerInfo?.name || t("appointments.no_name")}
                       </p>
                       <p className="text-[9px] font-bold text-zinc-400 italic">
                         {a.date} · {a.time}
                       </p>
                       {a.storeId && (
                         <p className="text-[8px] font-black text-red-500 italic truncate mt-0.5">
-                          {getStoreName(a.storeId) || "Tienda"}
+                          {getStoreName(a.storeId) || t("user.store_fallback")}
                         </p>
                       )}
                     </div>
@@ -743,17 +902,17 @@ export default function UserDashboard({
                       a.status === "completed" && "bg-zinc-100 text-zinc-500",
                       a.status === "cancelled" && "bg-red-50 text-red-600",
                     )}>
-                      {a.status === "pending" ? "Pendiente" : a.status === "confirmed" ? "Confirmada" : a.status === "completed" ? "Completada" : a.status === "cancelled" ? "Cancelada" : a.status}
+                      {a.status === "pending" ? t("appointments.status_pending") : a.status === "confirmed" ? t("appointments.status_confirmed") : a.status === "completed" ? t("appointments.status_completed") : a.status === "cancelled" ? t("appointments.status_cancelled") : a.status}
                     </span>
                     <select
                       value={a.status}
                       onChange={(e) => handleApptStatus(a._id, e.target.value)}
                       className="text-[8px] font-black italic bg-transparent outline-none cursor-pointer text-zinc-400 hover:text-zinc-600 transition-all"
                     >
-                      <option value="pending">Pendiente</option>
-                      <option value="confirmed">Confirmada</option>
-                      <option value="completed">Completada</option>
-                      <option value="cancelled">Cancelada</option>
+                      <option value="pending">{t("appointments.status_pending")}</option>
+                      <option value="confirmed">{t("appointments.status_confirmed")}</option>
+                      <option value="completed">{t("appointments.status_completed")}</option>
+                      <option value="cancelled">{t("appointments.status_cancelled")}</option>
                     </select>
                     <button onClick={() => openEditAppt(a)} className="p-1.5 rounded-lg hover:bg-zinc-50 text-zinc-300 hover:text-red-600 transition-all">
                       <Edit3 className="w-3.5 h-3.5" />
@@ -815,7 +974,7 @@ export default function UserDashboard({
                           </div>
                         ))}
                         {dayApps.length > 2 && (
-                          <span className="text-[6px] font-black text-zinc-400 italic">+{dayApps.length - 2} más</span>
+                          <span className="text-[6px] font-black text-zinc-400 italic">{t("appointments.calendar_more").replace("{n}", String(dayApps.length - 2))}</span>
                         )}
                       </div>
                     </div>
@@ -831,10 +990,10 @@ export default function UserDashboard({
           <div className="grid md:grid-cols-2 gap-4 md:gap-6">
             <div className="bg-white rounded-2xl border border-zinc-100 p-4 md:p-5 shadow-sm space-y-3">
               <h4 className="text-[10px] font-black italic text-zinc-500 uppercase tracking-wider flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-amber-500" /> Citas de Hoy
+                <Clock className="w-3.5 h-3.5 text-amber-500" /> {t("appointments.today_title")}
               </h4>
               {apptsToday.length === 0 ? (
-                <p className="text-[10px] text-zinc-400 italic text-center py-6">Sin citas para hoy</p>
+                <p className="text-[10px] text-zinc-400 italic text-center py-6">{t("appointments.today_empty")}</p>
               ) : apptsToday.slice(0, 5).map(a => (
                 <div key={a._id} className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-zinc-100 hover:border-red-200 transition-all">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -856,7 +1015,7 @@ export default function UserDashboard({
                       a.status === "completed" && "bg-zinc-100 text-zinc-500",
                       a.status === "cancelled" && "bg-red-50 text-red-600",
                     )}>
-                      {a.status === "pending" ? "Pend" : a.status === "confirmed" ? "Conf" : a.status === "completed" ? "Comp" : a.status === "cancelled" ? "Canc" : a.status}
+                      {a.status === "pending" ? t("appointments.status_pending").slice(0,4) : a.status === "confirmed" ? t("appointments.status_confirmed").slice(0,4) : a.status === "completed" ? t("appointments.status_completed").slice(0,4) : a.status === "cancelled" ? t("appointments.status_cancelled").slice(0,4) : a.status}
                     </span>
                   </div>
                 </div>
@@ -864,10 +1023,10 @@ export default function UserDashboard({
             </div>
             <div className="bg-white rounded-2xl border border-zinc-100 p-4 md:p-5 shadow-sm space-y-3">
               <h4 className="text-[10px] font-black italic text-zinc-500 uppercase tracking-wider flex items-center gap-2">
-                <ArrowRight className="w-3.5 h-3.5 text-emerald-500" /> Próximas Citas
+                <ArrowRight className="w-3.5 h-3.5 text-emerald-500" /> {t("appointments.upcoming_title")}
               </h4>
               {upcomingAppts.length === 0 ? (
-                <p className="text-[10px] text-zinc-400 italic text-center py-6">Sin próximas citas</p>
+                <p className="text-[10px] text-zinc-400 italic text-center py-6">{t("appointments.upcoming_empty")}</p>
               ) : upcomingAppts.slice(0, 5).map(a => (
                 <div key={a._id} className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-zinc-100 hover:border-red-200 transition-all">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -892,6 +1051,163 @@ export default function UserDashboard({
         )}
       </div>
 
+      {/* MIS PAGOS / RECIBOS */}
+      <div className="space-y-4 max-[400px]:space-y-4 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 max-[400px]:gap-3 gap-4">
+          <div>
+            <h3 className="text-xl max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tight">
+              Mis Pagos
+            </h3>
+            <p className="text-[9px] max-[400px]:text-[9px] text-[10px] font-black text-zinc-400 uppercase tracking-wide sm:tracking-widest mt-0.5 max-[400px]:mt-0.5 mt-1 italic">
+              {filteredPayments.length} {filteredPayments.length === 1 ? "comprobante" : "comprobantes"} · Descarga tus recibos de pago
+            </p>
+          </div>
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
+          <input
+            type="text"
+            value={paymentSearch}
+            onChange={e => setPaymentSearch(e.target.value)}
+            placeholder="Buscar por email, descripción, recibo..."
+            className="w-full bg-zinc-50 pl-11 pr-4 py-3 rounded-2xl border border-zinc-100 outline-none font-bold text-sm focus:bg-white focus:border-red-200 transition-all italic"
+          />
+        </div>
+
+        {loadingPayments ? (
+          <div className="bg-white border border-zinc-100 rounded-[1.5rem] md:rounded-[2.5rem] p-12 text-center">
+            <Loader2 className="w-6 h-6 text-zinc-300 animate-spin mx-auto" />
+            <p className="text-[10px] font-black text-zinc-300 italic mt-3 uppercase tracking-widest">Cargando pagos...</p>
+          </div>
+        ) : filteredPayments.length > 0 ? (
+          <div className="bg-white border border-zinc-100 rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden shadow-xl overflow-x-auto">
+            <table className="w-full text-left min-w-[500px]">
+              <thead className="bg-zinc-50 border-b border-zinc-100">
+                <tr>
+                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Fecha</th>
+                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Descripción</th>
+                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Monto</th>
+                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Método</th>
+                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Recibo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPayments.map((p: any) => (
+                  <tr key={p._id} className="border-b border-zinc-50 hover:bg-zinc-50/50 transition-colors">
+                    <td className="px-5 md:px-8 py-4 md:py-5">
+                      <p className="text-[10px] md:text-xs font-black text-zinc-950 italic">
+                        {new Date(p.createdAt).toLocaleDateString()}
+                      </p>
+                      <p className="text-[9px] md:text-[10px] text-zinc-400 font-bold">
+                        {p.receiptNumber || `#${p._id?.slice(-6)}`}
+                      </p>
+                    </td>
+                    <td className="px-5 md:px-8 py-4 md:py-5">
+                      <p className="text-[10px] md:text-xs font-bold text-zinc-600 italic truncate max-w-[150px] md:max-w-none">
+                        {p.displayDescription || p.description || "Pago"}
+                      </p>
+                    </td>
+                    <td className="px-5 md:px-8 py-4 md:py-5">
+                      <p className="text-xs md:text-sm font-black text-red-600 italic">
+                        {p.displayCurrency} ${p.displayAmount?.toFixed(2)}
+                      </p>
+                    </td>
+                    <td className="px-5 md:px-8 py-4 md:py-5">
+                      <span className="px-2 py-0.5 bg-zinc-100 text-zinc-500 rounded-full text-[8px] md:text-[9px] font-black italic uppercase">
+                        {p.displayPaymentMethod}
+                      </span>
+                    </td>
+                    <td className="px-5 md:px-8 py-4 md:py-5 text-right">
+                      <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => downloadReceipt(p._id)}
+                        className="p-2 md:p-3 bg-zinc-50 text-zinc-400 hover:text-red-600 hover:bg-white hover:shadow-lg rounded-xl transition-all"
+                      >
+                        <Download className="w-4 h-4 md:w-5 md:h-5" />
+                      </motion.button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="bg-white border border-zinc-100 rounded-[1.5rem] md:rounded-[2.5rem] p-12 text-center">
+            <FileText className="w-10 h-10 text-zinc-200 mx-auto mb-3" />
+            <p className="text-sm font-bold text-zinc-300 italic">
+              {paymentSearch ? "No se encontraron pagos" : "Aún no tienes pagos registrados"}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Create/Edit Store modal */}
+      <AnimatePresence>
+        {showCreateStore && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6"
+            onClick={() => setShowCreateStore(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9 }} animate={{ scale: 1 }}
+              className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative"
+              onClick={e => e.stopPropagation()}
+            >
+              <button onClick={() => setShowCreateStore(false)} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl">
+                <X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" />
+              </button>
+              <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-6 uppercase tracking-tighter">
+                {editingStoreId ? t("biz.edit_store") : t("user.new_store_title")}
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_edit_name")}</label>
+                  <input data-tour="form_name" type="text" value={storeForm.name} onChange={e => setStoreForm({...storeForm, name: e.target.value})} placeholder={t("user.store_name_placeholder")} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                </div>
+                <div>
+                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_edit_desc")}</label>
+                  <textarea data-tour="form_desc" value={storeForm.desc} onChange={e => setStoreForm({...storeForm, desc: e.target.value})} placeholder={t("user.desc_placeholder")} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-24 mt-1 text-sm" />
+                </div>
+                <div>
+                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_field_industry")}</label>
+                  <select data-tour="form_industry" value={storeForm.industry} onChange={e => setStoreForm({...storeForm, industry: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic">
+                    <option value="tecnologia">{t("biz.industry_technology")}</option>
+                    <option value="comercio">{t("biz.industry_commerce")}</option>
+                    <option value="servicios">{t("biz.industry_services")}</option>
+                    <option value="salud">{t("biz.industry_health")}</option>
+                    <option value="educacion">{t("biz.industry_education")}</option>
+                    <option value="otro">{t("biz.industry_other")}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_field_type")}</label>
+                  <select data-tour="form_type" value={storeForm.type} onChange={e => setStoreForm({...storeForm, type: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic">
+                    <option value="" disabled>{t("user.select_type")}</option>
+                    <option value="general">{t("user.store_type_general")}</option>
+                    <option value="ventas">{t("user.store_type_sales")}</option>
+                    <option value="saas">{t("user.store_type_saas")}</option>
+                    <option value="crm">{t("user.store_type_crm")}</option>
+                    <option value="tienda">{t("user.store_type_online")}</option>
+                    <option value="educacion">{t("user.store_type_educational")}</option>
+                    <option value="otro">{t("user.store_type_other")}</option>
+                  </select>
+                </div>
+                <button
+                  data-tour="form_submit"
+                  onClick={handleCreateStore}
+                  disabled={!storeForm.name || !storeForm.type}
+                  className="w-full py-4 bg-red-600 text-white rounded-2xl font-black italic text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {editingStoreId ? t("biz.config_btn_save") : t("user.create")}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Appointment form modal */}
       <AnimatePresence>
         {showApptForm && (
@@ -909,27 +1225,27 @@ export default function UserDashboard({
                 <X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" />
               </button>
               <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-6 uppercase tracking-tighter">
-                {editingApptId ? "EDITAR CITA" : "NUEVA CITA"}
+                {editingApptId ? t("appointments.form_edit") : t("appointments.form_new")}
               </h3>
               <div className="space-y-4">
                 <div>
-                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Cliente</label>
-                  <input type="text" value={apptForm.customerName} onChange={e => setApptForm({...apptForm, customerName: e.target.value})} placeholder="Nombre del cliente" className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_customer_label")}</label>
+                  <input type="text" value={apptForm.customerName} onChange={e => setApptForm({...apptForm, customerName: e.target.value})} placeholder={t("appointments.form_name_placeholder")} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Email</label>
-                    <input type="email" value={apptForm.customerEmail} onChange={e => setApptForm({...apptForm, customerEmail: e.target.value})} placeholder="Email" className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_email")}</label>
+                    <input type="email" value={apptForm.customerEmail} onChange={e => setApptForm({...apptForm, customerEmail: e.target.value})} placeholder={t("appointments.form_email")} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
                   </div>
                   <div>
-                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Teléfono</label>
-                    <input type="tel" value={apptForm.customerPhone} onChange={e => setApptForm({...apptForm, customerPhone: e.target.value})} placeholder="Teléfono" className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_phone")}</label>
+                    <input type="tel" value={apptForm.customerPhone} onChange={e => setApptForm({...apptForm, customerPhone: e.target.value})} placeholder={t("appointments.form_phone")} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
                   </div>
                 </div>
                 <div>
-                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Tienda / Empresa</label>
+                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_store")}</label>
                   <select value={apptForm.storeId} onChange={e => setApptForm({...apptForm, storeId: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic">
-                    <option value="">Sin tienda</option>
+                    <option value="">{t("appointments.no_store")}</option>
                     {stores.map((s: any) => (
                       <option key={s._id || s.id} value={s._id || s.id}>{s.name}</option>
                     ))}
@@ -937,32 +1253,32 @@ export default function UserDashboard({
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Fecha</label>
+                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_date")}</label>
                     <input type="date" value={apptForm.date} onChange={e => setApptForm({...apptForm, date: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
                   </div>
                   <div>
-                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Hora</label>
+                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_time")}</label>
                     <input type="time" value={apptForm.time} onChange={e => setApptForm({...apptForm, time: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Duración (min)</label>
+                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_duration")}</label>
                     <input type="number" value={apptForm.duration} onChange={e => setApptForm({...apptForm, duration: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
                   </div>
                   <div>
-                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Estado</label>
+                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_status")}</label>
                     <select value={apptForm.status} onChange={e => setApptForm({...apptForm, status: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic">
-                      <option value="pending">Pendiente</option>
-                      <option value="confirmed">Confirmada</option>
-                      <option value="completed">Completada</option>
-                      <option value="cancelled">Cancelada</option>
+                      <option value="pending">{t("appointments.status_pending")}</option>
+                      <option value="confirmed">{t("appointments.status_confirmed")}</option>
+                      <option value="completed">{t("appointments.status_completed")}</option>
+                      <option value="cancelled">{t("appointments.status_cancelled")}</option>
                     </select>
                   </div>
                 </div>
                 <div>
-                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Notas</label>
-                  <textarea value={apptForm.notes} onChange={e => setApptForm({...apptForm, notes: e.target.value})} placeholder="Notas..." className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-sm" />
+                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_notes")}</label>
+                  <textarea value={apptForm.notes} onChange={e => setApptForm({...apptForm, notes: e.target.value})} placeholder={t("appointments.form_notes_placeholder")} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-sm" />
                 </div>
                 <button
                   onClick={handleSaveAppt}
@@ -970,7 +1286,7 @@ export default function UserDashboard({
                   className="w-full py-4 bg-red-600 text-white rounded-2xl font-black italic text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {apptSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {editingApptId ? "GUARDAR CAMBIOS" : "CREAR CITA"}
+                  {editingApptId ? t("appointments.form_save") : t("appointments.form_create")}
                 </button>
               </div>
             </motion.div>

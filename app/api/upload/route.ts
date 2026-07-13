@@ -15,12 +15,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    const isVideo = file.type.startsWith("video/");
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
     const result: any = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: "jandosoft", resource_type: "image" },
+        { folder: "jandosoft", resource_type: isVideo ? "video" : "image" },
         (error, result) => {
           if (error) reject(error);
           else resolve(result);
@@ -29,9 +30,13 @@ export async function POST(req: Request) {
       uploadStream.end(buffer);
     });
 
-    return NextResponse.json({ url: result.secure_url, publicId: result.public_id });
+    return NextResponse.json({
+      url: result.secure_url,
+      publicId: result.public_id,
+      mediaType: isVideo ? "video" : "image",
+    });
   } catch (error) {
     console.error("Upload error:", error);
-    return NextResponse.json({ error: "Error uploading image" }, { status: 500 });
+    return NextResponse.json({ error: "Error uploading file" }, { status: 500 });
   }
 }

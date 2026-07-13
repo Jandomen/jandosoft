@@ -1,5 +1,6 @@
 import { connectDB } from "@/lib/mongodb";
 import { Store } from "@/lib/models/Store";
+import { verifyAdminAuth } from "@/lib/admin-middleware";
 
 function parseDuration(duration: string): Date | null {
   if (!duration || duration === "permanent") return null;
@@ -18,6 +19,9 @@ function parseDuration(duration: string): Date | null {
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const authResult = await verifyAdminAuth(req);
+  if ("error" in authResult) return authResult.error;
+
   try {
     await connectDB();
     const { id } = await params;
@@ -25,7 +29,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const store = await Store.findById(id);
     if (!store) {
-      return Response.json({ error: "Tienda no encontrada" }, { status: 404 });
+      return Response.json({ error: "Empresa no encontrada" }, { status: 404 });
     }
 
     const now = new Date();

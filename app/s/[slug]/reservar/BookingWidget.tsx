@@ -133,7 +133,6 @@ export default function BookingWidget({ slug, services }: { slug: string; servic
 
   return (
     <div className="bg-zinc-50 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 p-6 md:p-10 shadow-sm">
-      {/* Steps indicator */}
       <div className="flex items-center justify-center gap-2 mb-8">
         {[1, 2, 3].map(s => (
           <div key={s} className="flex items-center gap-2">
@@ -150,7 +149,6 @@ export default function BookingWidget({ slug, services }: { slug: string; servic
         ))}
       </div>
 
-      {/* Step 1: Select service */}
       {step === 1 && (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
           <h3 className="text-sm md:text-base font-black italic text-zinc-950 uppercase tracking-tighter mb-4">Elige un Servicio</h3>
@@ -189,7 +187,6 @@ export default function BookingWidget({ slug, services }: { slug: string; servic
         </motion.div>
       )}
 
-      {/* Step 2: Select date & time */}
       {step === 2 && (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
           <div className="flex items-center justify-between">
@@ -202,7 +199,6 @@ export default function BookingWidget({ slug, services }: { slug: string; servic
             </motion.button>
           </div>
 
-          {/* Calendar */}
           <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden">
             <div className="flex items-center justify-between p-3 border-b border-zinc-100">
               <motion.button whileTap={{ scale: 0.9 }} onClick={prevMonth}
@@ -243,7 +239,6 @@ export default function BookingWidget({ slug, services }: { slug: string; servic
             </div>
           </div>
 
-          {/* Time slots */}
           {selectedDate && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
               <h4 className="text-[10px] font-black italic text-zinc-500 uppercase tracking-wider">
@@ -273,7 +268,6 @@ export default function BookingWidget({ slug, services }: { slug: string; servic
         </motion.div>
       )}
 
-      {/* Step 3: Contact info */}
       {step === 3 && (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
           <div className="flex items-center justify-between">
@@ -286,7 +280,6 @@ export default function BookingWidget({ slug, services }: { slug: string; servic
             </motion.button>
           </div>
 
-          {/* Summary */}
           <div className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-2">
             <div className="flex items-center gap-2 text-[10px] text-zinc-600 font-medium">
               <Briefcase className="w-3.5 h-3.5 text-red-500" />
@@ -302,7 +295,6 @@ export default function BookingWidget({ slug, services }: { slug: string; servic
             </div>
           </div>
 
-          {/* Form */}
           <div className="space-y-3">
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />

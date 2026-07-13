@@ -62,10 +62,10 @@ export default function AdminLoginPage() {
           <div className="w-16 h-16 md:w-20 md:h-20 bg-red-600 rounded-2xl md:rounded-3xl mx-auto flex items-center justify-center text-white shadow-xl shadow-red-100 mb-4 md:mb-6">
             <ShieldCheck className="w-8 h-8 md:w-10 md:h-10" />
           </div>
-          <h1 className="text-2xl md:text-4xl font-black italic text-zinc-950 uppercase tracking-tighter">
-            Admin <span className="text-red-600">Jandosoft</span>
+          <h1 className="text-2xl md:text-4xl font-bold text-zinc-900 tracking-tight">
+            Admin <span className="font-wallpoet tracking-[0.2em] text-red-600">JANDOSOFT</span>
           </h1>
-          <p className="text-[9px] md:text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1 md:mt-2 italic">
+          <p className="text-[9px] md:text-[10px] font-medium text-zinc-400 uppercase tracking-widest mt-1 md:mt-2">
             Panel de Control Corporativo
           </p>
         </div>
@@ -106,8 +106,8 @@ export default function AdminLoginPage() {
             {loading ? "VERIFICANDO..." : "INGRESAR"}
           </motion.button>
         </form>
-        <p className="text-center text-[8px] md:text-[9px] text-zinc-400 font-bold italic mt-4 md:mt-6">
-          Solo personal autorizado · Jandosoft Enterprise
+        <p className="text-center text-[8px] md:text-[9px] text-zinc-400 font-medium mt-4 md:mt-6">
+          Solo personal autorizado · <span className="font-wallpoet tracking-[0.2em] text-red-600">JANDOSOFT</span> Enterprise
         </p>
       </motion.div>
     </div>

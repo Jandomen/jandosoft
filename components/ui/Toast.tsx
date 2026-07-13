@@ -19,9 +19,9 @@ export const Toast = ({ message, type, onClose }: ToastProps) => {
   }, [onClose]);
 
   const config = {
-    success: { icon: <CheckCircle2 className="w-5 h-5" />, bg: "bg-emerald-50", text: "text-emerald-800", border: "border-emerald-200" },
-    error: { icon: <AlertCircle className="w-5 h-5" />, bg: "bg-rose-50", text: "text-rose-800", border: "border-rose-200" },
-    info: { icon: <Info className="w-5 h-5" />, bg: "bg-blue-50", text: "text-blue-800", border: "border-blue-200" },
+    success: { icon: <CheckCircle2 className="w-5 h-5" />, bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-700 dark:text-emerald-300", border: "border-emerald-300 dark:border-emerald-800/60" },
+    error: { icon: <AlertCircle className="w-5 h-5" />, bg: "bg-rose-50 dark:bg-rose-950/50", text: "text-rose-800 dark:text-rose-300", border: "border-rose-200 dark:border-rose-800/60" },
+    info: { icon: <Info className="w-5 h-5" />, bg: "bg-blue-50 dark:bg-yellow-900/20", text: "text-blue-800 dark:text-yellow-300", border: "border-blue-200 dark:border-yellow-700/50" },
   };
 
   const { icon, bg, text, border } = config[type];

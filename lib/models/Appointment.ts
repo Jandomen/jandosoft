@@ -23,6 +23,9 @@ export interface IAppointment extends Document {
   notes: string;
   status: AppointmentStatus;
   createdBy: "customer" | "owner";
+  paymentStatus: "unpaid" | "pending" | "paid" | "refunded";
+  stripePaymentUrl?: string;
+  stripePaymentIntentId?: string;
   reminders: { type: "email"; sentAt: Date }[];
   createdAt: Date;
 }
@@ -52,6 +55,9 @@ const AppointmentSchema = new Schema<IAppointment>({
     default: "pending",
   },
   createdBy: { type: String, enum: ["customer", "owner"], default: "owner" },
+  paymentStatus: { type: String, enum: ["unpaid", "pending", "paid", "refunded"], default: "unpaid" },
+  stripePaymentUrl: { type: String, default: "" },
+  stripePaymentIntentId: { type: String, default: "" },
   reminders: [{
     type: { type: String, enum: ["email"] },
     sentAt: { type: Date },

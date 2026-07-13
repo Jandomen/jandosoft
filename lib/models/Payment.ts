@@ -16,6 +16,9 @@ export interface IPayment extends Document {
   description: string;
   createdAt: Date;
   organizationId?: mongoose.Types.ObjectId;
+  appointmentId?: mongoose.Types.ObjectId;
+  receiptNumber?: string;
+  receiptSentAt?: Date;
 }
 
 const PaymentSchema = new Schema<IPayment>({
@@ -32,7 +35,10 @@ const PaymentSchema = new Schema<IPayment>({
   stripeAccountId: { type: String, default: "" },
   status: { type: String, default: "pending" },
   description: { type: String, default: "" },
+  appointmentId: { type: Schema.Types.ObjectId, ref: "Appointment" },
   createdAt: { type: Date, default: Date.now },
+  receiptNumber: { type: String, default: "" },
+  receiptSentAt: { type: Date },
 }, { timestamps: true });
 
 export const Payment = mongoose.models.Payment || mongoose.model<IPayment>("Payment", PaymentSchema);

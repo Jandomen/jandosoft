@@ -3,49 +3,36 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { LanguageCarousel } from "@/components/ui/LanguageCarousel";
 import {
   BarChart3, 
   Users, 
   Settings, 
   Plus, 
   TrendingUp, 
-  Clock, 
-  Database as DbIcon, 
   Package, 
-  ArrowUpRight, 
   Search, 
   LogOut, 
   Trash2, 
-  Globe, 
-  Cpu, 
-  Key, 
-  Cloud,
-  Layers,
   FileText,
   Mail,
   Zap,
   ShoppingBag,
   ShieldCheck,
-  CreditCard,
   Image as ImageIcon,
   ChevronRight,
-  Upload,
   Download,
   DollarSign,
   Store,
-  UserCheck,
-  Building2,
   RefreshCw,
-  Menu,
-  X,
   Megaphone,
   Ban,
+  Code2,
   CheckCircle,
   ExternalLink,
   Star,
   Check,
   Save,
-  RotateCcw,
   Edit3,
 } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/pdf-utils";
@@ -56,13 +43,10 @@ const cn = (...classes: string[]) => classes.filter(Boolean).join(' ');
 interface AdminProps {
   currency: string;
   setCurrency: (c: any) => void;
-  products: any[];
-  setProducts: (p: any) => void;
-  transactions: any[];
 }
 
-export default function Admin({ currency, setCurrency, products, setProducts, transactions, onLogout }: AdminProps & { onLogout?: () => void }) {
-  const { language, setLanguage, t } = useLanguage();
+export default function Admin({ currency, setCurrency, onLogout }: AdminProps & { onLogout?: () => void }) {
+  const { t } = useLanguage();
   const [newProduct, setNewProduct] = useState<{ name: string; price: string; desc: string; images: string[] }>({ name: "", price: "", desc: "", images: [] });
   const [activeTab, setActiveTab] = useState("dashboard");
   const [liveActivity, setLiveActivity] = useState<{ action: string; time: string; detail?: string; createdAt?: string }[]>([]);
@@ -80,6 +64,9 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [allStores, setAllStores] = useState<any[]>([]);
   const [allInvoices, setAllInvoices] = useState<any[]>([]);
+  const [allPayments, setAllPayments] = useState<any[]>([]);
+  const [paymentSearch, setPaymentSearch] = useState("");
+  const [loadingPayments, setLoadingPayments] = useState(false);
   const [commercials, setCommercials] = useState<any[]>([]);
   const [searchStores, setSearchStores] = useState("");
   const [searchUsers, setSearchUsers] = useState("");
@@ -103,9 +90,22 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
   const [savingPlans, setSavingPlans] = useState(false);
   const [syncingStripe, setSyncingStripe] = useState(false);
   const [planToast, setPlanToast] = useState("");
+  const [selectedStoreId, setSelectedStoreId] = useState<string>("");
+  const [storeProducts, setStoreProducts] = useState<any[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [publishingProduct, setPublishingProduct] = useState(false);
+  const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
 
   const [changingPlanUserId, setChangingPlanUserId] = useState<string | null>(null);
   const [changingPlanValue, setChangingPlanValue] = useState("");
+
+  const [widgetStoreId, setWidgetStoreId] = useState("");
+  const [widgetConfig, setWidgetConfig] = useState<any>(null);
+  const [widgetStoreName, setWidgetStoreName] = useState("");
+  const [widgetSlug, setWidgetSlug] = useState("");
+  const [savingWidget, setSavingWidget] = useState(false);
+  const [widgetToast, setWidgetToast] = useState("");
+  const [widgetCopied, setWidgetCopied] = useState(false);
 
   const fetchDashboard = async (overrides?: {
     searchUsers?: string; usersPage?: number;
@@ -119,12 +119,13 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
       const sPage = overrides?.storesPage ?? storesPage;
       const iPage = overrides?.invoicesPage ?? invoicesPage;
 
-      const [dashRes, usersRes, storesRes, invRes, commRes] = await Promise.all([
+      const [dashRes, usersRes, storesRes, invRes, commRes, payRes] = await Promise.all([
         fetch("/api/admin/dashboard"),
         fetch(`/api/admin/users?search=${encodeURIComponent(uSearch)}&page=${uPage}&limit=20`),
         fetch(`/api/admin/stores?search=${encodeURIComponent(sSearch)}&page=${sPage}&limit=20`),
         fetch(`/api/invoices?page=${iPage}&limit=20`),
         fetch("/api/admin/commercials"),
+        fetch(`/api/stripe/payments?limit=100`),
       ]);
       if (dashRes.ok) {
         const data = await dashRes.json();
@@ -149,6 +150,10 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
       if (commRes.ok) {
         const data = await commRes.json();
         setCommercials(data.commercials || []);
+      }
+      if (payRes.ok) {
+        const data = await payRes.json();
+        setAllPayments(data.payments || []);
       }
     } catch (e) {
       console.error("Error fetching admin data:", e);
@@ -207,6 +212,77 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
     } finally {
       setSyncingStripe(false);
       setTimeout(() => setPlanToast(""), 3000);
+    }
+  };
+
+  const handleDeletePlan = (planId: string) => {
+    if (!planConfig) return;
+    setPlanConfig({ ...planConfig, plans: planConfig.plans.filter((p: any) => p.id !== planId) });
+    setDeletingPlanId(null);
+    setEditingPlanId(null);
+    setEditForm(null);
+    setPlanToast("Plan eliminado. No olvides guardar los cambios.");
+    setTimeout(() => setPlanToast(""), 3000);
+  };
+
+  const fetchStoreProducts = async (storeId: string) => {
+    if (!storeId) return;
+    setLoadingProducts(true);
+    try {
+      const res = await fetch(`/api/admin/stores/${storeId}/products`);
+      if (res.ok) {
+        const data = await res.json();
+        setStoreProducts(data.products || []);
+      }
+    } catch {
+      console.error("Error fetching store products");
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const handlePublishProduct = async () => {
+    if (!newProduct.name || !newProduct.price || !selectedStoreId) return;
+    setPublishingProduct(true);
+    try {
+      const product = {
+        id: Date.now(),
+        name: newProduct.name,
+        price: parseFloat(newProduct.price),
+        stock: 0,
+      };
+      const updatedProducts = [...storeProducts, product];
+      const res = await fetch(`/api/admin/stores/${selectedStoreId}/products`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ products: updatedProducts }),
+      });
+      if (res.ok) {
+        setStoreProducts(updatedProducts);
+        setNewProduct({ name: "", price: "", desc: "", images: [] });
+        setImageUrlInput("");
+      }
+    } catch {
+      console.error("Error publishing product");
+    } finally {
+      setPublishingProduct(false);
+    }
+  };
+
+  const handleDeleteStoreProduct = async (productId: number) => {
+    if (!selectedStoreId) return;
+    const updatedProducts = storeProducts.filter((p: any) => p.id !== productId);
+    try {
+      const res = await fetch(`/api/admin/stores/${selectedStoreId}/products`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ products: updatedProducts }),
+      });
+      if (res.ok) {
+        setStoreProducts(updatedProducts);
+      }
+    } catch {
+      console.error("Error deleting product");
     }
   };
 
@@ -334,21 +410,6 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
     }
   };
 
-  const publishProduct = () => {
-    if (!newProduct.name || !newProduct.price) return;
-    const product = {
-      id: Date.now(),
-      name: newProduct.name,
-      price: parseFloat(newProduct.price),
-      desc: newProduct.desc,
-      images: newProduct.images,
-      icon: <Package className="w-8 h-8" />
-    };
-    setProducts([product, ...products]);
-    setNewProduct({ name: "", price: "", desc: "", images: [] });
-    setActiveTab("dashboard");
-  };
-
   return (
     <div className="flex flex-col min-h-[600px] md:h-[800px] w-full max-w-7xl mx-auto border-0 md:border border-zinc-200 rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl bg-white">
       <header className="max-[340px]:px-2 max-[400px]:px-3 px-4 md:px-10 max-[340px]:py-2 max-[400px]:py-3 py-4 md:py-6 bg-white border-b border-zinc-100 flex items-center justify-between gap-1 md:gap-2">
@@ -357,8 +418,8 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                <ShieldCheck className="w-5 h-5 md:w-6 md:h-6" />
             </div>
             <div className="min-w-0">
-               <h2 className="max-[400px]:text-base text-lg md:text-xl font-black italic tracking-tighter text-zinc-950 truncate"><span className="text-red-600">Jandosoft</span> {t("admin.title")}</h2>
-               <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest italic truncate">{t("admin.subtitle")}</p>
+               <h2 className="max-[400px]:text-base text-lg md:text-xl font-black italic tracking-tighter text-zinc-950 truncate"><span className="font-wallpoet tracking-[0.2em] text-red-600">JANDOSOFT</span> {t("admin.title")}</h2>
+               <p className="text-[8px] md:text-[10px] font-wallpoet text-zinc-400 uppercase tracking-[0.2em] italic truncate">{t("admin.subtitle")}</p>
             </div>
          </div>
          <div className="hidden md:flex items-center gap-6">
@@ -375,20 +436,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                    <option value="ARS">ARS ($)</option>
                 </select>
              </div>
-             <div className="flex items-center gap-2 px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl">
-                <Globe className="w-3.5 h-3.5 text-zinc-400" />
-                <select 
-                   value={language} 
-                   onChange={(e) => setLanguage(e.target.value as any)}
-                   className="bg-transparent text-xs font-black italic text-red-600 outline-none cursor-pointer"
-                >
-                   <option value="es">Español</option>
-                   <option value="en">English</option>
-                   <option value="fr">Français</option>
-                   <option value="zh">中文</option>
-                   <option value="hi">हिन्दी</option>
-                </select>
-             </div>
+              <LanguageCarousel />
               <button onClick={() => fetchDashboard()} className="p-2.5 hover:bg-zinc-50 rounded-xl transition-all" title="Actualizar datos">
                 <RefreshCw className={cn("w-5 h-5 text-zinc-400", loading ? "animate-spin" : "")} />
               </button>
@@ -397,7 +445,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
              </button>
              <div className="flex items-center gap-3">
                <div className="text-right">
-                  <p className="text-xs font-black text-zinc-950 italic">Admin@Jandosoft</p>
+                  <p className="text-xs font-wallpoet text-zinc-950 italic">Admin@Jandosoft</p>
                   <p className="text-[9px] font-bold text-zinc-400 uppercase">Superuser</p>
                </div>
                <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center font-black text-xs text-white shadow-lg">AD</div>
@@ -425,6 +473,8 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
           { id: "analytics", icon: <BarChart3 className="w-3.5 h-3.5" />, label: t("nav.analytics") },
           { id: "revenue", icon: <DollarSign className="w-3.5 h-3.5" />, label: t("admin.revenue") },
           { id: "history", icon: <FileText className="w-3.5 h-3.5" />, label: t("admin.history") },
+          { id: "payments", icon: <DollarSign className="w-3.5 h-3.5" />, label: "Pagos" },
+          { id: "widget", icon: <Code2 className="w-3.5 h-3.5" />, label: "Widget" },
           { id: "commercials", icon: <Megaphone className="w-3.5 h-3.5" />, label: t("admin.commercials") },
           { id: "plans", icon: <Star className="w-3.5 h-3.5" />, label: t("admin.plans") },
           { id: "settings", icon: <Settings className="w-3.5 h-3.5" />, label: t("admin.settings_label") },
@@ -447,14 +497,15 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
               <MenuItem icon={<Users />} label={t("admin.users")} active={activeTab === "users"} onClick={() => setActiveTab("users")} />
               <MenuItem icon={<Store />} label={t("admin.stores")} active={activeTab === "stores"} onClick={() => setActiveTab("stores")} />
               <MenuItem icon={<ShoppingBag />} label={t("section.products")} active={activeTab === "store-admin"} onClick={() => setActiveTab("store-admin")} />
-              <MenuItem icon={<DbIcon />} label={t("admin.database")} active={activeTab === "database"} onClick={() => setActiveTab("database")} />
            </div>
            <div className="space-y-1">
             <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 lg:mb-4 italic">{t("admin.management")}</h3>
               <MenuItem icon={<BarChart3 />} label={t("nav.analytics")} active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} />
               <MenuItem icon={<DollarSign />} label={t("admin.revenue")} active={activeTab === 'revenue'} onClick={() => setActiveTab('revenue')} />
               <MenuItem icon={<FileText />} label={t("admin.history")} active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
+              <MenuItem icon={<DollarSign />} label={"Pagos"} active={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
                 <MenuItem icon={<Megaphone />} label={t("admin.commercials")} active={activeTab === 'commercials'} onClick={() => setActiveTab('commercials')} />
+                <MenuItem icon={<Code2 />} label={"Widget"} active={activeTab === 'widget'} onClick={() => setActiveTab('widget')} />
                 <MenuItem icon={<Mail />} label={t("admin.email")} active={activeTab === 'email'} onClick={() => setActiveTab('email')} />
                 <MenuItem icon={<Star />} label={t("admin.plans")} active={activeTab === 'plans'} onClick={() => setActiveTab('plans')} />
                 <MenuItem icon={<Settings />} label={t("admin.settings_label")} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
@@ -700,7 +751,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                         </div>
                       ))}
                       {allStores.length === 0 && (
-                        <div className="py-12 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200">{searchStores ? t("status.noresults") : "No hay tiendas creadas"}</div>
+                        <div className="py-12 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200">{searchStores ? t("status.noresults") : "No hay empresas creadas"}</div>
                       )}
                     </div>
                     {totalStoresPages > 1 && (
@@ -725,7 +776,25 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                    <motion.div key="store" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 md:space-y-10">
                       <div className="flex items-center justify-between flex-wrap gap-3">
                          <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">{t("admin.products_title")}</h3>
-                         <span className="text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest italic">{t("admin.published_items").replace("{n}", String(products.length))}</span>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Empresa</label>
+                        <select
+                          value={selectedStoreId}
+                          onChange={(e) => {
+                            setSelectedStoreId(e.target.value);
+                            setStoreProducts([]);
+                            setNewProduct({ name: "", price: "", desc: "", images: [] });
+                            if (e.target.value) fetchStoreProducts(e.target.value);
+                          }}
+                          className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic"
+                        >
+                          <option value="">Seleccionar empresa...</option>
+                          {allStores.map((s: any) => (
+                            <option key={s._id} value={s._id}>{s.name} ({s.ownerEmail})</option>
+                          ))}
+                        </select>
                       </div>
                       
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
@@ -735,100 +804,77 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                                   <AdminInput label={t("admin.product_name")} placeholder="Ej. Plan Avanzado" value={newProduct.name} onChange={(v: string) => setNewProduct({...newProduct, name: v})} />
                                   <AdminInput label={t("admin.investment").replace("{currency}", currency)} placeholder="Ej. 299" type="number" value={newProduct.price} onChange={(v: string) => setNewProduct({...newProduct, price: v})} />
                                </div>
-                               <div className="space-y-1.5">
-                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest ml-1">{t("admin.short_desc")}</label>
-                                  <textarea 
-                                     value={newProduct.desc}
-                                     onChange={(e) => setNewProduct({...newProduct, desc: e.target.value})}
-                                     className="w-full bg-white border border-zinc-100 rounded-xl md:rounded-2xl p-3 md:p-4 text-[11px] md:text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50"
-                                     placeholder="Detalles del producto..."
-                                  />
-                               </div>
                                
-                               <div className="space-y-3">
-                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic flex items-center justify-between">
-                                     {t("admin.gallery")}
-                                     <span className="text-red-600">{newProduct.images.length}/10</span>
-                                  </label>
-                                  <div className="grid grid-cols-5 gap-2">
-                                     {newProduct.images.map((img, i) => (
-                                        <div key={i} className="aspect-square bg-white rounded-xl overflow-hidden border border-zinc-100 relative group shadow-sm">
-                                           <img src={img} className="w-full h-full object-cover" />
-                                           <button onClick={() => setNewProduct({...newProduct, images: newProduct.images.filter((_, idx) => idx !== i)})} className="absolute inset-0 bg-red-600/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Trash2 className="w-4 h-4" /></button>
-                                        </div>
-                                     ))}
-                                     {newProduct.images.length < 10 && (
-                                        <label className="aspect-square bg-white border-2 border-dashed border-zinc-200 rounded-xl flex items-center justify-center text-zinc-300 hover:text-red-500 hover:border-red-200 cursor-pointer transition-all">
-                                           <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
-                                           <Plus className="w-6 h-6" />
-                                        </label>
-                                     )}
-                                   </div>
-                                   <div className="flex gap-2">
-                                     <div className="relative flex-1">
-                                       <input
-                                         type="text"
-                                         placeholder="O pega una URL de imagen..."
-                                         value={imageUrlInput}
-                                         onChange={e => setImageUrlInput(e.target.value)}
-                                         onKeyDown={e => e.key === "Enter" && addImageUrl()}
-                                         className="w-full bg-white h-10 px-3 rounded-xl border border-zinc-200 outline-none text-[10px] font-medium focus:border-red-200 transition-all"
-                                       />
-                                     </div>
-                                     <button
-                                       onClick={addImageUrl}
-                                       disabled={!imageUrlInput || newProduct.images.length >= 10}
-                                       className="px-4 py-2 bg-zinc-800 text-white rounded-xl text-[8px] font-black italic hover:bg-zinc-700 transition-all disabled:opacity-50 shrink-0"
-                                     >
-                                        {t("biz.add_image")}
-                                     </button>
-                                   </div>
-                                </div>
-                                
-                                <motion.button whileTap={{ scale: 0.95 }}
-                                   onClick={publishProduct}
-                                  className="w-full py-4 md:py-5 bg-red-600 text-white rounded-2xl font-black italic shadow-xl shadow-red-100 hover:bg-red-700 transition-all flex items-center justify-center gap-3 uppercase text-xs md:text-sm"
+                               <motion.button whileTap={{ scale: 0.95 }}
+                                 onClick={handlePublishProduct}
+                                 disabled={!selectedStoreId || publishingProduct || !newProduct.name || !newProduct.price}
+                                 className="w-full py-4 md:py-5 bg-red-600 text-white rounded-2xl font-black italic shadow-xl shadow-red-100 hover:bg-red-700 transition-all flex items-center justify-center gap-3 uppercase text-xs md:text-sm disabled:opacity-50"
                                >
-                                  {t("admin.publish_product")} <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
+                                 {publishingProduct ? "PUBLICANDO..." : (t("admin.publish_product") + " ")} <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
                                </motion.button>
                             </div>
                          </div>
 
                          <div className="space-y-3 md:space-y-4">
-                            <h4 className="text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest italic">{t("admin.active_items")}</h4>
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest italic">
+                                {selectedStoreId ? `Productos (${storeProducts.length})` : "Selecciona una empresa"}
+                              </h4>
+                              {selectedStoreId && (
+                                <motion.button whileTap={{ scale: 0.9 }} onClick={() => fetchStoreProducts(selectedStoreId)} className="p-1.5 hover:bg-zinc-50 rounded-lg transition-all">
+                                  <RefreshCw className={cn("w-3.5 h-3.5 text-zinc-400", loadingProducts ? "animate-spin" : "")} />
+                                </motion.button>
+                              )}
+                            </div>
                             <div className="grid grid-cols-1 gap-3 md:gap-4">
-                               {products.map((p: any) => (
+                               {loadingProducts ? (
+                                 <div className="py-8 text-center italic font-black text-zinc-200 text-[10px]">Cargando...</div>
+                               ) : storeProducts.length === 0 ? (
+                                 <div className="py-8 text-center italic font-black text-zinc-200 text-[10px]">Sin productos</div>
+                               ) : (storeProducts.map((p: any) => (
                                   <div key={p.id} className="bg-white max-[400px]:p-3 p-4 rounded-2xl md:rounded-3xl border border-zinc-100 shadow-sm flex items-center justify-between group hover:border-red-600/20 transition-all">
                                      <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
                                         <div className="w-8 h-8 md:w-12 md:h-12 bg-zinc-50 rounded-xl md:rounded-2xl flex items-center justify-center text-red-600 shadow-inner shrink-0">
-                                           {p.icon || <Package />}
+                                           <Package className="w-4 h-4 md:w-6 md:h-6" />
                                         </div>
                                         <div className="min-w-0">
                                            <p className="font-black italic text-xs md:text-sm text-zinc-950 truncate">{p.name}</p>
                                            <p className="text-[9px] md:text-[10px] font-bold text-zinc-400 italic">{currency} {p.price}</p>
                                         </div>
                                      </div>
-                                     <motion.button whileTap={{ scale: 0.9 }} onClick={() => setProducts(products.filter((pr: any) => pr.id !== p.id))} className="p-2 md:p-3 text-zinc-300 hover:text-rose-500 transition-colors shrink-0">
+                                     <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleDeleteStoreProduct(p.id)} className="p-2 md:p-3 text-zinc-300 hover:text-rose-500 transition-colors shrink-0">
                                         <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
                                      </motion.button>
                                   </div>
-                               ))}
+                               )))}
                             </div>
                          </div>
                       </div>
-                  </motion.div>
-               )}
+                   </motion.div>
+                )}
 
-                {activeTab === "database" && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}><div className="text-sm font-black italic text-zinc-400 p-10">{t("admin.database")}</div></motion.div>}
                
                 {activeTab === "settings" && (
                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 md:space-y-10">
                       <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">{t("admin.config_title")}</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
-                         <ConfigBox label="MongoDB Cluster" value="mongodb+srv://alquizor8..." icon={<DbIcon className="text-emerald-500" />} />
-                         <ConfigBox label="Cloudinary Assets" value="dpmufjj8y" icon={<Cloud className="text-blue-500" />} />
-                         <ConfigBox label="Stripe Endpoint" value="sk_live_51PLATLD..." icon={<CreditCard className="text-red-500" />} />
-                         <ConfigBox label="NowPayments Key" value="7H9EZ7V-2V5M2WK..." icon={<Zap className="text-amber-500" />} />
+                      <div className="max-w-md space-y-4">
+                        <div className="bg-zinc-50 p-6 md:p-8 rounded-[2rem] border border-zinc-100 space-y-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white rounded-xl shadow-sm"><ShieldCheck className="w-5 h-5 text-red-600" /></div>
+                            <div>
+                              <p className="text-xs font-wallpoet italic text-zinc-950 uppercase">Jandosoft Admin</p>
+                              <p className="text-[9px] font-bold text-zinc-400">Versión 1.0.0</p>
+                            </div>
+                          </div>
+                          <div className="w-full h-px bg-zinc-200" />
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={onLogout}
+                            className="w-full py-3 md:py-4 bg-rose-600 text-white rounded-2xl font-black italic text-[10px] md:text-xs hover:bg-rose-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-100"
+                          >
+                            <LogOut className="w-4 h-4" /> CERRAR SESIÓN
+                          </motion.button>
+                        </div>
                       </div>
                    </motion.div>
                 )}
@@ -897,7 +943,102 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                       </div>
                     )}
                     </motion.div>
-                  )}
+                   )}
+
+                {activeTab === "payments" && (
+                   <motion.div key="payments" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4 md:space-y-8">
+                      <div className="flex items-center justify-between flex-wrap gap-3">
+                         <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">Pagos Recibidos</h3>
+                         <div className="px-3 md:px-4 py-1.5 md:py-2 bg-zinc-950 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase italic">{allPayments.length} Pagos</div>
+                      </div>
+
+                      <div className="relative">
+                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
+                         <input
+                           type="text"
+                           value={paymentSearch}
+                           onChange={e => setPaymentSearch(e.target.value)}
+                           placeholder="Buscar por email, descripción, recibo..."
+                           className="w-full bg-zinc-50 pl-11 pr-4 py-3 rounded-2xl border border-zinc-100 outline-none font-bold text-sm focus:bg-white focus:border-red-200 transition-all italic"
+                         />
+                      </div>
+
+                      <div className="bg-white border border-zinc-100 rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden shadow-xl overflow-x-auto">
+                         <table className="w-full text-left min-w-[600px]">
+                            <thead className="bg-zinc-50 border-b border-zinc-100">
+                               <tr>
+                                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Fecha</th>
+                                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Cliente</th>
+                                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Descripción</th>
+                                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Monto</th>
+                                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Comisión</th>
+                                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Método</th>
+                                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Recibo</th>
+                               </tr>
+                            </thead>
+                            <tbody>
+                               {(paymentSearch
+                                 ? allPayments.filter((p: any) =>
+                                     p.customerEmail?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+                                     p.customerName?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+                                     p.description?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+                                     p.receiptNumber?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+                                     p.displayDescription?.toLowerCase().includes(paymentSearch.toLowerCase())
+                                   )
+                                 : allPayments
+                               ).map((p: any) => (
+                                  <tr key={p._id} className="border-b border-zinc-50 hover:bg-zinc-50/50 transition-colors">
+                                     <td className="px-5 md:px-8 py-4 md:py-5">
+                                        <p className="text-[10px] md:text-xs font-black text-zinc-950 italic">{new Date(p.createdAt).toLocaleDateString()}</p>
+                                        <p className="text-[9px] md:text-[10px] text-zinc-400 font-bold">{p.receiptNumber || `#${p._id?.slice(-6)}`}</p>
+                                     </td>
+                                     <td className="px-5 md:px-8 py-4 md:py-5">
+                                        <p className="text-[10px] md:text-xs font-bold text-zinc-600 italic truncate max-w-[120px] md:max-w-none">{p.customerName || p.customerEmail}</p>
+                                     </td>
+                                     <td className="px-5 md:px-8 py-4 md:py-5">
+                                        <p className="text-[10px] md:text-xs font-bold text-zinc-600 italic truncate max-w-[120px] md:max-w-none">{p.displayDescription || p.description || "—"}</p>
+                                     </td>
+                                     <td className="px-5 md:px-8 py-4 md:py-5">
+                                        <p className="text-xs md:text-sm font-black text-red-600 italic">{p.displayCurrency || (p.currency || "USD").toUpperCase()} ${p.displayAmount?.toFixed(2) || p.amount?.toFixed(2)}</p>
+                                     </td>
+                                     <td className="px-5 md:px-8 py-4 md:py-5">
+                                        <p className="text-[10px] md:text-xs font-bold text-zinc-400 italic">{p.platformFee ? `$${p.platformFee.toFixed(2)}` : "—"}</p>
+                                     </td>
+                                     <td className="px-5 md:px-8 py-4 md:py-5">
+                                        <span className="px-2 py-0.5 bg-zinc-100 text-zinc-500 rounded-full text-[8px] md:text-[9px] font-black italic uppercase">{p.displayPaymentMethod}</span>
+                                     </td>
+                                     <td className="px-5 md:px-8 py-4 md:py-5 text-right">
+                                        <motion.button whileTap={{ scale: 0.9 }}
+                                           onClick={async () => {
+                                             try {
+                                               const res = await fetch(`/api/receipts/${p._id}`);
+                                               if (!res.ok) return;
+                                               const blob = await res.blob();
+                                               const url = URL.createObjectURL(blob);
+                                               const a = document.createElement("a");
+                                               a.href = url;
+                                               a.download = `Recibo_${p.receiptNumber || p._id?.slice(-8)}.pdf`;
+                                               a.click();
+                                               URL.revokeObjectURL(url);
+                                             } catch {}
+                                           }}
+                                           className="p-2 md:p-3 bg-zinc-50 text-zinc-400 hover:text-red-600 hover:bg-white hover:shadow-lg rounded-xl transition-all"
+                                        >
+                                           <Download className="w-4 h-4 md:w-5 md:h-5" />
+                                        </motion.button>
+                                     </td>
+                                  </tr>
+                               ))}
+                               {allPayments.length === 0 && (
+                                  <tr>
+                                     <td colSpan={7} className="px-5 md:px-8 py-12 md:py-16 text-center italic font-black uppercase text-zinc-200 tracking-widest text-xs md:text-sm">No hay pagos registrados</td>
+                                  </tr>
+                               )}
+                            </tbody>
+                          </table>
+                       </div>
+                    </motion.div>
+                )}
 
                  {activeTab === "analytics" && (
                    <motion.div key="analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 md:space-y-8">
@@ -908,7 +1049,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                          <p className="max-[400px]:text-3xl text-4xl md:text-5xl font-black italic text-zinc-950">{dashboardStats.totalUsers}</p>
                        </div>
                        <div className="bg-zinc-50 max-[400px]:p-5 p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-zinc-100 space-y-2 md:space-y-4">
-                         <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase italic">Total Tiendas</p>
+                         <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase italic">Total Empresas</p>
                          <p className="max-[400px]:text-3xl text-4xl md:text-5xl font-black italic text-zinc-950">{dashboardStats.totalStores}</p>
                        </div>
                        <div className="bg-zinc-50 max-[400px]:p-5 p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-zinc-100 space-y-2 md:space-y-4">
@@ -1010,6 +1151,20 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                         </motion.button>
                         <motion.button
                           whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            const current = planConfig || { plans: [], freePlan: { id: "free", name: "Gratis", features: [], limits: { maxStores: 1, maxProductsPerStore: 10, maxMessages: 10, maxAutomations: 2 } } };
+                            const newId = `plan_${Date.now()}`;
+                            const newPlan = { id: newId, name: "Nuevo Plan", price: 0, desc: "", popular: false, features: [], limits: { maxStores: 1, maxProductsPerStore: 10, maxMessages: 10, maxAutomations: 2 } };
+                            setPlanConfig({ ...current, plans: [...current.plans, newPlan] });
+                            setEditingPlanId(newId);
+                            setEditForm(newPlan);
+                          }}
+                          className="px-4 md:px-6 py-2 md:py-3 bg-zinc-950 text-white rounded-xl font-black italic text-[10px] md:text-xs hover:bg-zinc-800 transition-all shadow-lg flex items-center gap-2"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> AÑADIR PLAN
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
                           onClick={fetchPlans}
                           className="p-2 md:p-2.5 hover:bg-zinc-50 rounded-xl transition-all"
                         >
@@ -1049,7 +1204,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                             <div className="space-y-2">
                               <label className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest">Límites</label>
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <AdminInput label="Tiendas" type="number" value={editForm.limits?.maxStores?.toString() || "1"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxStores: parseInt(v) || 0}})} />
+                                <AdminInput label="Empresas" type="number" value={editForm.limits?.maxStores?.toString() || "1"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxStores: parseInt(v) || 0}})} />
                                 <AdminInput label="Productos" type="number" value={editForm.limits?.maxProductsPerStore?.toString() || "10"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxProductsPerStore: parseInt(v) || 0}})} />
                                 <AdminInput label="Mensajes IA" type="number" value={editForm.limits?.maxMessages?.toString() || "10"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxMessages: parseInt(v) || 0}})} />
                                 <AdminInput label="Automations" type="number" value={editForm.limits?.maxAutomations?.toString() || "2"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxAutomations: parseInt(v) || 0}})} />
@@ -1063,7 +1218,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                         ) : (
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <div className="bg-white rounded-xl p-3 md:p-4 border border-zinc-100">
-                              <p className="text-[8px] font-black text-zinc-400 uppercase italic">Tiendas</p>
+                              <p className="text-[8px] font-black text-zinc-400 uppercase italic">Empresas</p>
                               <p className="text-lg md:text-xl font-black italic text-zinc-950">{planConfig.freePlan.limits?.maxStores || 1}</p>
                             </div>
                             <div className="bg-white rounded-xl p-3 md:p-4 border border-zinc-100">
@@ -1099,21 +1254,49 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                               </div>
                               <p className="text-[10px] text-zinc-400 font-medium italic">{plan.desc}</p>
                             </div>
-                            <motion.button
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => {
-                                if (editingPlanId === plan.id) {
-                                  setEditingPlanId(null);
-                                  setEditForm(null);
-                                } else {
-                                  setEditingPlanId(plan.id);
-                                  setEditForm({ ...plan });
-                                }
-                              }}
-                              className="p-2 hover:bg-zinc-50 rounded-xl transition-all shrink-0"
-                            >
-                              <Edit3 className={cn("w-4 h-4", editingPlanId === plan.id ? "text-red-600" : "text-zinc-400")} />
-                            </motion.button>
+                            <div className="flex items-center gap-1">
+                              <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => {
+                                  if (editingPlanId === plan.id) {
+                                    setEditingPlanId(null);
+                                    setEditForm(null);
+                                  } else {
+                                    setEditingPlanId(plan.id);
+                                    setEditForm({ ...plan });
+                                  }
+                                }}
+                                className="p-2 hover:bg-zinc-50 rounded-xl transition-all shrink-0"
+                              >
+                                <Edit3 className={cn("w-4 h-4", editingPlanId === plan.id ? "text-red-600" : "text-zinc-400")} />
+                              </motion.button>
+                              {deletingPlanId === plan.id ? (
+                                <div className="flex items-center gap-1">
+                                  <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleDeletePlan(plan.id)}
+                                    className="px-2.5 py-1.5 bg-rose-600 text-white rounded-lg text-[8px] font-black italic hover:bg-rose-700 transition-all"
+                                  >
+                                    SÍ, ELIMINAR
+                                  </motion.button>
+                                  <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => setDeletingPlanId(null)}
+                                    className="px-2.5 py-1.5 bg-zinc-100 text-zinc-500 rounded-lg text-[8px] font-black italic hover:bg-zinc-200 transition-all"
+                                  >
+                                    CANCELAR
+                                  </motion.button>
+                                </div>
+                              ) : (
+                                <motion.button
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => setDeletingPlanId(plan.id)}
+                                  className="p-2 hover:bg-rose-50 rounded-xl transition-all shrink-0"
+                                >
+                                  <Trash2 className="w-4 h-4 text-zinc-400 hover:text-rose-500" />
+                                </motion.button>
+                              )}
+                            </div>
                           </div>
 
                           {editingPlanId === plan.id && editForm ? (
@@ -1142,8 +1325,8 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                               <div className="space-y-2">
                                 <label className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest">Límites</label>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                  <AdminInput label="Tiendas" type="number" value={editForm.limits?.maxStores?.toString() || "3"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxStores: parseInt(v) || 0}})} />
-                                  <AdminInput label="Productos/tienda" type="number" value={editForm.limits?.maxProductsPerStore?.toString() || "50"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxProductsPerStore: parseInt(v) || 0}})} />
+                                  <AdminInput label="Empresas" type="number" value={editForm.limits?.maxStores?.toString() || "3"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxStores: parseInt(v) || 0}})} />
+                                  <AdminInput label="Productos/empresa" type="number" value={editForm.limits?.maxProductsPerStore?.toString() || "50"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxProductsPerStore: parseInt(v) || 0}})} />
                                   <AdminInput label="Mensajes IA" type="number" value={editForm.limits?.maxMessages?.toString() || "50"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxMessages: parseInt(v) || 0}})} />
                                   <AdminInput label="Automations" type="number" value={editForm.limits?.maxAutomations?.toString() || "10"} onChange={(v: string) => setEditForm({...editForm, limits: {...editForm.limits, maxAutomations: parseInt(v) || 0}})} />
                                 </div>
@@ -1158,7 +1341,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
 
                               <div className="flex gap-2 pt-2">
                                 <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setEditingPlanId(null); setEditForm(null); }} className="px-5 py-2.5 bg-zinc-50 text-zinc-500 rounded-xl font-black italic text-[10px] hover:bg-zinc-100 transition-all">CANCELAR</motion.button>
-                                <motion.button whileTap={{ scale: 0.95 }} onClick={() => { if (planConfig) { setPlanConfig({...planConfig, plans: planConfig.plans.map((p: any) => p.id === editForm.id ? editForm : p)}); setEditingPlanId(null); setEditForm(null); }} } className="px-5 py-2.5 bg-zinc-950 text-white rounded-xl font-black italic text-[10px] hover:bg-zinc-800 transition-all">APLICAR</motion.button>
+                                <motion.button whileTap={{ scale: 0.95 }} onClick={() => { if (!planConfig) return; const exists = planConfig.plans.some((p: any) => p.id === editForm.id); setPlanConfig({...planConfig, plans: exists ? planConfig.plans.map((p: any) => p.id === editForm.id ? editForm : p) : [...planConfig.plans, editForm]}); setEditingPlanId(null); setEditForm(null); }} className="px-5 py-2.5 bg-zinc-950 text-white rounded-xl font-black italic text-[10px] hover:bg-zinc-800 transition-all">APLICAR</motion.button>
                               </div>
                             </div>
                           ) : (
@@ -1181,7 +1364,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                           {editingPlanId !== plan.id && (
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
                               <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-100">
-                                <p className="text-[8px] font-black text-zinc-400 uppercase italic">Tiendas</p>
+                                <p className="text-[8px] font-black text-zinc-400 uppercase italic">Empresas</p>
                                 <p className="text-sm md:text-base font-black italic text-zinc-950">{plan.limits?.maxStores || 3}</p>
                               </div>
                               <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-100">
@@ -1201,6 +1384,350 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                         </div>
                       ))}
                     </div>
+                  </motion.div>
+                )}
+
+                {activeTab === "widget" && (
+                  <motion.div key="widget" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 md:space-y-10">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                      <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">
+                        Widget <span className="text-red-600">IA</span>
+                      </h3>
+                      {widgetToast && (
+                        <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-[9px] font-black italic">{widgetToast}</span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Empresa</label>
+                      <select
+                        value={widgetStoreId}
+                        onChange={async (e) => {
+                          setWidgetStoreId(e.target.value);
+                          setWidgetConfig(null);
+                          if (e.target.value) {
+                            try {
+                              const res = await fetch(`/api/admin/widget?storeId=${e.target.value}`);
+                              if (res.ok) {
+                                const data = await res.json();
+                                setWidgetConfig(data.config);
+                                setWidgetStoreName(data.storeName);
+                                setWidgetSlug(data.slug);
+                              }
+                            } catch {}
+                          }
+                        }}
+                        className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic"
+                      >
+                        <option value="">Seleccionar empresa...</option>
+                        {allStores.map((s: any) => (
+                          <option key={s._id} value={s._id}>{s.name} ({s.ownerEmail})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {widgetConfig && (
+                      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 md:gap-10">
+                        <div className="xl:col-span-3 space-y-5 md:space-y-6">
+                          <div className="bg-zinc-50 max-[400px]:p-5 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 shadow-sm space-y-5 md:space-y-6">
+                            <h4 className="text-[10px] font-black text-zinc-400 uppercase italic tracking-widest">Configuración del Widget</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <AdminInput
+                                label="Título del widget"
+                                placeholder="Asistente IA"
+                                value={widgetConfig.title || ""}
+                                onChange={(v: string) => setWidgetConfig({...widgetConfig, title: v})}
+                              />
+                              <AdminInput
+                                label="Texto del header"
+                                placeholder="¿En qué puedo ayudarte?"
+                                value={widgetConfig.headerText || ""}
+                              onChange={(v: string) => setWidgetConfig({...widgetConfig, headerText: v})}
+                            />
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Mensaje de bienvenida</label>
+                              <textarea
+                                value={widgetConfig.welcomeMessage || ""}
+                                onChange={(e) => setWidgetConfig({...widgetConfig, welcomeMessage: e.target.value})}
+                                className="w-full bg-white border border-zinc-100 rounded-xl p-3 md:p-4 text-[11px] font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic h-20 resize-none"
+                                placeholder="¡Hola! Soy tu asistente virtual. ¿En qué puedo ayudarte?"
+                              />
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Placeholder del input</label>
+                              <input
+                                type="text"
+                                value={widgetConfig.placeholder || ""}
+                                onChange={(e) => setWidgetConfig({...widgetConfig, placeholder: e.target.value})}
+                                className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic"
+                                placeholder="Escribe tu mensaje..."
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Color primario</label>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="color"
+                                    value={widgetConfig.primaryColor || "#dc2626"}
+                                    onChange={(e) => setWidgetConfig({...widgetConfig, primaryColor: e.target.value})}
+                                    className="w-12 h-12 rounded-xl border border-zinc-100 cursor-pointer bg-white"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={widgetConfig.primaryColor || "#dc2626"}
+                                    onChange={(e) => setWidgetConfig({...widgetConfig, primaryColor: e.target.value})}
+                                    className="flex-1 h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic font-mono"
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Color secundario</label>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="color"
+                                    value={widgetConfig.secondaryColor || "#f5f5f5"}
+                                    onChange={(e) => setWidgetConfig({...widgetConfig, secondaryColor: e.target.value})}
+                                    className="w-12 h-12 rounded-xl border border-zinc-100 cursor-pointer bg-white"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={widgetConfig.secondaryColor || "#f5f5f5"}
+                                    onChange={(e) => setWidgetConfig({...widgetConfig, secondaryColor: e.target.value})}
+                                    className="flex-1 h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic font-mono"
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Color texto</label>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="color"
+                                    value={widgetConfig.textColor || "#1a1a1a"}
+                                    onChange={(e) => setWidgetConfig({...widgetConfig, textColor: e.target.value})}
+                                    className="w-12 h-12 rounded-xl border border-zinc-100 cursor-pointer bg-white"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={widgetConfig.textColor || "#1a1a1a"}
+                                    onChange={(e) => setWidgetConfig({...widgetConfig, textColor: e.target.value})}
+                                    className="flex-1 h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic font-mono"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Posición</label>
+                                <select
+                                  value={widgetConfig.position || "bottom-right"}
+                                  onChange={(e) => setWidgetConfig({...widgetConfig, position: e.target.value})}
+                                  className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic"
+                                >
+                                  <option value="bottom-right">Abajo derecha</option>
+                                  <option value="bottom-left">Abajo izquierda</option>
+                                  <option value="top-right">Arriba derecha</option>
+                                  <option value="top-left">Arriba izquierda</option>
+                                </select>
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">URL del logo</label>
+                                <input
+                                  type="text"
+                                  value={widgetConfig.logo || ""}
+                                  onChange={(e) => setWidgetConfig({...widgetConfig, logo: e.target.value})}
+                                  className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic"
+                                  placeholder="https://ejemplo.com/logo.png"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2">
+                                <label className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest">Widget activo</label>
+                                <button
+                                  onClick={() => setWidgetConfig({...widgetConfig, enabled: !widgetConfig.enabled})}
+                                  className={`relative w-11 h-6 rounded-full transition-all ${widgetConfig.enabled ? 'bg-red-600' : 'bg-zinc-200'}`}
+                                >
+                                  <div className={`absolute w-5 h-5 bg-white rounded-full top-0.5 transition-all shadow-sm ${widgetConfig.enabled ? 'left-[22px]' : 'left-0.5'}`} />
+                                </button>
+                              </div>
+                            </div>
+
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              onClick={async () => {
+                                if (!widgetStoreId || !widgetConfig) return;
+                                setSavingWidget(true);
+                                try {
+                                  const res = await fetch("/api/admin/widget", {
+                                    method: "PUT",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ storeId: widgetStoreId, ...widgetConfig }),
+                                  });
+                                  if (res.ok) {
+                                    setWidgetToast("Configuración guardada correctamente");
+                                  } else {
+                                    setWidgetToast("Error al guardar configuración");
+                                  }
+                                } catch {
+                                  setWidgetToast("Error de conexión");
+                                } finally {
+                                  setSavingWidget(false);
+                                  setTimeout(() => setWidgetToast(""), 3000);
+                                }
+                              }}
+                              disabled={savingWidget}
+                              className="w-full py-4 md:py-5 bg-red-600 text-white rounded-2xl font-black italic shadow-xl shadow-red-100 hover:bg-red-700 transition-all flex items-center justify-center gap-3 uppercase text-xs md:text-sm disabled:opacity-50"
+                            >
+                              {savingWidget ? "GUARDANDO..." : "GUARDAR CONFIGURACIÓN"} <Save className="w-4 h-4" />
+                            </motion.button>
+                          </div>
+                        </div>
+
+                        <div className="xl:col-span-2 space-y-5 md:space-y-6">
+                          <div className="bg-zinc-50 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 shadow-sm space-y-5">
+                            <h4 className="text-[10px] font-black text-zinc-400 uppercase italic tracking-widest">Código de inserción</h4>
+                            <p className="text-[9px] md:text-[10px] text-zinc-500 font-medium italic">
+                              Copia este código y pégalo justo antes de <code className="bg-zinc-200 px-1.5 py-0.5 rounded text-[9px] font-mono">&lt;/body&gt;</code> en tu sitio web.
+                            </p>
+                            <div className="relative">
+                              <pre className="bg-zinc-950 text-zinc-100 rounded-2xl p-4 md:p-5 text-[9px] md:text-[10px] font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap">
+{`<!-- Jandosoft AI Chat Widget -->
+<script src="${widgetConfig.baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://jandosoft.vercel.app')}/widget.js"><\/script>
+<script>
+  window.Jandosoft.init({
+    slug: "${widgetSlug}",
+    baseUrl: "${widgetConfig.baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://jandosoft.vercel.app')}",
+    position: "${widgetConfig.position || 'bottom-right'}",
+    primaryColor: "${widgetConfig.primaryColor || '#dc2626'}",
+    ${widgetConfig.logo ? `logo: "${widgetConfig.logo}",` : ''}
+    title: "${widgetConfig.title || 'Asistente IA'}"
+  });
+<\/script>`}
+                              </pre>
+                              <motion.button
+                                whileTap={{ scale: 0.9 }}
+                                onClick={async () => {
+                                  const code = `<!-- Jandosoft AI Chat Widget -->\n<script src="${widgetConfig.baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://jandosoft.vercel.app')}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${widgetSlug}",\n    baseUrl: "${widgetConfig.baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://jandosoft.vercel.app')}",\n    position: "${widgetConfig.position || 'bottom-right'}",\n    primaryColor: "${widgetConfig.primaryColor || '#dc2626'}",${widgetConfig.logo ? `\n    logo: "${widgetConfig.logo}",` : ''}\n    title: "${widgetConfig.title || 'Asistente IA'}"\n  });\n<\/script>`;
+                                  await navigator.clipboard.writeText(code);
+                                  setWidgetCopied(true);
+                                  setTimeout(() => setWidgetCopied(false), 2000);
+                                }}
+                                className="absolute top-3 right-3 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[8px] font-black italic transition-all backdrop-blur-sm"
+                              >
+                                {widgetCopied ? "COPIADO" : "COPIAR"}
+                              </motion.button>
+                            </div>
+                          </div>
+
+                          <div className="bg-zinc-50 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 shadow-sm space-y-4">
+                            <h4 className="text-[10px] font-black text-zinc-400 uppercase italic tracking-widest">Instalación por plataforma</h4>
+                            <div className="space-y-3">
+                              <details className="group">
+                                <summary className="flex items-center gap-2 cursor-pointer text-xs font-black italic text-zinc-700 hover:text-red-600 transition-colors p-2 rounded-xl hover:bg-white">
+                                  <ChevronRight className="w-3.5 h-3.5 group-open:rotate-90 transition-transform" />
+                                  WordPress
+                                </summary>
+                                <div className="mt-2 ml-5 p-3 bg-white rounded-xl border border-zinc-100 text-[9px] md:text-[10px] text-zinc-600 font-medium italic space-y-2 leading-relaxed">
+                                  <p>1. Ve a <strong>Apariencia → Editor de temas</strong> o usa un plugin como <em>Insert Headers and Footers</em>.</p>
+                                  <p>2. Pega el código de inserción en la sección de <strong>footer</strong> (antes de &lt;/body&gt;).</p>
+                                  <p>3. Guarda los cambios y verifica que el widget aparezca en tu sitio.</p>
+                                </div>
+                              </details>
+                              <details className="group">
+                                <summary className="flex items-center gap-2 cursor-pointer text-xs font-black italic text-zinc-700 hover:text-red-600 transition-colors p-2 rounded-xl hover:bg-white">
+                                  <ChevronRight className="w-3.5 h-3.5 group-open:rotate-90 transition-transform" />
+                                  Shopify
+                                </summary>
+                                <div className="mt-2 ml-5 p-3 bg-white rounded-xl border border-zinc-100 text-[9px] md:text-[10px] text-zinc-600 font-medium italic space-y-2 leading-relaxed">
+                                  <p>1. En el panel de Shopify, ve a <strong>Tienda online → Temas → Editar código</strong>.</p>
+                                  <p>2. Busca el archivo <strong>theme.liquid</strong> y pega el código justo antes de &lt;/body&gt;.</p>
+                                  <p>3. Haz clic en <strong>Guardar</strong> y el widget aparecerá en tu tienda.</p>
+                                </div>
+                              </details>
+                              <details className="group">
+                                <summary className="flex items-center gap-2 cursor-pointer text-xs font-black italic text-zinc-700 hover:text-red-600 transition-colors p-2 rounded-xl hover:bg-white">
+                                  <ChevronRight className="w-3.5 h-3.5 group-open:rotate-90 transition-transform" />
+                                  Wix
+                                </summary>
+                                <div className="mt-2 ml-5 p-3 bg-white rounded-xl border border-zinc-100 text-[9px] md:text-[10px] text-zinc-600 font-medium italic space-y-2 leading-relaxed">
+                                  <p>1. En el editor de Wix, haz clic en <strong>Añadir → Más → HTML personalizado</strong>.</p>
+                                  <p>2. Pega el código de inserción en el cuadro de diálogo.</p>
+                                  <p>3. Ajusta el tamaño del elemento a <strong>0x0</strong> (el widget es flotante) y colócalo en cualquier parte del pie de página.</p>
+                                  <p>4. Publica los cambios.</p>
+                                </div>
+                              </details>
+                              <details className="group">
+                                <summary className="flex items-center gap-2 cursor-pointer text-xs font-black italic text-zinc-700 hover:text-red-600 transition-colors p-2 rounded-xl hover:bg-white">
+                                  <ChevronRight className="w-3.5 h-3.5 group-open:rotate-90 transition-transform" />
+                                  Squarespace
+                                </summary>
+                                <div className="mt-2 ml-5 p-3 bg-white rounded-xl border border-zinc-100 text-[9px] md:text-[10px] text-zinc-600 font-medium italic space-y-2 leading-relaxed">
+                                  <p>1. Ve a <strong>Configuración → Avanzado → Inyección de código</strong>.</p>
+                                  <p>2. Pega el código en el campo <strong>Footer</strong>.</p>
+                                  <p>3. Guarda los cambios.</p>
+                                </div>
+                              </details>
+                              <details className="group">
+                                <summary className="flex items-center gap-2 cursor-pointer text-xs font-black italic text-zinc-700 hover:text-red-600 transition-colors p-2 rounded-xl hover:bg-white">
+                                  <ChevronRight className="w-3.5 h-3.5 group-open:rotate-90 transition-transform" />
+                                  HTML / Otras plataformas
+                                </summary>
+                                <div className="mt-2 ml-5 p-3 bg-white rounded-xl border border-zinc-100 text-[9px] md:text-[10px] text-zinc-600 font-medium italic space-y-2 leading-relaxed">
+                                  <p>Pega el código de inserción justo antes del cierre de <strong>&lt;/body&gt;</strong> en tu archivo HTML.</p>
+                                  <p>El widget se cargará automáticamente como un botón flotante en la posición configurada.</p>
+                                </div>
+                              </details>
+                            </div>
+                          </div>
+
+                          <div className="bg-zinc-50 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 shadow-sm space-y-4">
+                            <h4 className="text-[10px] font-black text-zinc-400 uppercase italic tracking-widest">Vista previa</h4>
+                            <p className="text-[9px] md:text-[10px] text-zinc-500 font-medium italic">
+                              Así se verá el botón del widget en tu sitio web.
+                            </p>
+                            <div className="relative bg-white rounded-2xl border border-zinc-200 h-48 md:h-56 overflow-hidden">
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="text-[8px] md:text-[9px] text-zinc-300 font-black italic uppercase tracking-widest">Vista previa del sitio</div>
+                              </div>
+                              <div
+                                className="absolute w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 cursor-pointer"
+                                style={{
+                                  backgroundColor: widgetConfig.primaryColor || "#dc2626",
+                                  [widgetConfig.position?.includes("right") ? "right" : "left"]: "20px",
+                                  [widgetConfig.position?.includes("bottom") ? "bottom" : "top"]: "20px",
+                                }}
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                </svg>
+                              </div>
+                            </div>
+                          </div>
+
+                          <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                              const url = `${widgetConfig.baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://jandosoft.vercel.app')}/s/${widgetSlug}?embed=1`;
+                              window.open(url, "_blank", "width=400,height=600");
+                            }}
+                            className="w-full py-4 md:py-5 bg-zinc-950 text-white rounded-2xl font-black italic shadow-xl hover:bg-zinc-800 transition-all flex items-center justify-center gap-3 uppercase text-xs md:text-sm"
+                          >
+                            <ExternalLink className="w-4 h-4" /> PROBAR WIDGET
+                          </motion.button>
+                        </div>
+                      </div>
+                    )}
+
+                    {!widgetConfig && widgetStoreId && (
+                      <div className="py-12 text-center italic font-black uppercase tracking-widest text-zinc-200 text-[10px]">Cargando configuración...</div>
+                    )}
                   </motion.div>
                 )}
 
@@ -1297,7 +1824,7 @@ export default function Admin({ currency, setCurrency, products, setProducts, tr
                 <div className="w-12 h-12 bg-rose-100 rounded-2xl flex items-center justify-center mx-auto">
                   <Ban className="w-6 h-6 text-rose-600" />
                 </div>
-                <h3 className="text-lg font-black italic text-zinc-950 uppercase">Suspender {confirmingType === 'user' ? 'Usuario' : 'Tienda'}</h3>
+                <h3 className="text-lg font-black italic text-zinc-950 uppercase">Suspender {confirmingType === 'user' ? 'Usuario' : 'Empresa'}</h3>
                 <p className="text-[10px] font-medium text-zinc-400 italic">Selecciona la duración de la suspensión</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -1377,18 +1904,6 @@ function AdminInput({ label, placeholder, type ="text", value, onChange }: any) 
    );
 }
 
-function ConfigBox({ label, value, icon }: any) {
-   return (
-      <div className="bg-zinc-50 max-[400px]:p-4 p-5 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-zinc-100 space-y-3 md:space-y-4 shadow-sm">
-         <div className="flex items-center gap-2 md:gap-3">
-            <div className="p-1.5 md:p-2 bg-white rounded-xl shadow-sm">{icon}</div>
-            <span className="text-[10px] md:text-xs font-black italic text-zinc-950 uppercase truncate">{label}</span>
-         </div>
-         <div className="bg-white p-3 md:p-4 rounded-xl border border-zinc-100 font-mono text-[8px] md:text-[9px] text-zinc-400 break-all">{value}</div>
-      </div>
-   );
-}
-
 function AdminRevenuePanel() {
   const { t } = useLanguage();
   const [data, setData] = useState<any>(null);
@@ -1429,7 +1944,7 @@ function AdminRevenuePanel() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
         <div className="bg-white max-[400px]:p-5 p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-4">
           <div className="p-2 md:p-3 bg-red-50 rounded-lg md:rounded-xl w-fit"><DollarSign className="w-5 h-5 md:w-6 md:h-6 text-red-600" /></div>
-          <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">Comisiones Jandosoft</p>
+          <p className="text-[8px] md:text-[9px] font-wallpoet text-zinc-400 uppercase italic">Comisiones Jandosoft</p>
           <p className="max-[400px]:text-2xl text-3xl md:text-4xl font-black italic text-zinc-950">${(data?.totalPlatformRevenue || 0).toFixed(2)}</p>
         </div>
         <div className="bg-white max-[400px]:p-5 p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-4">
@@ -1446,7 +1961,7 @@ function AdminRevenuePanel() {
 
       {data?.byStore && Object.keys(data.byStore).length > 0 && (
         <div className="bg-zinc-50 max-[400px]:p-5 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 space-y-4 md:space-y-6">
-          <h4 className="max-[400px]:text-lg text-xl font-black italic text-zinc-950 uppercase tracking-tighter">Desglose por <span className="text-red-600">Tienda</span></h4>
+          <h4 className="max-[400px]:text-lg text-xl font-black italic text-zinc-950 uppercase tracking-tighter">Desglose por <span className="text-red-600">Empresa</span></h4>
           <div className="space-y-2 md:space-y-3">
             {Object.entries(data.byStore).map(([name, info]: any) => (
               <div key={name} className="flex items-center justify-between max-[400px]:p-3.5 p-5 bg-white rounded-2xl border border-zinc-100 hover:border-red-200 transition-all">

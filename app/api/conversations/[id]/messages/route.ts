@@ -39,8 +39,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const { id } = await params;
-  const { content } = await req.json();
-  if (!content?.trim()) {
+  const { content, mediaUrl, mediaType } = await req.json();
+  if (!content?.trim() && !mediaUrl) {
     return NextResponse.json({ error: "El mensaje no puede estar vacío" }, { status: 400 });
   }
 
@@ -57,11 +57,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     senderId: auth.userId,
     senderEmail: auth.email,
     senderName: auth.email.split("@")[0],
-    content: content.trim(),
+    content: content?.trim() || "",
+    ...(mediaUrl && mediaType ? { mediaUrl, mediaType } : {}),
   });
 
+  const preview = mediaUrl
+    ? `[${mediaType === "video" ? "Video" : "Imagen"}]${content?.trim() ? ": " + content.trim().slice(0, 80) : ""}`
+    : content.trim().slice(0, 100);
+
   await Conversation.findByIdAndUpdate(id, {
-    lastMessage: content.trim().slice(0, 100),
+    lastMessage: preview,
     lastSenderId: auth.userId,
     lastMessageAt: new Date(),
     updatedAt: new Date(),
@@ -77,7 +82,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         senderId: auth.userId,
         senderEmail: auth.email,
         senderName: auth.email.split("@")[0],
-        content: content.trim(),
+        content: message.content,
+        mediaUrl: message.mediaUrl,
+        mediaType: message.mediaType,
         createdAt: message.createdAt,
         readAt: null,
       },

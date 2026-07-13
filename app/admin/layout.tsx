@@ -115,8 +115,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <footer className="border-t border-zinc-100 py-4 md:py-6">
         <div className="max-w-7xl mx-auto px-4 md:px-6 text-center">
-          <p className="text-[9px] md:text-[10px] font-bold text-zinc-400 uppercase tracking-widest italic">
-            Jandosoft Enterprise &mdash; Administración Global
+          <p className="text-[9px] md:text-[10px] font-medium text-zinc-400 uppercase tracking-[0.15em]">
+            <span className="font-wallpoet tracking-[0.2em] text-red-600">JANDOSOFT</span> Enterprise &mdash; Administración Global
           </p>
         </div>
       </footer>
@@ -136,7 +136,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
                 <div>
                   <p className="text-[11px] md:text-xs font-black italic">Asistente Admin</p>
-                  <p className="text-[7px] md:text-[8px] text-zinc-400 font-bold uppercase tracking-wider">IA · Jandosoft</p>
+                  <p className="text-[7px] md:text-[8px] text-zinc-400 font-bold uppercase tracking-wider">IA · <span className="font-wallpoet tracking-[0.2em] text-red-600">JANDOSOFT</span></p>
                 </div>
               </div>
               <motion.button whileTap={{ scale: 0.9 }} onClick={() => setChatOpen(false)} className="p-1 hover:bg-zinc-800 rounded-lg transition-all">
@@ -150,10 +150,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <Bot className="w-8 h-8 md:w-10 md:h-10 text-zinc-200 mx-auto" />
                   <p className="text-[11px] md:text-xs font-black italic text-zinc-400">Asistente de Administración</p>
                   <p className="text-[9px] md:text-[10px] text-zinc-300 font-medium px-2 md:px-4">
-                    Puedes pedirme crear comerciales, revisar estadísticas, buscar tiendas, suspender actividad sospechosa y más.
+                    Puedes pedirme crear comerciales, revisar estadísticas, buscar empresas, suspender actividad sospechosa y más.
                   </p>
                   <div className="flex flex-wrap gap-2 justify-center pt-2 px-2">
-                    {["Crea un comercial", "Busca tiendas sospechosas", "Estadísticas del panel"].map((s) => (
+                    {["Crea un comercial", "Busca empresas sospechosas", "Estadísticas del panel"].map((s) => (
                       <button
                         key={s}
                         onClick={() => { setChatInput(s); }}

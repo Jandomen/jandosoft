@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Customer } from "@/lib/models/Customer";
+import { verifyAdminAuth } from "@/lib/admin-middleware";
 
 export async function GET(req: NextRequest) {
+  const authResult = await verifyAdminAuth(req);
+  if ("error" in authResult) return authResult.error;
+
   try {
     await connectDB();
     const { searchParams } = new URL(req.url);

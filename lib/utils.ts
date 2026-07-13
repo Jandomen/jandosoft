@@ -53,3 +53,54 @@ export function playNotificationSound(type: "success" | "error" | "info" = "info
     }
   } catch {}
 }
+
+export interface IKbEntry {
+  id?: number | string;
+  title?: string;
+  question?: string;
+  content: string;
+  category?: string;
+}
+
+export function searchKnowledgeBase(query: string, entries: IKbEntry[], limit = 5): IKbEntry[] {
+  if (!entries || entries.length === 0) return [];
+  if (entries.length <= limit) return entries;
+
+  const cleanWords = query
+    .toLowerCase()
+    .replace(/[^\w\s]/g, "")
+    .split(/\s+/)
+    .filter(w => w.length > 2);
+
+  if (cleanWords.length === 0) {
+    return entries.slice(0, limit);
+  }
+
+  const scored = entries.map(entry => {
+    let score = 0;
+    const title = (entry.title || "").toLowerCase();
+    const question = (entry.question || "").toLowerCase();
+    const content = (entry.content || "").toLowerCase();
+    const category = (entry.category || "").toLowerCase();
+
+    for (const word of cleanWords) {
+      if (question.includes(word)) score += 5;
+      if (title.includes(word)) score += 3;
+      if (category.includes(word)) score += 2;
+      if (content.includes(word)) score += 1;
+    }
+    return { entry, score };
+  });
+
+  const matches = scored
+    .filter(s => s.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(s => s.entry);
+
+  if (matches.length === 0) {
+    return entries.slice(0, limit);
+  }
+
+  return matches.slice(0, limit);
+}
+

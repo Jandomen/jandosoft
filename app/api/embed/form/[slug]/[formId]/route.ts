@@ -9,7 +9,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
     const store = await Store.findOne({ slug }).lean();
     if (!store) {
-      return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
+      return NextResponse.json({ error: "Empresa no encontrada" }, { status: 404 });
     }
 
     const smartForms = (store as any)?.smartForms || [];

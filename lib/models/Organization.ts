@@ -13,6 +13,11 @@ export interface IOrganization extends Document {
   slug: string;
   members: IMember[];
   createdAt: Date;
+  taxId?: string;
+  businessName?: string;
+  address?: string;
+  invoiceSeries?: string;
+  verifactuEnabled?: boolean;
 }
 
 const MemberSchema = new Schema<IMember>({
@@ -28,6 +33,11 @@ const OrganizationSchema = new Schema<IOrganization>({
   slug: { type: String, unique: true, required: true },
   members: [MemberSchema],
   createdAt: { type: Date, default: Date.now },
+  taxId: { type: String, default: "" },
+  businessName: { type: String, default: "" },
+  address: { type: String, default: "" },
+  invoiceSeries: { type: String, default: "" },
+  verifactuEnabled: { type: Boolean, default: false },
 }, { timestamps: true });
 
 export const Organization = mongoose.models.Organization || mongoose.model<IOrganization>("Organization", OrganizationSchema);

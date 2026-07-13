@@ -28,7 +28,7 @@ export default function EmbedFormPage({ params }: { params: Promise<{ slug: stri
       try {
         const res = await fetch(`/api/stores/public/${slug}`);
         const data = await res.json();
-        if (!data.store) { setError("Tienda no encontrada"); setLoading(false); return; }
+        if (!data.store) { setError("Empresa no encontrada"); setLoading(false); return; }
         const forms = data.store.smartForms || [];
         const f = forms.find((x: any) => String(x.id) === formId);
         if (!f) { setError("Formulario no encontrado"); setLoading(false); return; }

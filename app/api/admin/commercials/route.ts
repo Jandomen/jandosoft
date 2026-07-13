@@ -1,9 +1,13 @@
 import { connectDB } from "@/lib/mongodb";
 import { Commercial } from "@/lib/models/Commercial";
+import { verifyAdminAuth } from "@/lib/admin-middleware";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const authResult = await verifyAdminAuth(req);
+  if ("error" in authResult) return authResult.error;
+
   try {
     await connectDB();
     const commercials = await Commercial.find({}).sort({ createdAt: -1 }).lean();
@@ -15,6 +19,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const authResult = await verifyAdminAuth(req);
+  if ("error" in authResult) return authResult.error;
+
   try {
     await connectDB();
     const { title, imageUrl, linkUrl } = await req.json();
@@ -30,6 +37,9 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const authResult = await verifyAdminAuth(req);
+  if ("error" in authResult) return authResult.error;
+
   try {
     await connectDB();
     const { id } = await req.json();

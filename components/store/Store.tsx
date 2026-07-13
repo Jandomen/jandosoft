@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   CheckCircle2,
   ChevronRight,
+  ChevronLeft,
   CreditCard,
   Loader2,
   X,
@@ -16,91 +17,9 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
-
-const HARDCODED_PLANS = [
-  {
-    id: "starter",
-    name: "Starter",
-    price: 29,
-    desc: "Perfecto para emprender tu negocio digital",
-    popular: false,
-    features: ["Productos", "Clientes", "Pedidos", "Facturación", "IA básica", "Correos automáticos"],
-    limits: { maxStores: 3, maxProductsPerStore: 50, maxMessages: 50, maxAutomations: 10 },
-  },
-  {
-    id: "business",
-    name: "Business",
-    price: 79,
-    desc: "La opción más completa para hacer crecer tu negocio",
-    popular: true,
-    features: ["Todo Starter", "CRM avanzado", "WhatsApp Business", "Campañas", "Automatizaciones", "Analytics", "Clientes ilimitados"],
-    limits: { maxStores: 20, maxProductsPerStore: 500, maxMessages: 200, maxAutomations: 50 },
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    price: 199,
-    desc: "Para empresas que necesitan potencia y control total",
-    popular: false,
-    features: ["Todo Business", "Multiusuario", "Roles y permisos", "API", "Integraciones avanzadas", "IA avanzada", "Soporte prioritario"],
-    limits: { maxStores: 999, maxProductsPerStore: 9999, maxMessages: 999, maxAutomations: 999 },
-  },
-];
-
-const HARDCODED_FREE = {
-  id: "free",
-  name: "Gratis",
-  features: ["Productos", "Clientes", "Pedidos", "Facturación"],
-  limits: { maxStores: 1, maxProductsPerStore: 10, maxMessages: 10, maxAutomations: 2 },
-};
-
-const COMPARISON_PLANS = ["free", "starter", "business", "enterprise"];
-
-function buildComparisonFeatures(plans: any[], freePlan: any) {
-  const allFeatures = new Set<string>();
-  freePlan.features?.forEach((f: string) => allFeatures.add(f));
-  plans.forEach((p: any) => p.features?.forEach((f: string) => allFeatures.add(f)));
-
-  const limitsList: { label: string; key: string }[] = [
-    { label: "Tiendas", key: "maxStores" },
-    { label: "Productos por tienda", key: "maxProductsPerStore" },
-    { label: "Mensajes IA", key: "maxMessages" },
-    { label: "Automatizaciones", key: "maxAutomations" },
-  ];
-
-  const formatLimit = (value: number) => value >= 999 ? "Ilimitado" : value?.toString() || "0";
-
-  const result: any[] = [];
-
-  limitsList.forEach((meta) => {
-    const row: any = { label: meta.label };
-    row.free = formatLimit(freePlan.limits?.[meta.key as keyof typeof freePlan.limits] ?? 0);
-    plans.forEach((p: any) => { row[p.id] = formatLimit(p.limits?.[meta.key as keyof typeof p.limits] ?? 0); });
-    result.push(row);
-  });
-
-  allFeatures.forEach((feat) => {
-    const row: any = { label: feat };
-    row.free = !!freePlan.features?.includes(feat);
-    plans.forEach((p: any) => {
-      const resolved = inheritFeatures(p, plans);
-      row[p.id] = resolved.includes(feat);
-    });
-    result.push(row);
-  });
-
-  return result;
-}
-
-function inheritFeatures(plan: any, allPlans: any[]): string[] {
-  const todoFeature = (plan.features || []).find((f: string) => f.startsWith("Todo"));
-  if (!todoFeature) return plan.features || [];
-  const inheritFromId = todoFeature.replace("Todo ", "").toLowerCase();
-  const source = allPlans.find((p: any) => p.id === inheritFromId);
-  const sourceFeatures = source ? inheritFeatures(source, allPlans) : [];
-  const ownFeatures = (plan.features || []).filter((f: string) => !f.startsWith("Todo"));
-  return [...new Set([...sourceFeatures, ...ownFeatures])];
-}
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { useGeoCurrency } from "@/lib/hooks/useGeoCurrency";
+import { PLANS, FREE_PLAN, buildComparisonFeatures, inheritFeatures } from "@/lib/plans";
 
 interface PlansProps {
   currency: string;
@@ -108,17 +27,36 @@ interface PlansProps {
   isLogged: boolean;
   userEmail: string;
   onPaymentSuccess: (transaction: any) => void;
+  onLoginRequest?: () => void;
 }
 
-export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess }: PlansProps) {
+export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess, onLoginRequest }: PlansProps) {
   const { showToast } = useToast();
+  const { t } = useLanguage();
+  const geo = useGeoCurrency();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
   const [isBought, setIsBought] = useState(false);
 
-  const [plans, setPlans] = useState<any[]>(HARDCODED_PLANS);
-  const [freePlan] = useState<any>(HARDCODED_FREE);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [activeCarouselIndex, setActiveCarouselIndex] = useState(0);
+
+  const handleCarouselScroll = useCallback(() => {
+    if (!carouselRef.current) return;
+    const cards = carouselRef.current.querySelectorAll<HTMLElement>(".snap-start");
+    const scrollLeft = carouselRef.current.scrollLeft;
+    let closestIdx = 0;
+    let closestDist = Infinity;
+    cards.forEach((card, idx) => {
+      const dist = Math.abs(card.offsetLeft - scrollLeft);
+      if (dist < closestDist) { closestDist = dist; closestIdx = idx; }
+    });
+    setActiveCarouselIndex(closestIdx);
+  }, []);
+
+  const [plans, setPlans] = useState<any[]>(PLANS);
+  const [freePlan] = useState<any>(FREE_PLAN);
   const [comparisonFeatures, setComparisonFeatures] = useState<any[]>([]);
 
   useEffect(() => {
@@ -138,11 +76,19 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess 
       resolvedFeatures: inheritFeatures(p, plans),
     }));
     const allFeatures = buildComparisonFeatures(
-      resolved.map((p) => ({ ...p, features: p.resolvedFeatures })),
-      { ...freePlan, features: freePlan.features || [] }
+      resolved,
+      { ...freePlan, features: freePlan.features || [] },
+      t
     );
     setComparisonFeatures(allFeatures);
-  }, [plans, freePlan]);
+  }, [plans, freePlan, t]);
+
+  useEffect(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", handleCarouselScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleCarouselScroll);
+  }, [plans.length, handleCarouselScroll]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -162,7 +108,12 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess 
     if (!plan) return;
 
     if (!isLogged) {
-      showToast("Inicia sesión o regístrate para contratar un plan", "info");
+      onLoginRequest?.();
+      return;
+    }
+
+    if (!userEmail) {
+      showToast(t("plans.not_logged"), "info");
       return;
     }
 
@@ -173,7 +124,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess 
     try {
       const body: any = {
         customerEmail: userEmail,
-        customerName: userEmail?.split("@")[0] || "Cliente",
+        customerName: userEmail?.split("@")[0] || "Customer",
         description: `Plan ${plan.name} - Jandosoft`,
         planId: plan.id,
       };
@@ -195,11 +146,11 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess 
       if (data.url) {
         window.location.href = data.url;
       } else {
-        setStripeError(data.error || "Error al iniciar el pago");
+        setStripeError(data.error || t("plans.payment_error"));
         setIsProcessing(false);
       }
     } catch {
-      setStripeError("Error de conexión al procesar el pago");
+      setStripeError(t("plans.connection_error"));
       setIsProcessing(false);
     }
   };
@@ -226,12 +177,12 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess 
       <div className="flex flex-col items-center justify-center max-[400px]:p-6 p-12 md:p-20 bg-white max-[400px]:rounded-[2rem] rounded-[4rem] border border-zinc-100 shadow-3xl text-center max-w-2xl mx-auto italic overflow-hidden relative">
         <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500" />
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-8 shadow-xl shadow-emerald-50"><CheckCircle2 className="w-12 h-12" /></motion.div>
-        <h3 className="max-[400px]:text-2xl text-4xl font-black mb-4 text-zinc-950 uppercase tracking-tighter italic">¡Suscripción Activada!</h3>
+        <h3 className="max-[400px]:text-2xl text-4xl font-black mb-4 text-zinc-950 uppercase tracking-tighter italic">{t("plans.success_title")}</h3>
         <p className="text-zinc-500 mb-10 max-[400px]:text-sm text-lg font-medium leading-relaxed max-w-sm font-black italic">
-          Tu plan <span className="text-red-600 uppercase font-black">{selectedPlan?.toUpperCase()}</span> ha sido activado. Ya puedes disfrutar de todos los beneficios.
+          {t("plans.success_desc").replace("{plan}", selectedPlan?.toUpperCase() ?? "")}
         </p>
         <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setIsBought(false); setSelectedPlan(null); }} className="max-[400px]:px-8 max-[400px]:py-4 max-[400px]:text-base px-12 py-5 bg-red-600 text-white rounded-2xl font-black text-xl hover:bg-red-700 transition-all shadow-2xl shadow-red-200 uppercase tracking-widest italic">
-          CONTINUAR
+          {t("plans.continue")}
         </motion.button>
       </div>
     );
@@ -241,104 +192,220 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess 
     <div className="max-w-7xl mx-auto space-y-20 pb-20 italic">
       <div className="text-center space-y-4 max-w-3xl mx-auto">
         <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-full text-xs font-black border border-red-100 italic">
-          <Zap className="w-3.5 h-3.5" /> PLANES DE SUSCRIPCIÓN
+          <Zap className="w-3.5 h-3.5" /> {t("plans.badge")}
         </div>
-        <h2 className="max-[400px]:text-3xl text-4xl md:text-6xl font-black italic text-zinc-950 uppercase tracking-tighter">
-          Elige el plan <span className="text-red-600">ideal</span> para ti
-        </h2>
+        {(() => {
+          const titleParts = t("plans.title").split("{highlight}");
+          return (
+            <h2 className="max-[400px]:text-3xl text-4xl md:text-6xl font-black italic text-zinc-950 uppercase tracking-tighter">
+              {titleParts[0]}<span className="text-red-600">{t("plans.title_highlight")}</span>{titleParts[1]}
+            </h2>
+          );
+        })()}
         <p className="text-zinc-500 text-sm md:text-lg font-medium max-w-xl mx-auto">
-          Suscripción mensual · Cancela cuando quieras · Todos los planes incluyen actualizaciones
+          {t("plans.subtitle")}
         </p>
+
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Moneda:</span>
+          <select
+            value={geo.currencyCode}
+            onChange={(e) => geo.setCurrency(e.target.value)}
+            className="text-xs font-bold text-zinc-700 bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-red-600/10 focus:border-red-300 cursor-pointer"
+          >
+            {geo.CURRENCY_OPTIONS.map((opt) => (
+              <option key={opt.code} value={opt.code}>
+                {opt.flag} {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto px-4">
-        {plans.map((plan, i) => {
-          const resolvedFeatures = inheritFeatures(plan, plans);
-          return (
-            <motion.div
-              key={plan.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className={cn(
-                "relative bg-white rounded-[2.5rem] border-2 p-8 flex flex-col transition-all duration-300",
-                plan.popular
-                  ? "border-red-600 shadow-2xl shadow-red-600/10 scale-[1.02] md:scale-[1.05] z-10"
-                  : "border-zinc-100 hover:border-zinc-200 shadow-xl"
-              )}
+      {/* Carousel */}
+      <div className="relative max-w-6xl mx-auto px-4 md:px-6">
+        {/* Screen reader hint for scrollable carousel */}
+        {plans.length > 2 && (
+          <p className="sr-only" role="status" aria-live="polite">
+            {t("plans.carousel_hint") ?? "Usa las flechas o desliza para ver más planes."}
+          </p>
+        )}
+
+        <div
+          ref={carouselRef}
+          className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4"
+          style={{
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            gap: plans.length > 2 ? "2rem" : "2.5rem",
+          }}
+        >
+          {plans.map((plan, i) => {
+            const resolvedFeatures = inheritFeatures(plan, plans);
+            const popular = plan.popular;
+            return (
+              <motion.div
+                key={plan.id}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className={cn(
+                  "snap-start shrink-0 relative bg-white rounded-[2.5rem] border-2 p-7 md:p-8 flex flex-col transition-all duration-300",
+                  plans.length === 1 && "mx-auto",
+                  popular
+                    ? "border-red-600 shadow-2xl shadow-red-600/10 z-10"
+                    : "border-zinc-100 hover:border-zinc-200 shadow-xl"
+                )}
+                style={{
+                  flex: plans.length <= 2 ? `0 0 calc((100% - ${plans.length > 1 ? "2.5rem" : "0px"}) / ${plans.length})` : "0 0 min(75vw, 420px)",
+                  maxWidth: plans.length === 1 ? "480px" : plans.length === 2 ? "480px" : "none",
+                  transform: popular && plans.length > 2 ? "scale(1.05)" : popular && plans.length <= 2 ? "scale(1.03)" : "none",
+                  zIndex: popular ? 10 : undefined,
+                }}
+              >
+                {popular && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center gap-1.5 z-20">
+                    <Star className="w-3 h-3 fill-current" /> {t("plans.popular")}
+                  </div>
+                )}
+
+                <div className="space-y-6 flex flex-col flex-1">
+                  <div>
+                    <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t(plan.nameKey ?? plan.name)}</h3>
+                    <p className="text-[11px] text-zinc-500 font-medium mt-2 leading-relaxed">{t(plan.descKey ?? "")}</p>
+                  </div>
+
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl md:text-5xl font-black italic text-zinc-950 tracking-tighter">{geo.formatPrice(plan.price)}</span>
+                    <span className="text-zinc-400 font-black text-xs italic uppercase">{t("plans.per_month")}</span>
+                    {geo.currencyCode !== "USD" && (
+                      <span className="text-[10px] text-zinc-400 font-medium ml-1">(${plan.price} USD)</span>
+                    )}
+                  </div>
+
+                  <div className="space-y-2.5 flex-1">
+                    {resolvedFeatures.slice(0, 6).map((feat: string) => (
+                      <div key={feat} className="flex items-start gap-3">
+                        <div className={cn("p-0.5 rounded-full mt-0.5", popular ? "bg-red-600" : "bg-emerald-500")}>
+                          <Check className="w-3 h-3 text-white" />
+                        </div>
+                        <span className="text-xs font-bold text-zinc-700 italic">{t(feat)}</span>
+                      </div>
+                    ))}
+                    {resolvedFeatures.length > 6 && (
+                      <p className="text-[10px] font-bold text-zinc-400 italic pl-7">
+                        +{resolvedFeatures.length - 6} más
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="pt-4">
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => handleSelectPlan(plan.id)}
+                      disabled={isProcessing && selectedPlan === plan.id}
+                      className={cn(
+                        "w-full py-3.5 rounded-xl font-black text-xs italic transition-all shadow-lg flex items-center justify-center gap-2 uppercase tracking-wider",
+                        popular
+                          ? "bg-red-600 text-white hover:bg-red-700 shadow-red-200"
+                          : "bg-zinc-950 text-white hover:bg-zinc-800"
+                      )}
+                    >
+                      {isProcessing && selectedPlan === plan.id ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> {t("plans.processing")}</>
+                      ) : (
+                        <>{t("plans.get_plan")} <ArrowRight className="w-4 h-4" /></>
+                      )}
+                    </motion.button>
+                    <p className="text-[9px] text-zinc-400 font-bold text-center mt-3 italic uppercase tracking-widest">
+                      {t("plans.recurring_note")}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* Carousel controls - only for 2+ plans */}
+        {plans.length > 1 && (
+          <div className="flex items-center justify-center gap-4 mt-8">
+            <button
+              onClick={() => {
+                if (!carouselRef.current) return;
+                const card = carouselRef.current.querySelector<HTMLElement>(".snap-start");
+                if (!card) return;
+                const step = card.offsetWidth + (plans.length > 2 ? 32 : 40);
+                carouselRef.current.scrollBy({ left: -step, behavior: "smooth" });
+              }}
+              className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:border-zinc-300 hover:text-zinc-800 transition-all shadow-md hover:shadow-lg"
+              aria-label="Anterior plan"
             >
-              {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center gap-1.5">
-                  <Star className="w-3 h-3 fill-current" /> Más Popular
-                </div>
-              )}
+              <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
 
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{plan.name}</h3>
-                  <p className="text-xs text-zinc-500 font-medium mt-2 leading-relaxed">{plan.desc}</p>
-                </div>
-
-                <div className="flex items-baseline gap-1">
-                  <span className="text-5xl font-black italic text-zinc-950 tracking-tighter">${plan.price}</span>
-                  <span className="text-zinc-400 font-black text-sm italic uppercase">/mes</span>
-                </div>
-
-                <div className="space-y-3 pt-2">
-                  {resolvedFeatures.map((feat: string) => (
-                    <div key={feat} className="flex items-center gap-3">
-                      <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span className="text-xs font-bold text-zinc-700 italic">{feat}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-8 pt-6 border-t border-zinc-100">
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => handleSelectPlan(plan.id)}
-                  disabled={isProcessing && selectedPlan === plan.id}
+            <div className="flex items-center gap-2.5">
+              {plans.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    if (!carouselRef.current) return;
+                    const card = carouselRef.current.querySelector<HTMLElement>(".snap-start");
+                    if (!card) return;
+                    const step = card.offsetWidth + (plans.length > 2 ? 32 : 40);
+                    carouselRef.current.scrollTo({ left: i * step, behavior: "smooth" });
+                  }}
                   className={cn(
-                    "w-full py-4 rounded-2xl font-black text-sm italic transition-all shadow-xl flex items-center justify-center gap-2 uppercase tracking-wider",
-                    plan.popular
-                      ? "bg-red-600 text-white hover:bg-red-700 shadow-red-200"
-                      : "bg-zinc-950 text-white hover:bg-zinc-800"
+                    "rounded-full transition-all duration-500",
+                    i === activeCarouselIndex
+                      ? "bg-red-600 w-8 h-2.5 shadow-md shadow-red-300"
+                      : "bg-zinc-300 hover:bg-zinc-400 w-2.5 h-2.5"
                   )}
-                >
-                  {isProcessing && selectedPlan === plan.id ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> PROCESANDO</>
-                  ) : (
-                    <>{isLogged ? "COMENZAR AHORA" : "CREAR CUENTA"} <ArrowRight className="w-4 h-4" /></>
-                  )}
-                </motion.button>
-                <p className="text-[9px] text-zinc-400 font-bold text-center mt-3 italic uppercase tracking-widest">
-                  Cobro mensual recurrente · Cancela cuando quieras
-                </p>
-              </div>
-            </motion.div>
-          );
-        })}
+                  aria-label={`Ir al plan ${i + 1}`}
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={() => {
+                if (!carouselRef.current) return;
+                const card = carouselRef.current.querySelector<HTMLElement>(".snap-start");
+                if (!card) return;
+                const step = card.offsetWidth + (plans.length > 2 ? 32 : 40);
+                carouselRef.current.scrollBy({ left: step, behavior: "smooth" });
+              }}
+              className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:border-zinc-300 hover:text-zinc-800 transition-all shadow-md hover:shadow-lg"
+              aria-label="Siguiente plan"
+            >
+              <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="max-w-6xl mx-auto px-4 space-y-8">
         <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-50 text-zinc-600 rounded-full text-xs font-black border border-zinc-200 italic">
-            <Zap className="w-3.5 h-3.5" /> COMPARACIÓN COMPLETA
+            <Zap className="w-3.5 h-3.5" /> {t("plans.comparison_badge")}
           </div>
-          <h3 className="text-3xl md:text-4xl font-black italic text-zinc-950 uppercase tracking-tighter">
-            Todos los <span className="text-red-600">detalles</span>
-          </h3>
+          {(() => {
+            const compParts = t("plans.comparison_title").split("{highlight}");
+            return (
+              <h3 className="text-3xl md:text-4xl font-black italic text-zinc-950 uppercase tracking-tighter">
+                {compParts[0]}<span className="text-red-600">{t("plans.comparison_title_highlight")}</span>{compParts[1]}
+              </h3>
+            );
+          })()}
         </div>
 
         <div className="overflow-x-auto rounded-[2.5rem] border border-zinc-100 shadow-xl bg-white">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-zinc-100">
-                <th className="p-5 md:p-6 text-xs font-black uppercase tracking-widest text-zinc-400 italic">Funcionalidad</th>
-                {["Gratis", ...plans.map((p: any) => p.name)].map((name) => (
-                  <th key={name} className={cn("p-5 md:p-6 text-xs font-black uppercase tracking-widest italic text-center", name === "Business" ? "text-red-600" : "text-zinc-400")}>
+                <th className="p-5 md:p-6 text-xs font-black uppercase tracking-widest text-zinc-400 italic">{t("plans.comparison_header")}</th>
+                {[t("plans.comparison_free"), ...plans.map((p: any) => t(p.nameKey ?? p.name))].map((name, idx) => (
+                  <th key={idx} className={cn("p-5 md:p-6 text-xs font-black uppercase tracking-widest italic text-center", idx === 2 ? "text-red-600" : "text-zinc-400")}>
                     {name}
                   </th>
                 ))}
@@ -346,7 +413,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess 
             </thead>
             <tbody>
               {comparisonFeatures.map((feat: any, i: number) => (
-                <tr key={feat.label} className={cn("border-b border-zinc-50 transition-colors hover:bg-zinc-50/50", i % 2 === 0 ? "bg-zinc-50/30" : "bg-white")}>
+                <tr key={feat._key ?? `${i}-${feat.label}`} className={cn("border-b border-zinc-50 transition-colors hover:bg-zinc-50/50", i % 2 === 0 ? "bg-zinc-50/30" : "bg-white")}>
                   <td className="p-5 md:p-6 text-sm font-black italic text-zinc-950">{feat.label}</td>
                   {["free", ...plans.map((p: any) => p.id)].map((planKey) => {
                     const val = feat[planKey];
@@ -372,9 +439,6 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess 
       </div>
 
       <div className="max-w-3xl mx-auto px-4 text-center space-y-6">
-        <p className="text-zinc-400 text-sm font-medium italic">
-          ¿Necesitas una solución personalizada? Contáctanos para un plan a medida.
-        </p>
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={() => {
@@ -382,12 +446,12 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess 
               const popular = plans.find((p) => p.popular);
               if (popular) handleSelectPlan(popular.id);
             } else {
-              window.location.href = "/";
+              onLoginRequest?.();
             }
           }}
           className="px-10 py-5 bg-red-600 text-white rounded-2xl font-black text-base italic hover:bg-red-700 transition-all shadow-2xl shadow-red-200 inline-flex items-center gap-3 uppercase tracking-wider"
         >
-          {isLogged ? "COMENZAR CON BUSINESS" : "CREAR CUENTA GRATIS"} <ChevronRight className="w-5 h-5" />
+          {isLogged ? t("plans.cta_business") : t("plans.cta_create_free")} <ChevronRight className="w-5 h-5" />
         </motion.button>
       </div>
 
@@ -407,8 +471,8 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess 
                 <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <CreditCard className="w-8 h-8" />
                 </div>
-                <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">Pasarela de Pago</h3>
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-2 italic">Procesando pago seguro...</p>
+                <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("plans.payment_modal_title")}</h3>
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-2 italic">{t("plans.payment_modal_subtitle")}</p>
               </div>
 
               {stripeError && (
@@ -419,7 +483,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess 
 
               <div className="flex flex-col items-center justify-center py-12 space-y-4">
                 <Loader2 className="w-8 h-8 text-red-600 animate-spin" />
-                <p className="text-xs font-black italic text-zinc-400">Redirigiendo a pago seguro...</p>
+                <p className="text-xs font-black italic text-zinc-400">{t("plans.payment_modal_redirecting")}</p>
               </div>
             </motion.div>
           </motion.div>

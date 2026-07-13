@@ -19,7 +19,7 @@ async function checkProductLimit(storeId: string, organizationId: string, newPro
   const expiry = user.subscriptionExpiry ? new Date(user.subscriptionExpiry) : null;
   if (expiry && expiry < new Date()) return "Plan vencido. No puedes modificar productos.";
   if (newProductCount > limits.maxProductsPerStore) {
-    return `Límite de ${limits.maxProductsPerStore} productos por tienda alcanzado en tu plan actual.`;
+    return `Límite de ${limits.maxProductsPerStore} productos por empresa alcanzado en tu plan actual.`;
   }
   return null;
 }
@@ -60,13 +60,20 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ stor
 
     const storeCheck = await Store.findOne({ _id: storeId, organizationId: auth.organizationId }).lean();
     if (storeCheck?.isSuspended) {
-      return NextResponse.json({ error: "Esta tienda está suspendida. No puedes modificarla." }, { status: 403 });
+      return NextResponse.json({ error: "Esta empresa está suspendida. No puedes modificarla." }, { status: 403 });
     }
 
     if (body.slug) {
       const existing = await Store.findOne({ slug: body.slug, _id: { $ne: storeId } }).lean();
       if (existing) {
         return NextResponse.json({ error: `El slug "${body.slug}" ya está en uso. Elige otro.` }, { status: 409 });
+      }
+      const current = await Store.findOne({ _id: storeId }, { slug: 1, slugHistory: 1 }).lean();
+      if (current && current.slug && current.slug !== body.slug) {
+        await Store.updateOne(
+          { _id: storeId },
+          { $push: { slugHistory: { $each: [current.slug], $slice: -10 } } }
+        );
       }
     }
 
@@ -113,13 +120,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ st
 
     const storeCheck = await Store.findOne({ _id: storeId, organizationId: auth.organizationId }).lean();
     if (storeCheck?.isSuspended) {
-      return NextResponse.json({ error: "Esta tienda está suspendida. No puedes modificarla." }, { status: 403 });
+      return NextResponse.json({ error: "Esta empresa está suspendida. No puedes modificarla." }, { status: 403 });
     }
 
     if (body.slug) {
       const existing = await Store.findOne({ slug: body.slug, _id: { $ne: storeId } }).lean();
       if (existing) {
         return NextResponse.json({ error: `El slug "${body.slug}" ya está en uso. Elige otro.` }, { status: 409 });
+      }
+      const current = await Store.findOne({ _id: storeId }, { slug: 1, slugHistory: 1 }).lean();
+      if (current && current.slug && current.slug !== body.slug) {
+        await Store.updateOne(
+          { _id: storeId },
+          { $push: { slugHistory: { $each: [current.slug], $slice: -10 } } }
+        );
       }
     }
 

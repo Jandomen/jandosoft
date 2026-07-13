@@ -7,7 +7,7 @@ import { slugify } from "@/lib/utils";
 import { getPlanConfig, getPlanLimitsFromConfig } from "@/lib/plan-config";
 
 async function generateUniqueSlug(name: string): Promise<string> {
-  const base = slugify(name) || "tienda";
+  const base = slugify(name) || "empresa";
   let slug = base;
   let counter = 1;
   while (await Store.findOne({ slug }).lean()) {
@@ -27,11 +27,11 @@ async function checkPlanLimit(organizationId: string, userEmail: string): Promis
   const config = await getPlanConfig();
   const limits = getPlanLimitsFromConfig(config, user.subscription);
   const expiry = user.subscriptionExpiry ? new Date(user.subscriptionExpiry) : null;
-  if (expiry && expiry < new Date()) return "Plan vencido. Renueva para crear más tiendas.";
+  if (expiry && expiry < new Date()) return "Plan vencido. Renueva para crear más empresas.";
 
   const storeCount = await Store.countDocuments({ organizationId });
   if (storeCount >= limits.maxStores) {
-    return `Límite de ${limits.maxStores} tiendas alcanzado en tu plan actual. Actualiza tu plan para crear más.`;
+    return `Límite de ${limits.maxStores} empresas alcanzado en tu plan actual. Actualiza tu plan para crear más.`;
   }
   return null;
 }
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
     const bulkUpdates: any[] = [];
     stores = stores.map((s: any) => {
       if (!s.slug) {
-        const newSlug = slugify(s.name || "tienda");
+        const newSlug = slugify(s.name || "empresa");
         if (newSlug) {
           bulkUpdates.push({
             updateOne: { filter: { _id: s._id }, update: { $set: { slug: newSlug } } }
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const user = await User.findOne({ email: auth.email }).lean();
     if (user?.isSuspended) {
-      return NextResponse.json({ error: "Cuenta suspendida. No puedes crear tiendas." }, { status: 403 });
+      return NextResponse.json({ error: "Cuenta suspendida. No puedes crear empresas." }, { status: 403 });
     }
     const limitError = await checkPlanLimit(auth.organizationId, auth.email);
     if (limitError) {
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const slug = await generateUniqueSlug(body.name || "tienda");
+    const slug = await generateUniqueSlug(body.name || "empresa");
     const store = await Store.create({
       ...body,
       slug,

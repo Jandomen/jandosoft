@@ -26,7 +26,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     setMounted(true);
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      const valid: Language[] = ["es", "en", "fr", "zh", "hi"];
+      const valid: Language[] = ["es", "en", "fr", "zh", "hi", "ko", "ja", "it", "pt", "ru"];
       if (valid.includes(stored as Language)) {
         setLanguageState(stored as Language);
       }
@@ -44,10 +44,6 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     (key: string, fallback?: string) => translate(key, language, fallback),
     [language]
   );
-
-  if (!mounted) {
-    return <>{children}</>;
-  }
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>

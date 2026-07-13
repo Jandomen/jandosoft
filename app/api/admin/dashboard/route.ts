@@ -1,10 +1,14 @@
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { Store } from "@/lib/models/Store";
+import { verifyAdminAuth } from "@/lib/admin-middleware";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const authResult = await verifyAdminAuth(req);
+  if ("error" in authResult) return authResult.error;
+
   try {
     await connectDB();
 
@@ -44,7 +48,7 @@ export async function GET() {
         detail: u.email,
       })),
       ...recentStores.map((s: any) => ({
-        action: `Tienda creada: ${s.name}`,
+        action: `Empresa creada: ${s.name}`,
         time: s.createdAt,
         detail: s.name,
       })),

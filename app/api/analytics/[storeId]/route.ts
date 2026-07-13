@@ -16,7 +16,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ stor
     await connectDB();
     const store = await Store.findOne({ _id: storeId }).lean();
     if (!store) {
-      return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
+      return NextResponse.json({ error: "Empresa no encontrada" }, { status: 404 });
     }
 
     const isOwner = store.organizationId === auth.organizationId;

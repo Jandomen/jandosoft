@@ -70,8 +70,13 @@ function VerifyContent() {
   }, [token, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50 p-4">
-      <div className="w-full max-w-md bg-white rounded-[2.5rem] border border-zinc-100 p-10 md:p-14 text-center shadow-2xl">
+    <div className="min-h-screen bg-zinc-50">
+      <header className="h-20 bg-white border-b border-zinc-100 flex items-center px-10">
+        <Link href="/" className="font-wallpoet tracking-[0.2em] text-red-600 text-lg uppercase">JANDOSOFT</Link>
+      </header>
+      <div className="flex items-center justify-center p-4" style={{ minHeight: "calc(100vh - 5rem)" }}>
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-[2.5rem] border border-zinc-100 p-10 md:p-14 text-center shadow-2xl">
         {status === "loading" && (
           <div className="space-y-6">
             <Loader2 className="w-16 h-16 text-red-600 mx-auto animate-spin" />
@@ -83,7 +88,7 @@ function VerifyContent() {
             <div className="w-20 h-20 bg-emerald-50 rounded-[2rem] flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-10 h-10 text-emerald-600" />
             </div>
-            <h1 className="text-2xl font-black italic text-zinc-950">¡Correo Verificado!</h1>
+            <h1 className="text-2xl font-black italic text-zinc-950 font-wallpoet tracking-[0.1em]">¡Correo Verificado!</h1>
             <p className="text-sm text-zinc-500 font-medium">{message}</p>
             <Link
               href="/"
@@ -98,7 +103,7 @@ function VerifyContent() {
             <div className="w-20 h-20 bg-red-50 rounded-[2rem] flex items-center justify-center mx-auto">
               <XCircle className="w-10 h-10 text-red-600" />
             </div>
-            <h1 className="text-2xl font-black italic text-zinc-950">Error de Verificación</h1>
+            <h1 className="text-2xl font-black italic text-zinc-950 font-wallpoet tracking-[0.1em]">Error de Verificación</h1>
             <p className="text-sm text-zinc-500 font-medium">{message}</p>
             <Link
               href="/"
@@ -108,6 +113,8 @@ function VerifyContent() {
             </Link>
           </div>
         )}
+        </div>
+      </div>
       </div>
     </div>
   );

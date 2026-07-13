@@ -49,30 +49,42 @@ function ResetContent() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50 p-4">
-        <div className="w-full max-w-md bg-white rounded-[2.5rem] border border-zinc-100 p-10 md:p-14 text-center shadow-2xl">
+      <div className="min-h-screen bg-zinc-50">
+        <header className="h-20 bg-white border-b border-zinc-100 flex items-center px-10">
+          <Link href="/" className="font-wallpoet tracking-[0.2em] text-red-600 text-lg uppercase">JANDOSOFT</Link>
+        </header>
+        <div className="flex items-center justify-center p-4" style={{ minHeight: "calc(100vh - 5rem)" }}>
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-[2.5rem] border border-zinc-100 p-10 md:p-14 text-center shadow-2xl">
           <div className="w-20 h-20 bg-red-50 rounded-[2rem] flex items-center justify-center mx-auto">
             <XCircle className="w-10 h-10 text-red-600" />
           </div>
-          <h1 className="text-2xl font-black italic text-zinc-950 mt-6">Enlace Inválido</h1>
+          <h1 className="text-2xl font-black italic text-zinc-950 mt-6 font-wallpoet tracking-[0.1em]">Enlace Inválido</h1>
           <p className="text-sm text-zinc-500 font-medium mt-2">Este enlace de restablecimiento no es válido o ha expirado.</p>
           <Link href="/" className="inline-flex items-center gap-2 px-8 py-4 bg-zinc-950 text-white rounded-2xl font-black text-sm italic hover:bg-zinc-800 transition-all shadow-xl mt-6">
             SOLICITAR NUEVO ENLACE
           </Link>
         </div>
+        </div>
       </div>
+    </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50 p-4">
-      <div className="w-full max-w-md bg-white rounded-[2.5rem] border border-zinc-100 p-10 md:p-14 shadow-2xl">
+    <div className="min-h-screen bg-zinc-50">
+      <header className="h-20 bg-white border-b border-zinc-100 flex items-center px-10">
+        <Link href="/" className="font-wallpoet tracking-[0.2em] text-red-600 text-lg uppercase">JANDOSOFT</Link>
+      </header>
+      <div className="flex items-center justify-center p-4" style={{ minHeight: "calc(100vh - 5rem)" }}>
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-[2.5rem] border border-zinc-100 p-10 md:p-14 shadow-2xl">
         {status === "success" ? (
           <div className="text-center space-y-6">
             <div className="w-20 h-20 bg-emerald-50 rounded-[2rem] flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-10 h-10 text-emerald-600" />
             </div>
-            <h1 className="text-2xl font-black italic text-zinc-950">¡Contraseña Actualizada!</h1>
+            <h1 className="text-2xl font-black italic text-zinc-950 font-wallpoet tracking-[0.1em]">¡Contraseña Actualizada!</h1>
             <p className="text-sm text-zinc-500 font-medium">{message}</p>
             <Link href="/" className="inline-flex items-center gap-2 px-8 py-4 bg-red-600 text-white rounded-2xl font-black text-sm italic hover:bg-red-700 transition-all shadow-xl">
               INICIAR SESIÓN <ArrowRight className="w-4 h-4" />
@@ -84,7 +96,7 @@ function ResetContent() {
               <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-red-600 to-red-700 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-2xl shadow-red-200">
                 <Lock className="w-7 h-7 md:w-9 md:h-9 text-white" />
               </div>
-              <h1 className="text-2xl md:text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">Nueva Contraseña</h1>
+              <h1 className="text-2xl md:text-3xl font-black italic text-zinc-950 uppercase tracking-tighter font-wallpoet tracking-[0.1em]">Nueva Contraseña</h1>
               <p className="text-[9px] md:text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1 md:mt-2 italic">Elige una contraseña segura</p>
             </div>
 
@@ -127,6 +139,8 @@ function ResetContent() {
             </form>
           </div>
         )}
+        </div>
+      </div>
       </div>
     </div>
   );

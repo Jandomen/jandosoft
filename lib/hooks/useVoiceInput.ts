@@ -13,11 +13,18 @@ const SpeechRecognitionAPI = typeof window !== "undefined"
   ? (window.SpeechRecognition || window.webkitSpeechRecognition)
   : null;
 
-export function useVoiceInput() {
+interface VoiceInputOptions {
+  onResult?: (text: string) => void;
+  autoSend?: boolean;
+}
+
+export function useVoiceInput(options?: VoiceInputOptions) {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<any>(null);
   const isSupported = !!SpeechRecognitionAPI;
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   const startListening = useCallback(() => {
     if (!SpeechRecognitionAPI) return;
@@ -29,6 +36,10 @@ export function useVoiceInput() {
     recognition.onresult = (event: any) => {
       const text = event.results[0][0].transcript;
       setTranscript(text);
+      const opts = optionsRef.current;
+      if (opts?.autoSend && opts?.onResult) {
+        opts.onResult(text);
+      }
     };
 
     recognition.onerror = () => {

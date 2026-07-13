@@ -6,6 +6,8 @@ export interface IMessage extends Document {
   senderEmail: string;
   senderName: string;
   content: string;
+  mediaUrl?: string;
+  mediaType?: "image" | "video";
   readAt: Date | null;
   createdAt: Date;
 }
@@ -25,7 +27,9 @@ const MessageSchema = new Schema<IMessage>(
     },
     senderEmail: { type: String, required: true },
     senderName: { type: String, required: true },
-    content: { type: String, required: true },
+    content: { type: String, default: "" },
+    mediaUrl: { type: String },
+    mediaType: { type: String, enum: ["image", "video"] },
     readAt: { type: Date, default: null },
   },
   { timestamps: true }

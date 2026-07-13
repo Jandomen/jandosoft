@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
+import { Store } from "@/lib/models/Store";
+import bcrypt from "bcryptjs";
 import { getAuthFromCookies, getAuthFromHeaders } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
@@ -86,5 +88,39 @@ export async function PATCH(req: NextRequest) {
   } catch (error) {
     console.error("PATCH user error:", error);
     return NextResponse.json({ error: "Error updating user" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const auth = getAuthFromHeaders(req) || await getAuthFromCookies();
+    if (!auth) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    const { password } = await req.json();
+
+    await connectDB();
+    const user = await User.findById(auth.userId);
+    if (!user) {
+      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+    }
+
+    if (!password || !(await bcrypt.compare(password, user.password))) {
+      return NextResponse.json({ error: "Contraseña incorrecta" }, { status: 403 });
+    }
+
+    const orgId = user.organizationId;
+
+    await User.findByIdAndDelete(auth.userId);
+
+    if (orgId) {
+      await Store.deleteMany({ organizationId: orgId });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DELETE user error:", error);
+    return NextResponse.json({ error: "Error al eliminar la cuenta" }, { status: 500 });
   }
 }
