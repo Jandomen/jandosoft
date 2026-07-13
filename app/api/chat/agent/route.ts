@@ -179,7 +179,8 @@ Responde siempre en español, de forma amable y profesional. Si no puedes hacer 
         messages,
         CUSTOMER_TOOLS,
         AI_CONFIG.agentMaxTokens,
-        AI_CONFIG.temperature
+        AI_CONFIG.temperature,
+        store?.aiProvider
       );
       const choice = data.choices?.[0];
       if (!choice) {

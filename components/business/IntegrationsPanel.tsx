@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plug, Send, Check, X, Loader2, Trash2, ExternalLink, Search, Star } from "lucide-react";
+import { Plug, Send, Check, X, Loader2, Trash2, ExternalLink, Search, Star, Brain, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/components/ui/Toast";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
@@ -11,6 +11,7 @@ import {
   SiTelegram, SiDiscord, SiWhatsapp,
   SiInstagram, SiFacebook, SiX, SiThreads, SiYoutube,
   SiGooglemaps, SiMapbox, SiGmail, SiMessenger, SiTiktok,
+  SiAnthropic, SiGooglegemini, SiOllama, SiDeepseek, SiOpenrouter,
 } from "react-icons/si";
 import { TbBrandSlack, TbBrandTwilio } from "react-icons/tb";
 
@@ -53,6 +54,39 @@ const ICON_COLORS: Record<string, string> = {
   messenger: "#00B2FF",
   tiktok: "#000000",
 };
+
+const AI_PROVIDER_ICONS: Record<string, any> = {
+  openai: Brain,
+  anthropic: SiAnthropic,
+  gemini: SiGooglegemini,
+  openrouter: SiOpenrouter,
+  ollama: SiOllama,
+  groq: Zap,
+  deepseek: SiDeepseek,
+  custom: Plug,
+};
+
+const AI_PROVIDER_COLORS: Record<string, string> = {
+  openai: "#10a37f",
+  anthropic: "#d4a574",
+  gemini: "#4285f4",
+  openrouter: "#6366f1",
+  ollama: "#ffffff",
+  groq: "#f55036",
+  deepseek: "#4d6bfe",
+  custom: "#71717a",
+};
+
+const AI_PROVIDERS_LIST = [
+  { id: "openai", label: "OpenAI", models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1", "o3-mini"] },
+  { id: "anthropic", label: "Anthropic", models: ["claude-sonnet-4-20250514", "claude-3-5-haiku-20241022"] },
+  { id: "gemini", label: "Google Gemini", models: ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.5-pro"] },
+  { id: "openrouter", label: "OpenRouter", models: ["openai/gpt-4o-mini", "openai/gpt-4o", "anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat"] },
+  { id: "ollama", label: "Ollama (Local)", models: ["llama3.1", "mistral", "codellama", "phi3"] },
+  { id: "groq", label: "Groq", models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"] },
+  { id: "deepseek", label: "DeepSeek", models: ["deepseek-chat", "deepseek-reasoner"] },
+  { id: "custom", label: "Custom OpenAI-Compatible", models: [] },
+];
 
 interface Integration {
   _id: string;
@@ -105,11 +139,80 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
   const [paymentSaving, setPaymentSaving] = useState<string | null>(null);
   const [expandedPayment, setExpandedPayment] = useState<string | null>(null);
   const [paymentForm, setPaymentForm] = useState<Record<string, Record<string, string>>>({});
+  const [aiProvider, setAiProvider] = useState<any>(null);
+  const [aiLoading, setAiLoading] = useState(true);
+  const [aiSaving, setAiSaving] = useState(false);
+  const [aiProviderId, setAiProviderId] = useState("openai");
+  const [aiApiKey, setAiApiKey] = useState("");
+  const [aiBaseUrl, setAiBaseUrl] = useState("");
+  const [aiModel, setAiModel] = useState("");
 
   useEffect(() => {
     fetchIntegrations();
     fetchPaymentIntegrations();
+    fetchAIProvider();
   }, [storeId]);
+
+  const fetchAIProvider = async () => {
+    setAiLoading(true);
+    try {
+      const res = await fetch(`/api/stores/${storeId}/ai-provider`);
+      const data = await res.json();
+      if (data.aiProvider) {
+        setAiProvider(data.aiProvider);
+        setAiProviderId(data.aiProvider.provider || "openai");
+        setAiModel(data.aiProvider.model || "");
+        setAiBaseUrl(data.aiProvider.baseUrl || "");
+      }
+    } catch {}
+    setAiLoading(false);
+  };
+
+  const saveAIProvider = async () => {
+    setAiSaving(true);
+    try {
+      const providerConfig = AI_PROVIDERS_LIST.find(p => p.id === aiProviderId);
+      const res = await fetch(`/api/stores/${storeId}/ai-provider`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId,
+          provider: aiProviderId,
+          apiKey: aiApiKey,
+          baseUrl: aiBaseUrl || (aiProviderId === "ollama" ? "http://localhost:11434/v1" : ""),
+          model: aiModel || providerConfig?.models?.[0] || "",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error || "Error al guardar", "error"); return; }
+      showToast("Proveedor de IA configurado correctamente", "success");
+      setAiApiKey("");
+      await fetchAIProvider();
+    } catch {
+      showToast("Error de conexión", "error");
+    } finally {
+      setAiSaving(false);
+    }
+  };
+
+  const toggleAIProvider = async (enabled: boolean) => {
+    try {
+      await fetch(`/api/stores/${storeId}/ai-provider`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeId, enabled }),
+      });
+      await fetchAIProvider();
+    } catch {}
+  };
+
+  const deleteAIProvider = async () => {
+    try {
+      await fetch(`/api/stores/${storeId}/ai-provider?storeId=${storeId}`, { method: "DELETE" });
+      setAiProvider(null);
+      showToast("Proveedor de IA desconectado", "success");
+    } catch {}
+  };
 
   const fetchPaymentIntegrations = async () => {
     setPaymentLoading(true);
@@ -383,6 +486,126 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
             );
           })}
         </div>
+      </div>
+
+      <div className="w-full h-px bg-zinc-100" />
+
+      {/* AI PROVIDER */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-lg font-black italic text-zinc-950 uppercase tracking-tight flex items-center gap-2">
+              <Brain className="w-5 h-5 text-purple-600" /> Proveedor de IA
+            </h4>
+            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest italic">
+              Configura tu propia API de inteligencia artificial para el agente
+            </p>
+          </div>
+        </div>
+
+        {aiProvider?.enabled ? (
+          <div className="bg-white p-5 rounded-[2rem] border border-green-200 ring-1 ring-green-100 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl" style={{ backgroundColor: (AI_PROVIDER_COLORS[aiProvider.provider] || "#71717a") + "15" }}>
+                  {(() => { const I = AI_PROVIDER_ICONS[aiProvider.provider]; return I ? <I className="w-4 h-4" style={{ color: AI_PROVIDER_COLORS[aiProvider.provider] }} /> : <Brain className="w-4 h-4" />; })()}
+                </div>
+                <div>
+                  <p className="text-sm font-black italic text-zinc-950 uppercase tracking-tighter">
+                    {AI_PROVIDERS_LIST.find(p => p.id === aiProvider.provider)?.label || aiProvider.provider}
+                  </p>
+                  <span className="text-[9px] font-bold italic uppercase text-green-500">
+                    Activo — Modelo: {aiProvider.model}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <motion.button whileTap={{ scale: 0.9 }}
+                  onClick={() => toggleAIProvider(false)}
+                  className="p-1.5 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-all"
+                  title="Desactivar">
+                  <X className="w-3.5 h-3.5" />
+                </motion.button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => { setAiProvider(null); }}
+                className="px-4 py-2 bg-zinc-50 text-zinc-600 rounded-xl font-black text-[10px] italic hover:bg-zinc-100 transition-all">
+                Cambiar proveedor
+              </button>
+              <button onClick={deleteAIProvider}
+                className="px-4 py-2 bg-red-50 text-red-400 rounded-xl font-black text-[10px] italic hover:bg-red-100 transition-all">
+                Desconectar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white p-5 rounded-[2rem] border border-zinc-100 shadow-sm space-y-4">
+            <p className="text-[10px] font-bold text-zinc-400 italic">
+              Elige un proveedor para que tu agente IA funcione con tu propia API key.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {AI_PROVIDERS_LIST.map(p => {
+                const I = AI_PROVIDER_ICONS[p.id];
+                return (
+                  <button key={p.id} onClick={() => { setAiProviderId(p.id); setAiModel(p.models[0] || ""); setAiBaseUrl(p.id === "ollama" ? "http://localhost:11434/v1" : ""); }}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      aiProviderId === p.id ? "border-red-200 bg-red-50 ring-1 ring-red-100" : "border-zinc-100 hover:bg-zinc-50"
+                    }`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      {I && <I className="w-3.5 h-3.5" style={{ color: AI_PROVIDER_COLORS[p.id] }} />}
+                      <span className="text-[10px] font-black italic text-zinc-700 uppercase">{p.label}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="space-y-3">
+              {aiProviderId !== "ollama" && (
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">API Key</label>
+                  <input type="password" value={aiApiKey} onChange={e => setAiApiKey(e.target.value)}
+                    placeholder="Tu API key del proveedor"
+                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                </div>
+              )}
+              {(aiProviderId === "ollama" || aiProviderId === "custom") && (
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Base URL</label>
+                  <input type="text" value={aiBaseUrl} onChange={e => setAiBaseUrl(e.target.value)}
+                    placeholder={aiProviderId === "ollama" ? "http://localhost:11434/v1" : "https://tu-servidor.com/v1"}
+                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                </div>
+              )}
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Modelo</label>
+                {(() => {
+                  const pc = AI_PROVIDERS_LIST.find(p => p.id === aiProviderId);
+                  if (pc && pc.models.length > 0) {
+                    return (
+                      <select value={aiModel} onChange={e => setAiModel(e.target.value)}
+                        className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm">
+                        {pc.models.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    );
+                  }
+                  return (
+                    <input type="text" value={aiModel} onChange={e => setAiModel(e.target.value)}
+                      placeholder="nombre-del-modelo"
+                      className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                  );
+                })()}
+              </div>
+              <motion.button whileTap={{ scale: 0.95 }}
+                onClick={saveAIProvider} disabled={aiSaving || (!aiApiKey && aiProviderId !== "ollama")}
+                className="px-5 py-2.5 bg-purple-600 text-white rounded-xl font-black text-xs italic hover:bg-purple-700 transition-all disabled:opacity-50 flex items-center gap-1.5">
+                {aiSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                {aiSaving ? "Guardando..." : "Conectar proveedor de IA"}
+              </motion.button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="w-full h-px bg-zinc-100" />

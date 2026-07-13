@@ -703,13 +703,14 @@ export default function CustomersPanel({ storeId }: { storeId: string }) {
                     if ((needsSubject && !promotion.subject.trim()) || !promotion.message.trim()) return;
                     setSendingPromotion(true);
                     setPromotionResult("");
+                    const eligible = customers.filter(c => promoChannel === "whatsapp" ? c.phone : c.email);
                     try {
                       const res = await fetch("/api/promotions/send", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                           storeId,
-                          customerIds: customers.map(c => c._id),
+                          customerIds: eligible.map(c => c._id),
                           subject: promotion.subject.trim(),
                           message: promotion.message.trim(),
                           channel: promoChannel,

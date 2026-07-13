@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export type CommunicationType = "email";
+export type CommunicationType = "email" | "sms" | "whatsapp";
 export type CommunicationDirection = "sent" | "received";
 export type CommunicationStatus = "sent" | "failed" | "draft";
 
@@ -11,6 +11,7 @@ export interface ICommunication extends Document {
   direction: CommunicationDirection;
   subject: string;
   body: string;
+  to: string;
   status: CommunicationStatus;
   externalId: string;
   createdAt: Date;
@@ -19,10 +20,11 @@ export interface ICommunication extends Document {
 const CommunicationSchema = new Schema<ICommunication>({
   storeId: { type: Schema.Types.ObjectId, ref: "Store", required: true, index: true },
   customerId: { type: Schema.Types.ObjectId, ref: "Customer", required: true, index: true },
-  type: { type: String, enum: ["email"], required: true },
+  type: { type: String, enum: ["email", "sms", "whatsapp"], required: true },
   direction: { type: String, enum: ["sent", "received"], default: "sent" },
   subject: { type: String, default: "" },
   body: { type: String, default: "" },
+  to: { type: String, default: "" },
   status: { type: String, enum: ["sent", "failed", "draft"], default: "sent" },
   externalId: { type: String, default: "" },
 }, { timestamps: true });

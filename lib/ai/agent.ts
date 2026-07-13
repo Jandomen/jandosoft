@@ -15,7 +15,7 @@ registerAllTools();
 
 export const AGENT_TOOLS = ALL_TOOLS;
 
-export async function callLLM(messages: any[], tools?: any[], maxTokens?: number, temperature?: number) {
+export async function callLLM(messages: any[], tools?: any[], maxTokens?: number, temperature?: number, storeAIProvider?: any) {
   const mt = maxTokens ?? AI_CONFIG.maxTokens;
   const temp = temperature ?? AI_CONFIG.temperature;
   const startTime = Date.now();
@@ -31,6 +31,28 @@ export async function callLLM(messages: any[], tools?: any[], maxTokens?: number
   if (tools) options.tools = tools;
 
   async function attempt(): Promise<any> {
+    // 1) Store's custom AI provider
+    if (storeAIProvider?.enabled && storeAIProvider?.provider) {
+      try {
+        const { callWithStoreAIProvider } = await import("@/lib/ai-providers/registry");
+        const result = await callWithStoreAIProvider(storeAIProvider, {
+          messages: safeMessages,
+          model: storeAIProvider.model || AI_CONFIG.model,
+          temperature: temp,
+          max_tokens: mt,
+          tools,
+        });
+        return {
+          choices: [{ message: { content: result.content, tool_calls: result.tool_calls }, finish_reason: result.finish_reason }],
+          model: result.model,
+          usage: result.usage,
+        };
+      } catch (e) {
+        console.warn("[callLLM] Store AI provider failed, falling back:", (e as Error).message);
+      }
+    }
+
+    // 2) Platform OpenAI
     if (OPENAI_KEY) {
       const { default: OpenAI } = await import("openai");
       const client = new OpenAI({ apiKey: OPENAI_KEY });
@@ -41,6 +63,7 @@ export async function callLLM(messages: any[], tools?: any[], maxTokens?: number
       });
     }
 
+    // 3) Platform OpenRouter
     if (OPENROUTER_KEY) {
       const res = await fetch(AI_CONFIG.baseURL + "/chat/completions", {
         method: "POST",
@@ -148,7 +171,7 @@ export async function askBusinessAI({
     { role: "user", content: message },
   ]);
 
-  const data = await callLLM(messages, undefined, AI_CONFIG.quickMaxTokens, AI_CONFIG.temperature);
+  const data = await callLLM(messages, undefined, AI_CONFIG.quickMaxTokens, AI_CONFIG.temperature, store?.aiProvider);
   return data.choices?.[0]?.message?.content || "Error al obtener respuesta de la IA.";
 }
 
@@ -191,7 +214,7 @@ export async function askBusinessAIWithTools({
   let finalResponse = "";
 
   for (let turn = 0; turn < 5; turn++) {
-    const data = await callLLM(messages, activeTools, AI_CONFIG.agentMaxTokens, AI_CONFIG.temperature);
+    const data = await callLLM(messages, activeTools, AI_CONFIG.agentMaxTokens, AI_CONFIG.temperature, store?.aiProvider);
     const choice = data.choices?.[0];
     if (!choice) return { response: "Error al obtener respuesta de la IA.", actions };
 
