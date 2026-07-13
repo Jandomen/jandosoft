@@ -424,11 +424,9 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
       {/* PAYMENT PROVIDERS */}
       {(!searchQuery || ["stripe", "paypal", "mercadopago", "nowpayments"].some(p => p.includes(searchQuery.toLowerCase()))) && (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="text-lg font-black italic text-zinc-950 uppercase tracking-tight">Proveedores de Pago</h4>
-            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest italic">Conecta Stripe, PayPal, Mercado Pago o NOWPayments</p>
-          </div>
+        <div>
+          <h4 className="text-lg font-black italic text-zinc-950 uppercase tracking-tight">Proveedores de Pago</h4>
+          <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest italic">Conecta Stripe, PayPal, Mercado Pago o NOWPayments</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -446,7 +444,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 rounded-xl" style={{ backgroundColor: pi?.enabled ? PAYMENT_COLORS[provider] + "15" : "#f4f4f5" }}>
-                      <Icon className="w-4 h-4" style={{ color: pi?.enabled ? PAYMENT_COLORS[provider] : "#a1a1aa" }} />
+                      <Icon className="w-5 h-5" style={{ color: pi?.enabled ? PAYMENT_COLORS[provider] : "#a1a1aa" }} />
                     </div>
                     <div>
                       <p className="text-sm font-black italic text-zinc-950 uppercase tracking-tighter">{provider === "mercadopago" ? "Mercado Pago" : provider === "nowpayments" ? "NOWPayments" : provider}</p>
@@ -463,7 +461,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
                     {pi?.enabled && (
                       <motion.button whileTap={{ scale: 0.9 }}
                         onClick={() => togglePaymentDefault(provider)}
-                        className={`p-1.5 rounded-lg transition-all ${pi.isDefault ? "bg-amber-50 text-amber-500" : "bg-zinc-50 text-zinc-300 hover:text-amber-500"}`}
+                        className={`p-2 rounded-lg transition-all ${pi.isDefault ? "bg-amber-50 text-amber-500" : "bg-zinc-50 text-zinc-300 hover:text-amber-500"}`}
                         title="Predeterminado">
                         <Star className="w-3.5 h-3.5" />
                       </motion.button>
@@ -471,7 +469,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
                     {pi?.enabled && (
                       <motion.button whileTap={{ scale: 0.9 }}
                         onClick={() => togglePaymentEnabled(provider, true)}
-                        className="p-1.5 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-all">
+                        className="p-2 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-all">
                         <X className="w-3.5 h-3.5" />
                       </motion.button>
                     )}
@@ -481,11 +479,11 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
                 {pi?.enabled && !isExpanded ? (
                   <div className="flex gap-2">
                     <button onClick={() => { setExpandedPayment(provider); }}
-                      className="px-4 py-2 bg-zinc-50 text-zinc-600 rounded-xl font-black text-[10px] italic hover:bg-zinc-100 transition-all">
+                      className="px-4 py-2.5 bg-zinc-50 text-zinc-600 rounded-xl font-black text-[10px] italic hover:bg-zinc-100 transition-all">
                       Editar
                     </button>
                     <button onClick={() => deletePaymentProvider(provider)}
-                      className="px-4 py-2 bg-red-50 text-red-400 rounded-xl font-black text-[10px] italic hover:bg-red-100 transition-all">
+                      className="px-4 py-2.5 bg-red-50 text-red-400 rounded-xl font-black text-[10px] italic hover:bg-red-100 transition-all">
                       Desconectar
                     </button>
                   </div>
@@ -528,15 +526,13 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
       {/* AI PROVIDER */}
       {(!searchQuery || ["openai", "anthropic", "gemini", "openrouter", "ollama", "groq", "deepseek", "mistral", "xai", "perplexity", "huggingface", "cloudflare", "lmstudio", "nvidia", "replicate", "custom", "ia", "ai", "proveedor de ia", "inteligencia artificial"].some(k => k.includes(searchQuery.toLowerCase()) || searchQuery.toLowerCase().includes(k))) && (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="text-lg font-black italic text-zinc-950 uppercase tracking-tight flex items-center gap-2">
-              <Brain className="w-5 h-5 text-purple-600" /> Proveedor de IA
-            </h4>
-            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest italic">
-              Configura tu propia API de inteligencia artificial para el agente
-            </p>
-          </div>
+        <div>
+          <h4 className="text-lg font-black italic text-zinc-950 uppercase tracking-tight flex items-center gap-2">
+            <Brain className="w-5 h-5 text-purple-600" /> Proveedor de IA
+          </h4>
+          <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest italic">
+            Configura tu propia API de inteligencia artificial para el agente
+          </p>
         </div>
 
         {aiProvider?.enabled ? (
@@ -544,7 +540,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl" style={{ backgroundColor: (AI_PROVIDER_COLORS[aiProvider.provider] || "#71717a") + "15" }}>
-                  {(() => { const I = AI_PROVIDER_ICONS[aiProvider.provider]; return I ? <I className="w-4 h-4" style={{ color: AI_PROVIDER_COLORS[aiProvider.provider] }} /> : <Brain className="w-4 h-4" />; })()}
+                  {(() => { const I = AI_PROVIDER_ICONS[aiProvider.provider]; return I ? <I className="w-5 h-5" style={{ color: AI_PROVIDER_COLORS[aiProvider.provider] }} /> : <Brain className="w-5 h-5" />; })()}
                 </div>
                 <div>
                   <p className="text-sm font-black italic text-zinc-950 uppercase tracking-tighter">
@@ -558,7 +554,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
               <div className="flex items-center gap-1">
                 <motion.button whileTap={{ scale: 0.9 }}
                   onClick={() => toggleAIProvider(false)}
-                  className="p-1.5 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-all"
+                  className="p-2 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-all"
                   title="Desactivar">
                   <X className="w-3.5 h-3.5" />
                 </motion.button>
@@ -566,11 +562,11 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
             </div>
             <div className="flex gap-2">
               <button onClick={() => { setAiProvider(null); }}
-                className="px-4 py-2 bg-zinc-50 text-zinc-600 rounded-xl font-black text-[10px] italic hover:bg-zinc-100 transition-all">
+                className="px-4 py-2.5 bg-zinc-50 text-zinc-600 rounded-xl font-black text-[10px] italic hover:bg-zinc-100 transition-all">
                 Cambiar proveedor
               </button>
               <button onClick={deleteAIProvider}
-                className="px-4 py-2 bg-red-50 text-red-400 rounded-xl font-black text-[10px] italic hover:bg-red-100 transition-all">
+                className="px-4 py-2.5 bg-red-50 text-red-400 rounded-xl font-black text-[10px] italic hover:bg-red-100 transition-all">
                 Desconectar
               </button>
             </div>
@@ -667,7 +663,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
       <div className="w-full h-px bg-zinc-100" />
 
       {/* OTHER INTEGRATIONS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {Object.entries(PLATFORM_INFO).filter(([platform, info]) =>
           !searchQuery || platform.toLowerCase().includes(searchQuery.toLowerCase()) ||
           info.label.toLowerCase().includes(searchQuery.toLowerCase())
@@ -678,12 +674,12 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
 
           return (
             <div key={platform}
-              className={`bg-white p-6 rounded-[2.5rem] border shadow-sm transition-all ${
+              className={`bg-white p-5 rounded-[2rem] border shadow-sm transition-all ${
                 existing?.enabled ? "border-green-200 ring-1 ring-green-100" : "border-zinc-100"
               }`}>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl ${existing?.enabled ? "bg-green-50" : "bg-zinc-50"}`}>
+                  <div className="p-2.5 rounded-xl" style={{ backgroundColor: existing?.enabled ? iconColor + "15" : "#f4f4f5" }}>
                     <Icon className="w-5 h-5" style={{ color: existing?.enabled ? iconColor : "#a1a1aa" }} />
                   </div>
                   <div>
@@ -696,7 +692,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
                   </div>
                 </div>
                 {existing && (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
                     <motion.button whileTap={{ scale: 0.9 }}
                       onClick={() => toggleEnabled(platform, existing.enabled)}
                       className={`p-2 rounded-lg transition-all ${
@@ -719,7 +715,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
                       className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
                   </div>
                 ))}
-                <div className="flex gap-2 pt-2 flex-wrap">
+                <div className="flex gap-2 pt-1 flex-wrap">
                   <motion.button whileTap={{ scale: 0.95 }}
                     onClick={() => saveIntegration(platform)} disabled={saving === platform}
                     className="px-5 py-2.5 bg-red-600 text-white rounded-xl font-black text-xs italic hover:bg-red-700 transition-all disabled:opacity-50 flex items-center gap-1.5">
@@ -730,13 +726,13 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
                     <>
                       <motion.button whileTap={{ scale: 0.95 }}
                         onClick={() => testConnection(platform)} disabled={testing === platform}
-                        className="px-4 py-2.5 bg-zinc-100 text-zinc-600 rounded-xl font-black text-xs italic hover:bg-zinc-200 transition-all disabled:opacity-50 flex items-center gap-1.5">
+                        className="px-4 py-2.5 bg-zinc-100 text-zinc-600 rounded-xl font-black text-[10px] italic hover:bg-zinc-200 transition-all disabled:opacity-50 flex items-center gap-1.5">
                         {testing === platform ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
                         {t("integrations.test")}
                       </motion.button>
                       <motion.button whileTap={{ scale: 0.95 }}
                         onClick={() => toggleEnabled(platform, existing.enabled)}
-                        className={`px-4 py-2.5 rounded-xl font-black text-xs italic transition-all flex items-center gap-1.5 ${
+                        className={`px-4 py-2.5 rounded-xl font-black text-[10px] italic transition-all flex items-center gap-1.5 ${
                           existing.enabled ? "bg-rose-50 text-rose-600 hover:bg-rose-100" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
                         }`}>
                         {existing.enabled ? <X className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
@@ -751,7 +747,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
                   )}
                   {info.docs && (
                     <a href={info.docs} target="_blank" rel="noopener noreferrer"
-                      className="px-4 py-2.5 bg-zinc-50 text-zinc-400 rounded-xl font-black text-xs italic hover:bg-zinc-100 transition-all flex items-center gap-1.5">
+                      className="px-4 py-2.5 bg-zinc-50 text-zinc-400 rounded-xl font-black text-[10px] italic hover:bg-zinc-100 transition-all flex items-center gap-1.5">
                       <ExternalLink className="w-3 h-3" /> {t("integrations.guide")}
                     </a>
                   )}
