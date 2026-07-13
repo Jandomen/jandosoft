@@ -388,6 +388,13 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
         Configura los proveedores de pago de tu empresa y las integraciones con tus servicios favoritos.
       </p>
 
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
+        <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          placeholder={t("integrations.search_placeholder")}
+          className="w-full bg-zinc-50 pl-11 pr-4 py-3 rounded-2xl border border-zinc-100 outline-none font-medium text-sm focus:bg-white focus:border-red-200 transition-all" />
+      </div>
+
       {/* PAYMENT PROVIDERS */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -611,13 +618,6 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
       <div className="w-full h-px bg-zinc-100" />
 
       {/* OTHER INTEGRATIONS */}
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
-        <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-          placeholder={t("integrations.search_placeholder")}
-          className="w-full bg-zinc-50 pl-11 pr-4 py-3 rounded-2xl border border-zinc-100 outline-none font-medium text-sm focus:bg-white focus:border-red-200 transition-all" />
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {Object.entries(PLATFORM_INFO).filter(([platform, info]) =>
           !searchQuery || platform.toLowerCase().includes(searchQuery.toLowerCase()) ||
