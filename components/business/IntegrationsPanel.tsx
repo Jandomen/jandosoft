@@ -34,7 +34,7 @@ const ICON_COLORS: Record<string, string> = {
   google_maps: "#4285F4", mapbox: "#4264FB", gmail: "#EA4335", messenger: "#00B2FF",
   tiktok: "#000000",
   openai: "#10a37f", anthropic: "#d4a574", gemini: "#4285f4", openrouter: "#6366f1",
-  ollama: "#ffffff", groq: "#f55036", deepseek: "#4d6bfe", mistral: "#ff7000",
+  ollama: "#333333", groq: "#f55036", deepseek: "#4d6bfe", mistral: "#ff7000",
   xai: "#1d9bf0", perplexity: "#20b8cd", huggingface: "#ff9d00", cloudflare: "#f6821f",
   lmstudio: "#9333ea", nvidia: "#76b900", replicate: "#3b82f6", custom: "#71717a",
 };
