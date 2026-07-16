@@ -12,11 +12,14 @@ const org = require('./commands/org');
 const status = require('./commands/status');
 const chat = require('./commands/chat');
 const conversations = require('./commands/conversations');
+const notifications = require('./commands/notifications');
+const barbershop = require('./commands/barbershop');
+const restaurant = require('./commands/restaurant');
 
 const [, , cmd, ...args] = process.argv;
 
 if (cmd === '--version' || cmd === '-v') {
-  console.log(`Jandosoft CLI v1.0.0`);
+  console.log(`Jandosoft CLI v2.0.0`);
   process.exit(0);
 }
 
@@ -28,7 +31,7 @@ function logo() {
   console.log(`  ${chalk.red.bold('  ██   ██║██╔══██║██║╚██╗██║██║  ██║██║   ██║╚════██║██║   ██║██╔══╝     ██║   ')}`);
   console.log(`  ${chalk.red.bold('  ╚█████╔╝██║  ██║██║ ╚████║██████╔╝╚██████╔╝███████║╚██████╔╝██║        ██║   ')}`);
   console.log(`  ${chalk.red.bold('   ╚════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝  ╚═════╝ ╚══════╝ ╚═════╝ ╚═╝        ╚═╝   ')}`);
-  console.log(`  ${chalk.dim(`                           CLI v1.0.0 — ${BASE_URL}`)}`);
+  console.log(`  ${chalk.dim(`                           CLI v2.0.0 — ${BASE_URL}`)}`);
   console.log('');
 }
 
@@ -52,7 +55,10 @@ async function showMenu() {
     choices.push(new inquirer.Separator());
     choices.push({ name: `${chalk.magenta('◆')}  ${chalk.bold('AI Chat')}            ${chalk.dim('IA de Jandosoft')}`, value: 'chat', short: 'Chat' });
     choices.push({ name: `${chalk.magenta('◆')}  ${chalk.bold('Conversaciones')}    ${chalk.dim('mensajes en vivo')}`, value: 'conversations', short: 'Convos' });
-    choices.push({ name: `${chalk.magenta('◆')}  ${chalk.bold('Historial de Chat')}  ${chalk.dim('IA guardado')}`, value: 'chathistory', short: 'Historial' });
+    choices.push({ name: `${chalk.yellow('🔔')}  ${chalk.bold('Notificaciones')}`, value: 'notifications', short: 'Notifs' });
+    choices.push(new inquirer.Separator());
+    choices.push({ name: `${chalk.cyan('✂️')}  ${chalk.bold('Barbería')}           ${chalk.dim('barberos, cola, historial')}`, value: 'barbershop', short: 'Barbería' });
+    choices.push({ name: `${chalk.green('🍽️')}  ${chalk.bold('Restaurante')}        ${chalk.dim('menú, pedidos, reservaciones')}`, value: 'restaurant', short: 'Restaurante' });
     choices.push(new inquirer.Separator());
     choices.push({ name: `${chalk.cyan('◆')}  ${chalk.bold('Estado del Servidor')}`, value: 'status', short: 'Status' });
     choices.push({ name: `${chalk.cyan('◆')}  ${chalk.bold('Configuración')}`, value: 'config', short: 'Config' });
@@ -97,6 +103,15 @@ async function handleAction(action) {
       break;
     case 'conversations':
       await conversations.handler(args);
+      break;
+    case 'notifications':
+      await notifications.handler(args);
+      break;
+    case 'barbershop':
+      await barbershop.handler(args);
+      break;
+    case 'restaurant':
+      await restaurant.handler(args);
       break;
     case 'chathistory':
       await conversations.handler(['history']);
@@ -147,6 +162,18 @@ async function runDirectCommand() {
       case 'conversations':
         logo();
         await conversations.handler(args);
+        break;
+      case 'notifications':
+        logo();
+        await notifications.handler(args);
+        break;
+      case 'barbershop':
+        logo();
+        await barbershop.handler(args);
+        break;
+      case 'restaurant':
+        logo();
+        await restaurant.handler(args);
         break;
       case 'status':
         logo();

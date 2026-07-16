@@ -45,6 +45,9 @@ async function showStoreDashboard(store) {
       { name: `  ${chalk.cyan('🔧')}  ${chalk.bold('Servicios')}     ${chalk.dim(`(${(s.services || []).length})`)}`, value: 'services', short: 'Servicios' },
       { name: `  ${chalk.cyan('📊')}  ${chalk.bold('Analíticas')}`, value: 'analytics', short: 'Analytics' },
       new inquirer.Separator(),
+      { name: `  ${chalk.yellow('🔔')}  ${chalk.bold('Notificaciones')}`, value: 'notifications', short: 'Notifs' },
+      { name: `  ${chalk.green('💳')}  ${chalk.bold('Pagos')}`, value: 'payments', short: 'Pagos' },
+      new inquirer.Separator(),
       { name: `  ${chalk.red('◆')}  ${chalk.bold('Volver a empresas')}`, value: '__back__', short: 'Volver' },
     ];
 
@@ -80,6 +83,13 @@ async function showStoreDashboard(store) {
         break;
       case 'analytics':
         await showAnalytics(s);
+        break;
+      case 'notifications':
+        const notifications = require('./notifications');
+        await notifications.handler([]);
+        break;
+      case 'payments':
+        showPayments(s, plan);
         break;
     }
 
@@ -250,6 +260,20 @@ async function createStore(args) {
   } catch (err) {
     console.log(`\n${chalk.red.bold(' ✖ Error')} ${err.message}\n`);
   }
+}
+
+function showPayments(s, plan) {
+  console.log(`\n ${chalk.bold('💳 Información de Pagos')}\n`);
+  console.log(`   ${chalk.dim('💳 Plan:')}              ${chalk.cyan(plan.toUpperCase())}`);
+  console.log(`   ${chalk.dim('💰 Política de cobro:')}  ${s.paymentPolicy === 'always' ? 'Siempre cobrar' : s.paymentPolicy === 'optional' ? 'Opcional' : 'No cobrar'}`);
+  console.log(`   ${chalk.dim('🔗 Stripe Connect:')}     ${s.stripeAccountId ? chalk.green('✓ Conectado') : chalk.yellow('✖ No conectado')}`);
+  if (s.stripeAccountId) {
+    console.log(`   ${chalk.dim('   Account ID:')}         ${chalk.dim(s.stripeAccountId)}`);
+  }
+  console.log(`   ${chalk.dim('💰 Cobros habilitados:')} ${s.paymentsEnabled ? chalk.green('✓ Sí') : chalk.yellow('✖ No')}`);
+  console.log(`   ${chalk.dim('📊 Ingresos totales:')}   $${s.totalRevenue || 0}`);
+  console.log(`   ${chalk.dim('📑 Facturas:')}           ${(s.invoices || []).length}`);
+  console.log('');
 }
 
 module.exports = { handler };
