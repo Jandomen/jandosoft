@@ -1161,7 +1161,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                           onClick={() => {
                             const current = planConfig || { plans: [], freePlan: { id: "free", name: "Gratis", features: [], limits: { maxStores: 1, maxProductsPerStore: 10, maxMessages: 10, maxAutomations: 2 } } };
                             const newId = `plan_${Date.now()}`;
-                            const newPlan = { id: newId, name: "Nuevo Plan", price: 0, desc: "", popular: false, features: [], limits: { maxStores: 1, maxProductsPerStore: 10, maxMessages: 10, maxAutomations: 2 } };
+                            const newPlan = { id: newId, name: "Nuevo Plan", price: 0, currency: "usd", desc: "", popular: false, features: [], limits: { maxStores: 1, maxProductsPerStore: 10, maxMessages: 10, maxAutomations: 2 } };
                             setPlanConfig({ ...current, plans: [...current.plans, newPlan] });
                             setEditingPlanId(newId);
                             setEditForm(newPlan);
@@ -1306,17 +1306,46 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                             </div>
                           </div>
 
-                          {editingPlanId === plan.id && editForm ? (
+                           {editingPlanId === plan.id && editForm ? (
                             <div className="space-y-4 bg-zinc-50 rounded-2xl p-5 border border-zinc-100">
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <AdminInput label="Nombre" value={editForm.name || ""} onChange={(v: string) => setEditForm({...editForm, name: v})} />
-                                <div className="space-y-1.5">
-                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Precio ($)</label>
-                                  <input type="number" value={editForm.price?.toString() || "0"} onChange={(e) => setEditForm({...editForm, price: parseInt(e.target.value) || 0})} className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic" />
-                                </div>
                                 <div className="space-y-1.5">
                                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Descripción</label>
                                   <input type="text" value={editForm.desc || ""} onChange={(e) => setEditForm({...editForm, desc: e.target.value})} className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic" />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Precio</label>
+                                  <input type="number" value={editForm.price?.toString() || "0"} onChange={(e) => setEditForm({...editForm, price: parseInt(e.target.value) || 0})} className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic" />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Moneda</label>
+                                  <select value={editForm.currency || "usd"} onChange={(e) => setEditForm({...editForm, currency: e.target.value, priceUsd: e.target.value === "usd" ? 0 : editForm.priceUsd || 0})} className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic">
+                                    <option value="usd">USD ($ Dólares)</option>
+                                    <option value="mxn">MXN ($ Pesos Mexicanos)</option>
+                                    <option value="eur">EUR (€ Euros)</option>
+                                    <option value="cop">COL ($ Pesos Colombianos)</option>
+                                    <option value="ars">ARS ($ Pesos Argentinos)</option>
+                                    <option value="brl">BRL (R$ Reales)</option>
+                                    <option value="pen">PEN (S/ Soles)</option>
+                                    <option value="clp">CLP ($ Pesos Chilenos)</option>
+                                    <option value="uyu">UYU ($ Pesos Uruguayos)</option>
+                                    <option value="gbp">GBP (£ Libras)</option>
+                                    <option value="cad">CAD ($ Dólares Canadienses)</option>
+                                    <option value="aud">AUD ($ Dólares Australianos)</option>
+                                  </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">
+                                    {editForm.currency && editForm.currency !== "usd" ? "Precio USD (alternativa)" : "Precio USD"}
+                                  </label>
+                                  <input type="number" value={editForm.priceUsd?.toString() || ""} onChange={(e) => setEditForm({...editForm, priceUsd: parseInt(e.target.value) || 0})} placeholder={editForm.currency === "usd" ? "Mismo que arriba" : "Para tarjetas internacionales"} className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic" />
+                                  {editForm.currency && editForm.currency !== "usd" && (
+                                    <p className="text-[8px] text-zinc-400 font-medium italic ml-1">Precio para tarjetas que no acepten {editForm.currency?.toUpperCase()}</p>
+                                  )}
                                 </div>
                               </div>
 
@@ -1353,7 +1382,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                             </div>
                           ) : (
                             <div className="flex items-baseline gap-1">
-                              <span className="text-3xl md:text-4xl font-black italic text-zinc-950 tracking-tighter">${plan.price}</span>
+                              <span className="text-3xl md:text-4xl font-black italic text-zinc-950 tracking-tighter">{plan.currency === "eur" ? "€" : plan.currency === "gbp" ? "£" : plan.currency === "brl" ? "R$" : plan.currency === "pen" ? "S/" : plan.currency === "gtq" ? "Q" : plan.currency === "crc" ? "₡" : plan.currency === "hnl" ? "L" : plan.currency === "pyg" ? "₲" : plan.currency === "bob" ? "Bs" : "$"}{plan.price}</span>
                               <span className="text-zinc-400 font-black text-xs italic uppercase">/mes</span>
                             </div>
                           )}

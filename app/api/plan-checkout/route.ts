@@ -6,7 +6,7 @@ import { getPlanConfig } from "@/lib/plan-config";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, name, planId, paymentMethod } = await req.json();
+    const { email, name, planId, paymentMethod, payCurrency } = await req.json();
     if (!email || !planId) {
       return NextResponse.json({ error: "email and planId required" }, { status: 400 });
     }
@@ -34,11 +34,14 @@ export async function POST(req: NextRequest) {
         if (user) await User.findByIdAndUpdate(user._id, { stripeCustomerId });
       }
 
-      if (plan.stripePriceId) {
+      const useUsd = payCurrency === "usd" || (!plan.currency || plan.currency === "usd");
+      const selectedPriceId = useUsd && plan.stripePriceIdUsd ? plan.stripePriceIdUsd : plan.stripePriceId;
+
+      if (selectedPriceId) {
         const session = await stripe.checkout.sessions.create({
           mode: "subscription",
           payment_method_types: ["card"],
-          line_items: [{ price: plan.stripePriceId, quantity: 1 }],
+          line_items: [{ price: selectedPriceId, quantity: 1 }],
           customer: stripeCustomerId,
           success_url: `${baseUrl}/?stripe_success={CHECKOUT_SESSION_ID}&plan=${planId}`,
           cancel_url: `${baseUrl}/?stripe_cancel=1`,
@@ -47,13 +50,13 @@ export async function POST(req: NextRequest) {
         });
         return NextResponse.json({ url: session.url, sessionId: session.id });
       } else {
-        const amountInCents = Math.round(plan.price * 100);
+        const amountInCents = Math.round((useUsd && plan.priceUsd ? plan.priceUsd : plan.price) * 100);
         const session = await stripe.checkout.sessions.create({
           mode: "payment",
           payment_method_types: ["card"],
           line_items: [{
             price_data: {
-              currency: (plan.currency || "usd").toLowerCase(),
+              currency: useUsd ? "usd" : (plan.currency || "usd").toLowerCase(),
               product_data: { name: `Plan ${plan.name} - Jandosoft` },
               unit_amount: amountInCents,
             },

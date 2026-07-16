@@ -24,12 +24,14 @@ export interface IPlan {
   name: string;
   price: number;
   currency?: string;
+  priceUsd?: number;
   desc: string;
   popular: boolean;
   features: string[];
   limits: IPlanLimits;
   stripePriceId?: string;
   stripeProductId?: string;
+  stripePriceIdUsd?: string;
 }
 
 export interface IFreePlan {
@@ -65,6 +67,7 @@ const PlanSchema = new Schema<IPlan>({
   limits: { type: PlanLimitsSchema, default: () => ({}) },
   stripePriceId: { type: String, default: null },
   stripeProductId: { type: String, default: null },
+  stripePriceIdUsd: { type: String, default: null },
 }, { _id: false });
 
 const FreePlanSchema = new Schema<IFreePlan>({

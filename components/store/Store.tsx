@@ -60,6 +60,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
   const [freePlan] = useState<any>(FREE_PLAN);
   const [comparisonFeatures, setComparisonFeatures] = useState<any[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [payCurrency, setPayCurrency] = useState<"local" | "usd">("local");
   const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
 
   const PLAN_PAYMENT_METHODS = [
@@ -70,6 +71,8 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
   const handlePlanClick = (planId: string) => {
     if (!isLogged) { onLoginRequest?.(); return; }
     if (!userEmail) { showToast(t("plans.not_logged"), "info"); return; }
+    const plan = plans.find((p) => p.id === planId);
+    setPayCurrency(plan?.currency && plan.currency !== "usd" ? "local" : "usd");
     setPendingPlanId(planId);
     setShowPaymentModal(true);
   };
@@ -90,6 +93,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
           name: userEmail?.split("@")[0] || "Customer",
           planId: pendingPlanId,
           paymentMethod,
+          payCurrency,
         }),
       });
       const data = await res.json();
@@ -150,11 +154,12 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
       window.history.replaceState({}, "", window.location.pathname);
     }
     if (stripeCancel) {
+      setStripeError(t("plans.payment_cancelled") || "Pago cancelado. Puedes intentar de nuevo cuando quieras.");
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
 
-  const handleSelectPlan = async (planId: string) => {
+  const handleSelectPlan = async (planId: string, payCurrency?: "local" | "usd") => {
     const plan = plans.find((p) => p.id === planId);
     if (!plan) return;
 
@@ -180,11 +185,19 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
         planId: plan.id,
       };
 
-      if (plan.stripePriceId) {
+      const useUsd = payCurrency === "usd" || (!payCurrency && (!plan.currency || plan.currency === "usd"));
+
+      if (useUsd && plan.stripePriceIdUsd) {
+        body.priceId = plan.stripePriceIdUsd;
+      } else if (!useUsd && plan.stripePriceId) {
         body.priceId = plan.stripePriceId;
+      } else if (plan.stripePriceId) {
+        body.priceId = plan.stripePriceId;
+      } else if (plan.stripePriceIdUsd) {
+        body.priceId = plan.stripePriceIdUsd;
       } else {
-        body.amount = plan.price;
-        body.currency = plan.currency || "usd";
+        body.amount = useUsd && plan.priceUsd ? plan.priceUsd : plan.price;
+        body.currency = useUsd ? "usd" : (plan.currency || "usd");
       }
 
       const res = await fetch("/api/stripe/checkout", {
@@ -330,8 +343,8 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
                   <div className="flex items-baseline justify-center gap-1">
                     <span className="text-5xl md:text-6xl font-black italic text-zinc-950 tracking-tighter">{geo.formatPrice(plan.price)}</span>
                     <span className="text-zinc-400 font-black text-sm italic uppercase">{t("plans.per_month")}</span>
-                    {geo.currencyCode !== "USD" && (
-                      <span className="text-[10px] text-zinc-400 font-medium ml-1">(${plan.price} USD)</span>
+                    {plan.currency && plan.currency !== "usd" && plan.priceUsd && (
+                      <span className="text-[10px] text-zinc-400 font-medium ml-1">(${plan.priceUsd} USD)</span>
                     )}
                   </div>
 
@@ -528,6 +541,23 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
                   Plan {plans.find(p => p.id === pendingPlanId)?.name || ""}
                 </p>
               </div>
+
+              {(() => {
+                const plan = plans.find(p => p.id === pendingPlanId);
+                const hasBothCurrencies = plan?.currency && plan.currency !== "usd" && plan.stripePriceIdUsd;
+                if (!hasBothCurrencies) return null;
+                const localSymbol = plan.currency === "mxn" ? "MXN" : plan.currency === "eur" ? "EUR" : plan.currency === "cop" ? "COP" : plan.currency?.toUpperCase() || "LOCAL";
+                return (
+                  <div className="flex gap-2 mb-4 p-1 bg-zinc-100 rounded-xl">
+                    <button onClick={() => setPayCurrency("local")} className={cn("flex-1 py-2.5 rounded-lg text-[10px] font-black italic uppercase transition-all", payCurrency === "local" ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-zinc-600")}>
+                      {localSymbol} ${plan.price}
+                    </button>
+                    <button onClick={() => setPayCurrency("usd")} className={cn("flex-1 py-2.5 rounded-lg text-[10px] font-black italic uppercase transition-all", payCurrency === "usd" ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-zinc-600")}>
+                      USD ${plan.priceUsd}
+                    </button>
+                  </div>
+                );
+              })()}
 
               <div className="space-y-2">
                 {PLAN_PAYMENT_METHODS.map((method) => {

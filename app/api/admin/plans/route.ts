@@ -29,11 +29,12 @@ export async function GET(req: Request) {
   }
 }
 
-async function syncPlanToStripe(plan: any): Promise<{ productId?: string; priceId?: string }> {
+async function syncPlanToStripe(plan: any): Promise<{ productId?: string; priceId?: string; priceIdUsd?: string }> {
   if (plan.price === 0) return {};
 
   let productId = plan.stripeProductId;
   let priceId = plan.stripePriceId;
+  let priceIdUsd = plan.stripePriceIdUsd;
 
   if (productId) {
     try {
@@ -52,10 +53,12 @@ async function syncPlanToStripe(plan: any): Promise<{ productId?: string; priceI
     productId = product.id;
   }
 
+  const planCurrency = (plan.currency || "usd").toLowerCase();
+
   const monthlyPrice = await stripe.prices.create({
     product: productId,
     unit_amount: plan.price * 100,
-    currency: (plan.currency || "usd").toLowerCase(),
+    currency: planCurrency,
     recurring: { interval: "month" },
     metadata: { plan_id: plan.id },
   });
@@ -63,10 +66,23 @@ async function syncPlanToStripe(plan: any): Promise<{ productId?: string; priceI
   if (plan.stripePriceId && plan.stripePriceId !== monthlyPrice.id) {
     try { await stripe.prices.update(plan.stripePriceId, { active: false }); } catch {}
   }
-
   priceId = monthlyPrice.id;
 
-  return { productId, priceId };
+  if (planCurrency !== "usd" && plan.priceUsd && plan.priceUsd > 0) {
+    const usdPrice = await stripe.prices.create({
+      product: productId,
+      unit_amount: plan.priceUsd * 100,
+      currency: "usd",
+      recurring: { interval: "month" },
+      metadata: { plan_id: plan.id, currency: "usd" },
+    });
+    if (plan.stripePriceIdUsd && plan.stripePriceIdUsd !== usdPrice.id) {
+      try { await stripe.prices.update(plan.stripePriceIdUsd, { active: false }); } catch {}
+    }
+    priceIdUsd = usdPrice.id;
+  }
+
+  return { productId, priceId, priceIdUsd };
 }
 
 export async function PUT(req: NextRequest) {
@@ -96,9 +112,10 @@ export async function PUT(req: NextRequest) {
       const plan = config.plans[i];
       if (plan.price > 0) {
         try {
-          const { productId, priceId } = await syncPlanToStripe(plan);
+          const { productId, priceId, priceIdUsd } = await syncPlanToStripe(plan);
           if (productId) config.plans[i].stripeProductId = productId;
           if (priceId) config.plans[i].stripePriceId = priceId;
+          if (priceIdUsd) config.plans[i].stripePriceIdUsd = priceIdUsd;
         } catch (err: any) {
           syncErrors.push(`${plan.name}: ${err.message}`);
         }
