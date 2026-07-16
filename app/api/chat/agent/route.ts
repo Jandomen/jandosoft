@@ -530,6 +530,13 @@ ${taskContext}`;
         text: "El asistente AI está temporalmente indisponible. Intenta de nuevo más tarde.",
       });
     }
+    const isProviderError = error?.status >= 500 || error?.message?.includes("Provider") || error?.message?.includes("provider");
+    if (isProviderError) {
+      console.error("[Agent Route] Provider error:", error?.status, error?.message || error);
+      return Response.json({
+        text: "El servicio de IA está temporalmente sobrecargado. Por favor, intenta de nuevo en unos segundos.",
+      });
+    }
     console.error("Chat Agent API 500:", error?.message || error);
     return Response.json(
       { error: "Error al generar respuesta. Intenta de nuevo." },

@@ -1,6 +1,19 @@
 import Stripe from "stripe";
 import type { PaymentProvider, CheckoutRequest, CheckoutResult } from "./index";
 
+const STRIPE_SUPPORTED = new Set([
+  "usd", "eur", "gbp", "cad", "aud", "nzd", "sgd", "hkd", "chf", "sek", "nok", "dkk", "pln", "czk", "huf", "ron", "bgd", "hrk",
+  "mxn", "brl", "ars", "clp", "cop", "pen", "uyu", "pyg", "bob", "crc", "gtq", "hnl", "nio", "svc", "pab",
+  "jpy", "cny", "krw", "inr", "idr", "myr", "php", "thb", "vnd", "twd", "pkr", "bdt", "lkr", "npr", "kes", "ngn", "zar", "egp", "mad", "tnd",
+  "try", "rub", "uah", "kzt", "azn", "gel", "amd", "ils", "sar", "qar", "aed", "omr", "bhd", "kwd", "jod", "lbp", "egp",
+  "isk", "mnt", "lak", "mmk", "khr", "btn", "mvr", "xaf", "xof", "xpf",
+]);
+
+function getStripeCurrency(currency: string): string {
+  const c = (currency || "usd").toLowerCase();
+  return STRIPE_SUPPORTED.has(c) ? c : "usd";
+}
+
 export const stripeProvider: PaymentProvider = {
   config: {
     id: "stripe",
@@ -32,13 +45,14 @@ export const stripeProvider: PaymentProvider = {
 
       const amountInCents = Math.round(req.amount * 100);
       const baseUrl = process.env.NEXT_PUBLIC_URL || "https://jandosoft.vercel.app";
+      const currency = getStripeCurrency(req.currency);
 
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "payment",
         line_items: req.items?.length
           ? req.items.map((item) => ({
               price_data: {
-                currency: req.currency.toLowerCase(),
+                currency,
                 product_data: { name: item.name },
                 unit_amount: Math.round(item.price * 100),
               },
@@ -46,7 +60,7 @@ export const stripeProvider: PaymentProvider = {
             }))
           : [{
               price_data: {
-                currency: req.currency.toLowerCase(),
+                currency,
                 product_data: { name: req.description || "Pago" },
                 unit_amount: amountInCents,
               },
@@ -80,7 +94,11 @@ export const stripeProvider: PaymentProvider = {
       const session = await stripe.checkout.sessions.create(sessionParams);
       return { url: session.url || undefined, id: session.id };
     } catch (err: any) {
-      return { error: err.message || "Error creating Stripe checkout" };
+      const msg = err?.message || "Error creating Stripe checkout";
+      if (msg.includes("currency") || msg.includes("divisa")) {
+        return { error: "Tu tarjeta no soporta esta moneda. Intenta con otra tarjeta." };
+      }
+      return { error: msg };
     }
   },
 };

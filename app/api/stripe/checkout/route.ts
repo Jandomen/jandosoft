@@ -3,6 +3,18 @@ import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { stripe } from "@/lib/stripe";
 
+const STRIPE_SUPPORTED = new Set([
+  "usd", "eur", "gbp", "cad", "aud", "nzd", "sgd", "hkd", "chf", "sek", "nok", "dkk", "pln", "czk", "huf", "ron", "bgd", "hrk",
+  "mxn", "brl", "ars", "clp", "cop", "pen", "uyu", "pyg", "bob", "crc", "gtq", "hnl", "nio", "svc", "pab",
+  "jpy", "cny", "krw", "inr", "idr", "myr", "php", "thb", "vnd", "twd", "pkr", "bdt", "lkr", "npr", "kes", "ngn", "zar", "egp", "mad", "tnd",
+  "try", "rub", "uah", "kzt", "azn", "georg", "am", "ils", "sar", "qar", "aed", "omr", "bhd", "kwd", "jod", "lbp",
+  "isk", "mnt", "lak", "mmk", "khr", "btn", "mvr", "xaf", "xof", "xpf",
+]);
+function safeCurrency(c?: string): string {
+  const v = (c || "usd").toLowerCase();
+  return STRIPE_SUPPORTED.has(v) ? v : "usd";
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { items, amount, currency, customerEmail, customerName, description, priceId, planId } = await req.json();
@@ -71,7 +83,7 @@ export async function POST(req: NextRequest) {
       payment_method_types: ["card"],
       line_items: [{
         price_data: {
-          currency: (currency || "usd").toLowerCase(),
+          currency: safeCurrency(currency),
           product_data: {
             name: desc?.substring(0, 150) || "Pago Jandosoft",
           },
