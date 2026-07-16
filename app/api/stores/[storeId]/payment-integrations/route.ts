@@ -4,10 +4,12 @@ import { Store } from "@/lib/models/Store";
 import { getProviderConfig, PAYMENT_PROVIDERS } from "@/lib/payment-providers";
 import { validateProvider } from "@/lib/payment-providers/registry";
 
-export async function GET(req: NextRequest) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ storeId: string }> }
+) {
   try {
-    const { searchParams } = new URL(req.url);
-    const storeId = searchParams.get("storeId");
+    const { storeId } = await params;
     if (!storeId) return NextResponse.json({ error: "storeId required" }, { status: 400 });
 
     await connectDB();
@@ -113,10 +115,13 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ storeId: string }> }
+) {
   try {
+    const { storeId } = await params;
     const { searchParams } = new URL(req.url);
-    const storeId = searchParams.get("storeId");
     const provider = searchParams.get("provider");
     if (!storeId || !provider) return NextResponse.json({ error: "storeId and provider required" }, { status: 400 });
 
