@@ -200,18 +200,26 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
     setSyncingStripe(true);
     try {
       const res = await fetch("/api/stripe/sync-prices", { method: "POST" });
-      if (res.ok) {
-        setPlanToast("Planes sincronizados con Stripe");
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const synced = (data.results || []).map((r: any) => {
+          const parts = [r.name || r.plan];
+          if (r.priceId) parts.push("local ✓");
+          if (r.priceIdUsd) parts.push("USD ✓");
+          return parts.join(": ");
+        });
+        const errs = (data.errors || []).map((e: any) => `${e.name}: ✗ ${e.error}`);
+        const lines = [...synced, ...errs];
+        setPlanToast(lines.length > 0 ? `Stripe: ${lines.join(" | ")}` : "Sincronizado");
         fetchPlans();
       } else {
-        const err = await res.json();
-        setPlanToast(err.error || "Error al sincronizar");
+        setPlanToast(data.error || "Error al sincronizar");
       }
     } catch {
       setPlanToast("Error de conexión");
     } finally {
       setSyncingStripe(false);
-      setTimeout(() => setPlanToast(""), 3000);
+      setTimeout(() => setPlanToast(""), 6000);
     }
   };
 

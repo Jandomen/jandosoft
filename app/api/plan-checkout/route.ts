@@ -50,6 +50,9 @@ export async function POST(req: NextRequest) {
         });
         return NextResponse.json({ url: session.url, sessionId: session.id });
       } else {
+        if (!plan.price || plan.price <= 0) {
+          return NextResponse.json({ error: "Plan sin precio configurado. Guarda el plan y sincroniza con Stripe." }, { status: 400 });
+        }
         const amountInCents = Math.round((useUsd && plan.priceUsd ? plan.priceUsd : plan.price) * 100);
         const session = await stripe.checkout.sessions.create({
           mode: "payment",
@@ -100,7 +103,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Método de pago no soportado" }, { status: 400 });
   } catch (error: any) {
-    console.error("[PlanCheckout] Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[PlanCheckout] Error:", error?.message || error, error?.type, error?.code);
+    if (error?.message?.includes("No such price")) {
+      return NextResponse.json({ error: "El plan no está sincronizado con Stripe. Ve a Admin → Planes → SINCRONIZAR CON STRIPE." }, { status: 400 });
+    }
+    return NextResponse.json({ error: error.message || "Error al crear sesión de pago" }, { status: 500 });
   }
 }
