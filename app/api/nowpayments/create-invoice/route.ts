@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { connectDB } from "@/lib/mongodb";
 import { NowPaymentsPayment } from "@/lib/models/NowPaymentsPayment";
+import { getAuthFromHeaders, getAuthFromCookies } from "@/lib/auth";
+import { notifyOwner } from "@/lib/notify";
 
 const NP_API = "https://api.nowpayments.io/v1/invoice";
 const NP_API_KEY = process.env.NOWPAYMENTS_API_KEY || "";
@@ -55,6 +57,11 @@ export async function POST(req: NextRequest) {
       priceCurrency: (currency || "usd").toLowerCase(),
       customerEmail: email || "",
     });
+
+    const auth = getAuthFromHeaders(req) || await getAuthFromCookies();
+    if (auth?.userId && storeId) {
+      await notifyOwner(auth.userId, storeId, "payment", "Pago crypto iniciado", `$${amount} - ${email || "Cliente"}`);
+    }
 
     return NextResponse.json({
       invoiceUrl: invoiceData.invoice_url,

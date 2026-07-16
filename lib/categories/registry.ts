@@ -80,8 +80,9 @@ export const CATEGORIES: Record<CategoryId, CategoryDefinition> = {
     description: "Restaurantes, cafeterías, bares y comedores",
     icon: "UtensilsCrossed",
     modules: [
-      "dashboard", "menu", "orders", "customers", "appointments",
-      "recipes", "inventory", "analytics", "invoices", "gallery",
+      "dashboard", "menu", "restaurant", "floor_plan", "restaurant_orders", "reservations",
+      "customers", "appointments", "recipes", "inventory", "promotions", "loyalty",
+      "restaurant_reviews", "waiter_calls", "analytics", "invoices", "gallery",
       "testimonials", "integrations", "automations",
       "ai", "knowledgebase", "agentconfig", "agentinstall",
       "smartforms", "team", "orgsettings",
@@ -141,11 +142,13 @@ Puedes crear planes de estudio, asignar profesores a cursos, y gestionar el cale
       "integrations", "automations",
       "ai", "knowledgebase", "agentconfig", "agentinstall",
       "smartforms", "team", "orgsettings",
+      "barbers", "queue", "barber_history",
     ],
-    systemPrompt: `Eres un asistente IA especializado en barberias y salones de belleza.
-Gestionas servicios de corte, peinado, coloracion, manicure y tratamientos.
-Ayudas a agendar citas, recordar a clientes sus proximas visitas, gestionar el inventario de productos.
-Puedes recomendar estilos segun el tipo de cabello y mantener un historial de servicios por cliente.`,
+    systemPrompt: `Eres un asistente IA especializado en barberías y salones de belleza.
+Gestionas servicios de corte, peinado, coloración, manicure y tratamientos.
+Gestionas la cola de clientes walk-in, los barberos, sus horarios y especialidades.
+Ayudas a agendar citas, recordar a clientes sus próximas visitas, gestionar el inventario de productos.
+Puedes recomendar estilos según el tipo de cabello y mantener un historial de servicios por cliente y barbero.`,
     widgetConfig: {
       showHero: true, showProducts: false, showServices: true,
       showGallery: true, showTestimonials: true,

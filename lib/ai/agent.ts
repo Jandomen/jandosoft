@@ -10,6 +10,7 @@ import { filterToolsByDomain, executeRegisteredTool } from "@/lib/ai/tools";
 import { registerAllTools, ALL_TOOLS } from "@/lib/ai/tools/registry";
 import { buildContext, type ContextRequest } from "@/lib/ai/context-builder";
 import { validateInput, detectPromptInjection } from "@/lib/ai/guardrails";
+import { getStoreTimezone, getDateComponents } from "@/lib/ai/time";
 
 registerAllTools();
 
@@ -241,8 +242,8 @@ export async function askBusinessAIWithTools({
           const { Appointment: AppointmentModel } = await import("@/lib/models/Appointment");
           await connectDB();
           const storeId = store?._id || store?.id;
-          const today = new Date();
-          const todayStr = today.toISOString().split("T")[0];
+          const tz = getStoreTimezone(store);
+          const todayStr = getDateComponents(tz).dateISO;
           let refreshedAppointments: any[] = [];
           if (store?._stores?.length) {
             const allStoreIds = store._stores.map((s: any) => s._id);

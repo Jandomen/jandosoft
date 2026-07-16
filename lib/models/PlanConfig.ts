@@ -14,6 +14,9 @@ export interface IPlanLimits {
   maxProductsPerStore: number;
   maxMessages: number;
   maxAutomations: number;
+  maxAppointments: number;
+  maxCampaigns: number;
+  maxCustomers: number;
 }
 
 export interface IPlan {
@@ -45,6 +48,9 @@ const PlanLimitsSchema = new Schema<IPlanLimits>({
   maxProductsPerStore: { type: Number, default: 10 },
   maxMessages: { type: Number, default: 10 },
   maxAutomations: { type: Number, default: 2 },
+  maxAppointments: { type: Number, default: 999 },
+  maxCampaigns: { type: Number, default: 999 },
+  maxCustomers: { type: Number, default: 999 },
 }, { _id: false });
 
 const PlanSchema = new Schema<IPlan>({
@@ -81,7 +87,7 @@ export const DEFAULT_PLANS: IPlan[] = [
     desc: "Perfecto para emprender tu negocio digital",
     popular: false,
     features: ["Productos", "Clientes", "Pedidos", "Facturación", "IA básica", "Correos automáticos"],
-    limits: { maxStores: 3, maxProductsPerStore: 50, maxMessages: 50, maxAutomations: 10 },
+    limits: { maxStores: 3, maxProductsPerStore: 50, maxMessages: 50, maxAutomations: 10, maxAppointments: 50, maxCampaigns: 20, maxCustomers: 200 },
   },
   {
     id: "business",
@@ -90,7 +96,7 @@ export const DEFAULT_PLANS: IPlan[] = [
     desc: "La opción más completa para hacer crecer tu negocio",
     popular: true,
     features: ["Todo Starter", "CRM avanzado", "WhatsApp Business", "Campañas", "Automatizaciones", "Analytics", "Clientes ilimitados"],
-    limits: { maxStores: 20, maxProductsPerStore: 500, maxMessages: 200, maxAutomations: 50 },
+    limits: { maxStores: 20, maxProductsPerStore: 500, maxMessages: 200, maxAutomations: 50, maxAppointments: 500, maxCampaigns: 100, maxCustomers: 5000 },
   },
   {
     id: "enterprise",
@@ -99,13 +105,13 @@ export const DEFAULT_PLANS: IPlan[] = [
     desc: "Para empresas que necesitan potencia y control total",
     popular: false,
     features: ["Todo Business", "Multiusuario", "Roles y permisos", "API", "Integraciones avanzadas", "IA avanzada", "Soporte prioritario"],
-    limits: { maxStores: 999, maxProductsPerStore: 9999, maxMessages: 999, maxAutomations: 999 },
+    limits: { maxStores: 999, maxProductsPerStore: 9999, maxMessages: 999, maxAutomations: 999, maxAppointments: 9999, maxCampaigns: 9999, maxCustomers: 99999 },
   },
 ];
 
 export const DEFAULT_FREE_PLAN: IFreePlan = {
   id: "free",
   name: "Gratis",
-  features: ["Productos", "Clientes", "Pedidos", "Facturación"],
-  limits: { maxStores: 1, maxProductsPerStore: 10, maxMessages: 10, maxAutomations: 2 },
+  features: ["1 producto", "2 citas", "2 campañas", "10 mensajes IA"],
+  limits: { maxStores: 1, maxProductsPerStore: 1, maxMessages: 10, maxAutomations: 2, maxAppointments: 2, maxCampaigns: 2, maxCustomers: 0 },
 };

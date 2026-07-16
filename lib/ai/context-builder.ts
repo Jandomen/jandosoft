@@ -1,5 +1,6 @@
 import type { Domain } from "@/lib/ai/tools";
 import { AI_CONFIG } from "@/lib/ai/config";
+import { injectTimeContext } from "@/lib/ai/time";
 
 export interface StoreContext {
   name: string;
@@ -43,21 +44,6 @@ export interface BuiltContext {
     campaigns?: any[];
     smartForms?: any[];
   };
-}
-
-function buildDateString(): string {
-  const now = new Date();
-  const dateStr = now.toLocaleDateString("es-MX", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const timeStr = now.toLocaleTimeString("es-MX", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  return `${dateStr}. HORA: ${timeStr}`;
 }
 
 function buildLimitWarnings(
@@ -113,7 +99,7 @@ function truncateList<T>(items: T[], label: string, format: (item: T) => string)
 }
 
 export function buildContext(ctxReq: ContextRequest, store: any): BuiltContext {
-  const dateStr = buildDateString();
+  const timeContext = injectTimeContext(store);
   const domainLabel: Record<Domain, string> = {
     general: "General",
     crm: "CRM / Clientes",
@@ -222,7 +208,7 @@ export function buildContext(ctxReq: ContextRequest, store: any): BuiltContext {
     : Object.values(DOMAIN_INSTRUCTIONS).filter(Boolean).join("\n");
 
   const systemPrompt = [
-    `FECHA OFICIAL DE HOY (USAR ESTA, NO INVENTAR): ${dateStr}`,
+    timeContext,
     ``,
     role + domainSuffix,
     ``,

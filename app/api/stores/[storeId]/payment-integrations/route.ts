@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
       integrations,
       defaultProvider: defaultProvider?.provider || null,
       available: Object.keys(PAYMENT_PROVIDERS),
+      paymentPolicy: store.paymentPolicy || "optional",
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -79,27 +80,33 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { storeId, provider, enabled, isDefault } = await req.json();
-    if (!storeId || !provider) return NextResponse.json({ error: "storeId and provider required" }, { status: 400 });
+    const { storeId, provider, enabled, isDefault, paymentPolicy } = await req.json();
+    if (!storeId) return NextResponse.json({ error: "storeId required" }, { status: 400 });
 
     await connectDB();
     const store = await Store.findById(storeId) as any;
     if (!store) return NextResponse.json({ error: "Store not found" }, { status: 404 });
 
-    const integrations = store.paymentIntegrations || [];
-    const idx = integrations.findIndex((i: any) => i.provider === provider);
-    if (idx < 0) return NextResponse.json({ error: "Integration not found" }, { status: 404 });
-
-    if (enabled !== undefined) integrations[idx].enabled = enabled;
-    if (isDefault) {
-      integrations.forEach((i: any) => { i.isDefault = false; });
-      integrations[idx].isDefault = true;
+    if (paymentPolicy) {
+      store.paymentPolicy = paymentPolicy;
     }
 
-    store.paymentIntegrations = integrations;
-    store.paymentsEnabled = integrations.some((i: any) => i.enabled);
-    await store.save();
+    if (provider) {
+      const integrations = store.paymentIntegrations || [];
+      const idx = integrations.findIndex((i: any) => i.provider === provider);
+      if (idx < 0) return NextResponse.json({ error: "Integration not found" }, { status: 404 });
 
+      if (enabled !== undefined) integrations[idx].enabled = enabled;
+      if (isDefault) {
+        integrations.forEach((i: any) => { i.isDefault = false; });
+        integrations[idx].isDefault = true;
+      }
+
+      store.paymentIntegrations = integrations;
+      store.paymentsEnabled = integrations.some((i: any) => i.enabled);
+    }
+
+    await store.save();
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

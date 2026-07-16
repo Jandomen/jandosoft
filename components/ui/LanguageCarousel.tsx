@@ -7,8 +7,8 @@ import { LANGUAGES } from "@/lib/i18n/translations";
 import { Globe } from "lucide-react";
 
 const FLAGS: Record<string, string> = {
-  es: "🇪🇸",
-  en: "🇺🇸",
+  es: "🇲🇽",
+  en: "🇬🇧",
   fr: "🇫🇷",
   zh: "🇨🇳",
   hi: "🇮🇳",

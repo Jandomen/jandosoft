@@ -10,7 +10,7 @@ export type Domain =
   | "general";
 
 export const DOMAIN_TOOLS: Record<Domain, string[]> = {
-  general: [],
+  general: ["getCurrentDateTime"],
   crm: [
     "create_customer", "update_customer", "list_customers",
     "invite_team_member", "remove_team_member", "change_team_member_role", "list_team_members",

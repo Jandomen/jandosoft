@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { PlanConfig, DEFAULT_PLANS, DEFAULT_FREE_PLAN } from "@/lib/models/PlanConfig";
 import { invalidatePlanCache } from "@/lib/plan-config";
 import { verifyAdminAuth } from "@/lib/admin-middleware";
+import { stripe } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,46 @@ export async function GET(req: Request) {
   }
 }
 
+async function syncPlanToStripe(plan: any): Promise<{ productId?: string; priceId?: string }> {
+  if (plan.price === 0) return {};
+
+  let productId = plan.stripeProductId;
+  let priceId = plan.stripePriceId;
+
+  if (productId) {
+    try {
+      await stripe.products.update(productId, { name: plan.name, description: plan.desc || "" });
+    } catch {
+      productId = undefined;
+    }
+  }
+
+  if (!productId) {
+    const product = await stripe.products.create({
+      name: plan.name,
+      description: plan.desc || "",
+      metadata: { plan_id: plan.id },
+    });
+    productId = product.id;
+  }
+
+  const monthlyPrice = await stripe.prices.create({
+    product: productId,
+    unit_amount: plan.price * 100,
+    currency: "usd",
+    recurring: { interval: "month" },
+    metadata: { plan_id: plan.id },
+  });
+
+  if (plan.stripePriceId && plan.stripePriceId !== monthlyPrice.id) {
+    try { await stripe.prices.update(plan.stripePriceId, { active: false }); } catch {}
+  }
+
+  priceId = monthlyPrice.id;
+
+  return { productId, priceId };
+}
+
 export async function PUT(req: NextRequest) {
   const authResult = await verifyAdminAuth(req);
   if ("error" in authResult) return authResult.error;
@@ -50,7 +91,28 @@ export async function PUT(req: NextRequest) {
     await config.save();
     invalidatePlanCache();
 
-    return NextResponse.json({ success: true, plans: config.plans, freePlan: config.freePlan });
+    const syncErrors: string[] = [];
+    for (let i = 0; i < config.plans.length; i++) {
+      const plan = config.plans[i];
+      if (plan.price > 0) {
+        try {
+          const { productId, priceId } = await syncPlanToStripe(plan);
+          if (productId) config.plans[i].stripeProductId = productId;
+          if (priceId) config.plans[i].stripePriceId = priceId;
+        } catch (err: any) {
+          syncErrors.push(`${plan.name}: ${err.message}`);
+        }
+      }
+    }
+
+    if (syncErrors.length > 0) {
+      console.error("[Plans] Stripe sync errors:", syncErrors);
+    }
+
+    await config.save();
+    invalidatePlanCache();
+
+    return NextResponse.json({ success: true, plans: config.plans, freePlan: config.freePlan, syncErrors });
   } catch (error) {
     console.error("PUT plans error:", error);
     return NextResponse.json({ error: "Error updating plans" }, { status: 500 });

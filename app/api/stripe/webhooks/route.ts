@@ -145,6 +145,14 @@ export async function POST(req: NextRequest) {
             const platformFee = Math.round(amount * (feePercent / 100));
             const netAmount = amount - platformFee;
 
+            let storeStripeAccountId = "";
+            if (metadata.storeId) {
+              try {
+                const storeDoc = await Store.findById(metadata.storeId).lean() as any;
+                storeStripeAccountId = storeDoc?.stripeAccountId || "";
+              } catch {}
+            }
+
             const payment = await Payment.create({
               storeId: metadata.storeId,
               storeName: metadata.storeName || "",
@@ -156,6 +164,7 @@ export async function POST(req: NextRequest) {
               platformFee,
               netAmount,
               stripePaymentIntentId: piId,
+              stripeAccountId: storeStripeAccountId,
               provider: "stripe",
               status: "completed",
               description: session.metadata?.items || session.custom_fields?.[0]?.text?.value || "",

@@ -3,6 +3,9 @@ export interface PlanLimits {
   maxProductsPerStore: number;
   maxMessages: number;
   maxAutomations: number;
+  maxAppointments: number;
+  maxCampaigns: number;
+  maxCustomers: number;
 }
 
 export interface PlanConfig {
@@ -33,7 +36,7 @@ export const FREE_PLAN: FreePlanConfig = {
   name: "Gratis",
   nameKey: "plans.free_name",
   features: ["plans.feature.products", "plans.feature.customers", "plans.feature.orders", "plans.feature.invoicing"],
-  limits: { maxStores: 1, maxProductsPerStore: 10, maxMessages: 10, maxAutomations: 2 },
+  limits: { maxStores: 1, maxProductsPerStore: 1, maxMessages: 10, maxAutomations: 2, maxAppointments: 2, maxCampaigns: 2, maxCustomers: 0 },
 };
 
 export const PLANS: PlanConfig[] = [
@@ -46,7 +49,7 @@ export const PLANS: PlanConfig[] = [
     descKey: "plans.starter_desc",
     popular: false,
     features: ["plans.feature.products", "plans.feature.customers", "plans.feature.orders", "plans.feature.invoicing", "plans.feature.basic_ai", "plans.feature.auto_emails"],
-    limits: { maxStores: 3, maxProductsPerStore: 50, maxMessages: 50, maxAutomations: 10 },
+    limits: { maxStores: 3, maxProductsPerStore: 50, maxMessages: 50, maxAutomations: 10, maxAppointments: 50, maxCampaigns: 20, maxCustomers: 200 },
   },
   {
     id: "business",
@@ -58,7 +61,7 @@ export const PLANS: PlanConfig[] = [
     popular: true,
     inherits: "starter",
     features: ["plans.feature.campaigns", "plans.feature.automations", "plans.feature.analytics", "plans.feature.knowledge_base", "plans.feature.appointments", "plans.feature.integrations", "plans.feature.whatsapp", "plans.feature.communications", "plans.feature.social_media"],
-    limits: { maxStores: 20, maxProductsPerStore: 500, maxMessages: 200, maxAutomations: 50 },
+    limits: { maxStores: 20, maxProductsPerStore: 500, maxMessages: 200, maxAutomations: 50, maxAppointments: 500, maxCampaigns: 100, maxCustomers: 5000 },
   },
   {
     id: "enterprise",
@@ -70,7 +73,7 @@ export const PLANS: PlanConfig[] = [
     popular: false,
     inherits: "business",
     features: ["plans.feature.api", "plans.feature.smart_forms", "plans.feature.advanced_integrations", "plans.feature.advanced_ai", "plans.feature.priority_support", "plans.feature.multi_user"],
-    limits: { maxStores: 999, maxProductsPerStore: 9999, maxMessages: 999, maxAutomations: 999 },
+    limits: { maxStores: 999, maxProductsPerStore: 9999, maxMessages: 999, maxAutomations: 999, maxAppointments: 9999, maxCampaigns: 9999, maxCustomers: 99999 },
   },
 ];
 
@@ -79,6 +82,14 @@ export function getPlanLimits(subscription: string | null): PlanLimits {
   if (sub === "free") return FREE_PLAN.limits;
   const plan = PLANS.find((p) => p.id === sub);
   return plan?.limits || FREE_PLAN.limits;
+}
+
+export function canUseFeature(subscription: string | null, feature: keyof PlanLimits, currentCount: number): { allowed: boolean; limit: number; remaining: number; needsUpgrade: boolean } {
+  const limits = getPlanLimits(subscription);
+  const limit = limits[feature];
+  const remaining = Math.max(0, limit - currentCount);
+  const allowed = currentCount < limit || limit >= 999;
+  return { allowed, limit, remaining, needsUpgrade: !allowed && (subscription || "free") === "free" };
 }
 
 export function getPlanLabel(subscription: string | null): string {
@@ -108,6 +119,9 @@ export function buildComparisonFeatures(
     { labelKey: "plans.limit_products", key: "maxProductsPerStore" },
     { labelKey: "plans.limit_messages", key: "maxMessages" },
     { labelKey: "plans.limit_automations", key: "maxAutomations" },
+    { labelKey: "plans.limit_appointments", key: "maxAppointments" },
+    { labelKey: "plans.limit_campaigns", key: "maxCampaigns" },
+    { labelKey: "plans.limit_customers", key: "maxCustomers" },
   ];
 
   const formatLimit = (value: number) => value >= 999 ? t("plans.unlimited") : value?.toString() || "0";

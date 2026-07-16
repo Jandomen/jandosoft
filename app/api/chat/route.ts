@@ -4,6 +4,7 @@ import ChatUsage from "@/lib/models/ChatUsage";
 import { PlanConfig } from "@/lib/models/PlanConfig";
 import { AI_CONFIG, estimateCost, formatCost } from "@/lib/ai/config";
 import { MemoryService, shrinkContext } from "@/lib/ai/memory";
+import { injectTimeContextCompact } from "@/lib/ai/time";
 
 const openai = new OpenAI({
   baseURL: AI_CONFIG.baseURL,
@@ -112,9 +113,21 @@ export async function POST(req: Request) {
     let isPublic = false;
     let maxMessages = AUTH_MAX_MESSAGES;
     let resetHours = AUTH_RESET_HOURS;
+    let planMaxMessages = 0;
 
     if (email) {
       identifier = email;
+      try {
+        await connectDB();
+        const { User } = await import("@/lib/models/User");
+        const user = await User.findOne({ email }).lean();
+        if (user?.subscription && user.subscription !== "free") {
+          const { getPlanLimits } = await import("@/lib/plans");
+          const limits = getPlanLimits(user.subscription);
+          planMaxMessages = limits.maxMessages;
+          maxMessages = planMaxMessages;
+        }
+      } catch {}
     } else if (guestId) {
       identifier = `guest:${guestId}`;
       isPublic = true;
@@ -125,12 +138,32 @@ export async function POST(req: Request) {
     if (identifier) {
       const { allowed, remaining } = await checkAndIncrementUsage(identifier, maxMessages, resetHours);
       if (!allowed) {
-        const limitLabel = isPublic ? `${PUBLIC_MAX_MESSAGES} preguntas cada ${PUBLIC_RESET_HOURS} horas` : `${AUTH_MAX_MESSAGES} preguntas cada ${AUTH_RESET_HOURS} horas`;
+        const limitLabel = isPublic
+          ? `${PUBLIC_MAX_MESSAGES} preguntas cada ${PUBLIC_RESET_HOURS} horas`
+          : planMaxMessages > 0
+            ? `${planMaxMessages} preguntas cada ${AUTH_RESET_HOURS} horas (Plan activo)`
+            : `${AUTH_MAX_MESSAGES} preguntas cada ${AUTH_RESET_HOURS} horas`;
         const extra = isPublic ? " ¡Regístrate o inicia sesión para obtener más mensajes!" : "";
+
+        let plansInfo: any[] = [];
+        try {
+          const { getPlanConfig } = await import("@/lib/plan-config");
+          const config = await getPlanConfig();
+          plansInfo = config.plans.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            desc: p.desc,
+            limits: p.limits,
+          }));
+        } catch {}
+
         return Response.json({
-          error: `Has alcanzado el límite de ${limitLabel}.${extra}`,
+          error: `Has alcanzado el límite de ${limitLabel}.${extra} ¡Desbloquea más mensajes actualizando tu plan!`,
           remaining: 0,
           isPublic,
+          limitReached: true,
+          plans: plansInfo,
         }, { status: 429 });
       }
     }
@@ -181,6 +214,26 @@ ${context.email ? `- Usuario: ${context.email}` : ""}${plansBlock}
       ? (messages.find((m: any) => m.role === "system")?.content || BASE_INSTRUCTION + contextBlock)
       : BASE_INSTRUCTION + contextBlock;
 
+    // ── Fetch store for AI provider + timezone ──
+    let storeAIProvider = null;
+    let storeTimezone = "";
+    const businessStoreId = body.storeId || "";
+    if (businessStoreId) {
+      try {
+        await connectDB();
+        const { Store } = await import("@/lib/models/Store");
+        const storeDoc = await Store.findById(businessStoreId).lean() as any;
+        if (storeDoc?.aiProvider?.enabled && storeDoc?.aiProvider?.provider) {
+          storeAIProvider = storeDoc.aiProvider;
+        }
+        storeTimezone = storeDoc?.timezone || "";
+      } catch {}
+    }
+
+    // ── Inject server time into system prompt ──
+    const timeContext = injectTimeContextCompact(storeTimezone ? { timezone: storeTimezone } : null);
+    const systemContentWithTime = systemContent + "\n\n" + timeContext;
+
     const allMessages = messages
       .filter((m: any) => m.role !== "system")
       .map((m: { role: string; content: string }) => ({
@@ -191,49 +244,70 @@ ${context.email ? `- Usuario: ${context.email}` : ""}${plansBlock}
     const storeId = email || `guest:${guestId}`;
     const memoryService = new MemoryService(storeId);
     const { messages: finalMessages } = await memoryService.buildOptimizedContext({
-      systemPrompt: systemContent,
+      systemPrompt: systemContentWithTime,
       allMessages,
     });
 
     let completion;
-    try {
-      completion = await createCompletion(model, finalMessages, maxTokens, temperature);
-    } catch (err: any) {
-      const isCreditError = err?.status === 402 || err?.code === "insufficient_quota" || err?.code === "insufficient_credits";
-      const isTokenLimit = isCreditError && (
-        err?.message?.includes("Prompt tokens limit exceeded") ||
-        err?.error?.message?.includes("Prompt tokens limit exceeded")
-      );
+    if (storeAIProvider) {
+      try {
+        const { callWithStoreAIProvider } = await import("@/lib/ai-providers/registry");
+        const result = await callWithStoreAIProvider(storeAIProvider, {
+          messages: finalMessages as any,
+          model: storeAIProvider.model || model,
+          temperature,
+          max_tokens: maxTokens,
+        });
+        completion = {
+          choices: [{ message: { content: result.content, tool_calls: result.tool_calls }, finish_reason: result.finish_reason }],
+          model: result.model,
+          usage: result.usage,
+        };
+      } catch (e) {
+        console.warn("[Chat] Store AI provider failed, falling back to platform:", (e as Error).message);
+      }
+    }
 
-      if (isCreditError) {
-        if (isTokenLimit) {
-          console.warn("[OpenRouter] Prompt tokens limit — shrinking context and retrying");
-          const shrunk = shrinkContext(finalMessages, 0.35);
-          try {
-            completion = await createCompletion(model, shrunk, 200, 0.7);
-          } catch (retryErr: any) {
-            console.error("[OpenRouter] Shrunk context also failed:", retryErr?.message || retryErr);
-            return Response.json({
-              text: "El asistente AI está temporalmente indisponible. Intenta de nuevo más tarde.",
-              remaining: identifier ? await getRemaining(identifier, maxMessages, resetHours) : undefined,
-              isPublic: isPublic || undefined,
-            });
+    if (!completion) {
+      try {
+        completion = await createCompletion(model, finalMessages, maxTokens, temperature);
+      } catch (err: any) {
+        const isCreditError = err?.status === 402 || err?.code === "insufficient_quota" || err?.code === "insufficient_credits";
+        const isTokenLimit = isCreditError && (
+          err?.message?.includes("Prompt tokens limit exceeded") ||
+          err?.error?.message?.includes("Prompt tokens limit exceeded")
+        );
+
+        if (isCreditError) {
+          if (isTokenLimit) {
+            console.warn("[OpenRouter] Prompt tokens limit — shrinking context and retrying");
+            const shrunk = shrinkContext(finalMessages, 0.35);
+            try {
+              completion = await createCompletion(model, shrunk, 200, 0.7);
+            } catch (retryErr: any) {
+              console.error("[OpenRouter] Shrunk context also failed:", retryErr?.message || retryErr);
+              return Response.json({
+                text: "El asistente AI está temporalmente indisponible. Intenta de nuevo más tarde.",
+                remaining: identifier ? await getRemaining(identifier, maxMessages, resetHours) : undefined,
+                isPublic: isPublic || undefined,
+              });
+            }
+          } else {
+            console.warn("[OpenRouter] 402 / insufficient credits — retrying with max_tokens=256");
+            try {
+              completion = await createCompletion(model, finalMessages, 256, 0.7);
+            } catch (retryErr: any) {
+              console.error("[OpenRouter] Retry also failed:", retryErr?.message || retryErr);
+              return Response.json({
+                text: "El asistente AI está temporalmente indisponible. Intenta de nuevo más tarde.",
+                remaining: identifier ? await getRemaining(identifier, maxMessages, resetHours) : undefined,
+                isPublic: isPublic || undefined,
+              });
+            }
           }
         } else {
-          console.warn("[OpenRouter] 402 / insufficient credits — retrying with max_tokens=256");
-          try {
-            completion = await createCompletion(model, finalMessages, 256, 0.7);
-          } catch (retryErr: any) {
-            console.error("[OpenRouter] Retry also failed:", retryErr?.message || retryErr);
-            return Response.json({
-              text: "El asistente AI está temporalmente indisponible. Intenta de nuevo más tarde.",
-              remaining: identifier ? await getRemaining(identifier, maxMessages, resetHours) : undefined,
-              isPublic: isPublic || undefined,
-            });
-          }
+          throw err;
         }
-      } else {
-        throw err;
       }
     }
 
@@ -243,8 +317,10 @@ ${context.email ? `- Usuario: ${context.email}` : ""}${plansBlock}
     const duration = Date.now() - startTime;
     const cost = estimateCost(model, inputTokens, outputTokens);
 
+    const usedProvider = storeAIProvider ? storeAIProvider.provider : "platform";
+
     console.log(
-      `[Chat] model=${model} max_tokens=${maxTokens} ` +
+      `[Chat] provider=${usedProvider} model=${model} max_tokens=${maxTokens} ` +
       `input=${inputTokens} output=${outputTokens} total=${inputTokens + outputTokens} ` +
       `cost=${formatCost(cost)} duration=${duration}ms`
     );
@@ -255,6 +331,7 @@ ${context.email ? `- Usuario: ${context.email}` : ""}${plansBlock}
       text: completion.choices[0].message.content,
       remaining,
       isPublic: isPublic || undefined,
+      provider: usedProvider,
     });
 
   } catch (error: any) {

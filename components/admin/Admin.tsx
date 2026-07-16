@@ -524,11 +524,12 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                        </div>
                      ) : (
                        <>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-6">
                           <StatCard icon={<Users className="text-red-500" />} label={t("admin.user_total")} value={dashboardStats.totalUsers.toString()} change={t("admin.this_month").replace("{n}", String(dashboardStats.newUsersThisMonth))} />
                           <StatCard icon={<Store className="text-emerald-500" />} label={t("admin.stores_title")} value={dashboardStats.totalStores.toString()} change={`${dashboardStats.totalProducts} ${t("admin.productos")}`} />
                           <StatCard icon={<ShoppingBag className="text-amber-500" />} label={t("nav.orders")} value={dashboardStats.totalOrders.toString()} change={`$${dashboardStats.totalRevenue}`} />
                           <StatCard icon={<TrendingUp className="text-blue-500" />} label={t("admin.today")} value={dashboardStats.activeUsersToday.toString()} change={t("admin.new_today")} />
+                          <StatCard icon={<DollarSign className="text-purple-500" />} label="Stripe Connect" value={allStores.filter((s: any) => s.stripeConnectStatus === "active").length.toString()} change={`${allStores.filter((s: any) => s.stripeConnectStatus === "pending").length} pendientes`} />
                        </div>
  
                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
@@ -717,13 +718,19 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                               <Store className="w-3.5 h-3.5 md:w-6 md:h-6" />
                             </div>
                             <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 md:gap-2">
+                               <div className="flex items-center gap-1.5 md:gap-2">
                                 <p className={cn("font-black italic text-[10px] md:text-base truncate", s.isSuspended ? "text-rose-700" : "text-zinc-950")}>{s.name}</p>
                                 {s.isSuspended && (
                                   <span className="px-1 py-0.5 bg-rose-200 text-rose-700 rounded-full text-[6px] md:text-[7px] font-black uppercase italic leading-none">{t("biz.suspended")}</span>
                                 )}
+                                {s.stripeConnectStatus === "active" && (
+                                  <span className="px-1 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[6px] md:text-[7px] font-black uppercase italic leading-none">Stripe ✓</span>
+                                )}
+                                {s.stripeConnectStatus === "pending" && (
+                                  <span className="px-1 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-[6px] md:text-[7px] font-black uppercase italic leading-none">Stripe ⏳</span>
+                                )}
                               </div>
-                              <p className="text-[8px] md:text-[10px] text-zinc-400 font-bold italic truncate">{s.ownerEmail} · {s.typeLabel || s.type}</p>
+                              <p className="text-[8px] md:text-[10px] text-zinc-400 font-bold italic truncate">{s.ownerEmail} · {s.typeLabel || s.type}{s.stripeAccountEmail ? ` · ${s.stripeAccountEmail}` : ""}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5 md:gap-3 shrink-0">

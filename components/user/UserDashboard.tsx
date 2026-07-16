@@ -484,7 +484,7 @@ export default function UserDashboard({
                 <Mail className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-sm font-black italic text-rose-900">Verifica tu correo electrónico</p>
+                <p className="text-sm font-black italic text-rose-900">{t("user.verify_email_title")}</p>
                 <p className="text-[10px] font-medium text-rose-600 italic">{t("user.verify_warning")}</p>
               </div>
             </div>
@@ -1056,10 +1056,12 @@ export default function UserDashboard({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 max-[400px]:gap-3 gap-4">
           <div>
             <h3 className="text-xl max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tight">
-              Mis Pagos
+              {t("payments.title")}
             </h3>
             <p className="text-[9px] max-[400px]:text-[9px] text-[10px] font-black text-zinc-400 uppercase tracking-wide sm:tracking-widest mt-0.5 max-[400px]:mt-0.5 mt-1 italic">
-              {filteredPayments.length} {filteredPayments.length === 1 ? "comprobante" : "comprobantes"} · Descarga tus recibos de pago
+              {filteredPayments.length === 1
+                ? t("payments.receipts_count_singular")
+                : t("payments.receipts_count").replace("{count}", String(filteredPayments.length))}
             </p>
           </div>
         </div>
@@ -1070,7 +1072,7 @@ export default function UserDashboard({
             type="text"
             value={paymentSearch}
             onChange={e => setPaymentSearch(e.target.value)}
-            placeholder="Buscar por email, descripción, recibo..."
+            placeholder={t("payments.search_placeholder")}
             className="w-full bg-zinc-50 pl-11 pr-4 py-3 rounded-2xl border border-zinc-100 outline-none font-bold text-sm focus:bg-white focus:border-red-200 transition-all italic"
           />
         </div>
@@ -1078,18 +1080,18 @@ export default function UserDashboard({
         {loadingPayments ? (
           <div className="bg-white border border-zinc-100 rounded-[1.5rem] md:rounded-[2.5rem] p-12 text-center">
             <Loader2 className="w-6 h-6 text-zinc-300 animate-spin mx-auto" />
-            <p className="text-[10px] font-black text-zinc-300 italic mt-3 uppercase tracking-widest">Cargando pagos...</p>
+            <p className="text-[10px] font-black text-zinc-300 italic mt-3 uppercase tracking-widest">{t("payments.loading")}</p>
           </div>
         ) : filteredPayments.length > 0 ? (
           <div className="bg-white border border-zinc-100 rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden shadow-xl overflow-x-auto">
             <table className="w-full text-left min-w-[500px]">
               <thead className="bg-zinc-50 border-b border-zinc-100">
                 <tr>
-                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Fecha</th>
-                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Descripción</th>
-                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Monto</th>
-                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Método</th>
-                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Recibo</th>
+                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t("payments.col_date")}</th>
+                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t("payments.col_description")}</th>
+                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t("payments.col_amount")}</th>
+                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t("payments.col_method")}</th>
+                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">{t("payments.col_receipt")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1136,7 +1138,7 @@ export default function UserDashboard({
           <div className="bg-white border border-zinc-100 rounded-[1.5rem] md:rounded-[2.5rem] p-12 text-center">
             <FileText className="w-10 h-10 text-zinc-200 mx-auto mb-3" />
             <p className="text-sm font-bold text-zinc-300 italic">
-              {paymentSearch ? "No se encontraron pagos" : "Aún no tienes pagos registrados"}
+              {paymentSearch ? t("payments.no_results") : t("payments.empty")}
             </p>
           </div>
         )}

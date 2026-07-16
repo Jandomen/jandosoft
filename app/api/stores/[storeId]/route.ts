@@ -4,6 +4,7 @@ import { Store } from "@/lib/models/Store";
 import { User } from "@/lib/models/User";
 import { getAuthFromCookies, getAuthFromHeaders } from "@/lib/auth";
 import { getPlanConfig, getPlanLimitsFromConfig } from "@/lib/plan-config";
+import { Appointment } from "@/lib/models/Appointment";
 
 async function getAuth(req: NextRequest) {
   return getAuthFromHeaders(req) || await getAuthFromCookies();
@@ -63,6 +64,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ stor
       return NextResponse.json({ error: "Esta empresa está suspendida. No puedes modificarla." }, { status: 403 });
     }
 
+    if (body.campaigns && Array.isArray(body.campaigns)) {
+      const storeUser = await User.findOne({ email: (storeCheck as any)?.ownerEmail }).lean();
+      const config = await getPlanConfig();
+      const limits = getPlanLimitsFromConfig(config, storeUser?.subscription || "free");
+      if (body.campaigns.length > limits.maxCampaigns && limits.maxCampaigns < 999) {
+        return NextResponse.json({
+          error: `Límite de ${limits.maxCampaigns} campañas alcanzado en tu plan actual. ¡Upgrada para crear más!`,
+          needsUpgrade: true,
+        }, { status: 403 });
+      }
+    }
+
     if (body.slug) {
       const existing = await Store.findOne({ slug: body.slug, _id: { $ne: storeId } }).lean();
       if (existing) {
@@ -79,7 +92,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ stor
 
     const store = await Store.findOneAndUpdate(
       { _id: storeId, organizationId: auth.organizationId },
-      body,
+      { $set: body },
       { new: true }
     ).lean();
     if (!store) return NextResponse.json({ error: "Store not found" }, { status: 404 });

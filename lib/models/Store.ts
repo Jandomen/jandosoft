@@ -256,6 +256,47 @@ export interface IDocument {
   signed: boolean;
 }
 
+export interface IBarber {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  photo: string;
+  specialties: string[];
+  bio: string;
+  schedule: Record<string, { start: string; end: string }>;
+  active: boolean;
+  joinedAt: string;
+}
+
+export interface IBarberQueueEntry {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  serviceRequested: string;
+  barberId?: number;
+  position: number;
+  status: "waiting" | "in_progress" | "completed" | "cancelled";
+  checkInTime: string;
+  startedAt?: string;
+  completedAt?: string;
+  notes: string;
+}
+
+export interface IBarberServiceHistory {
+  id: string;
+  barberId: number;
+  barberName: string;
+  customerName: string;
+  customerPhone: string;
+  service: string;
+  price: number;
+  duration: number;
+  notes: string;
+  rating?: number;
+  date: string;
+}
+
 export interface IStore extends Document {
   ownerEmail: string;
   name: string;
@@ -290,8 +331,15 @@ export interface IStore extends Document {
   galleryItems: IGalleryItem[];
   testimonials: ITestimonial[];
   documents: IDocument[];
+  barbers: IBarber[];
+  barberQueue: IBarberQueueEntry[];
+  barberServiceHistory: IBarberServiceHistory[];
   stripeAccountId?: string;
+  stripeConnectAccessToken?: string;
+  stripeConnectRefreshToken?: string;
+  stripeConnectEmail?: string;
   paymentsEnabled?: boolean;
+  paymentPolicy?: "always" | "optional" | "none";
   platformFeePercent?: number;
   paymentIntegrations?: { provider: string; credentials: Record<string, string>; enabled: boolean; isDefault: boolean; connectedAt?: Date }[];
   aiProvider?: { provider: string; apiKey: string; baseUrl: string; model: string; enabled: boolean; configuredAt?: Date } | null;
@@ -307,6 +355,8 @@ export interface IStore extends Document {
   campaigns?: ICampaign[];
   smartForms?: any[];
   agentConfig?: IAgentConfig;
+  currency?: string;
+  timezone?: string;
 }
 
 interface IAutomation {
@@ -415,6 +465,24 @@ const AgentConfigSchema = new Schema({
   headerTextColor: { type: String, default: "#ffffff" },
   botBubbleColor: { type: String, default: "#f4f4f5" },
   userBubbleColor: { type: String, default: "#dc2626" },
+  chatBgColor: { type: String, default: "#f9fafb" },
+  inputBgColor: { type: String, default: "#ffffff" },
+  inputBorderColor: { type: String, default: "#e4e4e7" },
+  inputFocusColor: { type: String, default: "#dc2626" },
+  inputTextColor: { type: String, default: "#18181b" },
+  botTextColor: { type: String, default: "#18181b" },
+  userTextColor: { type: String, default: "#ffffff" },
+  fontFamily: { type: String, default: "" },
+  buttonSize: { type: Number, default: 56 },
+  buttonPosition: { type: String, default: "bottom-right" },
+  buttonStyle: { type: String, default: "circle" },
+  chatWidth: { type: Number, default: 380 },
+  chatHeight: { type: Number, default: 540 },
+  animationType: { type: String, default: "slide" },
+  inputRadius: { type: Number, default: 12 },
+  bubbleRadius: { type: Number, default: 16 },
+  theme: { type: String, default: "custom" },
+  lang: { type: String, default: "es" },
 }, { _id: false });
 
 const ProductSchema = new Schema<IProduct>({
@@ -703,8 +771,50 @@ const StoreSchema = new Schema<IStore>({
   galleryItems: [GalleryItemSchema],
   testimonials: [TestimonialSchema],
   documents: [DocumentSchema],
+  barbers: [{
+    id: Number,
+    name: String,
+    phone: String,
+    email: String,
+    photo: String,
+    specialties: [String],
+    bio: String,
+    schedule: Schema.Types.Mixed,
+    active: { type: Boolean, default: true },
+    joinedAt: String,
+  }],
+  barberQueue: [{
+    id: String,
+    customerName: String,
+    customerPhone: String,
+    serviceRequested: String,
+    barberId: Number,
+    position: Number,
+    status: { type: String, default: "waiting" },
+    checkInTime: String,
+    startedAt: String,
+    completedAt: String,
+    notes: String,
+  }],
+  barberServiceHistory: [{
+    id: String,
+    barberId: Number,
+    barberName: String,
+    customerName: String,
+    customerPhone: String,
+    service: String,
+    price: Number,
+    duration: Number,
+    notes: String,
+    rating: Number,
+    date: String,
+  }],
   stripeAccountId: { type: String, default: "" },
+  stripeConnectAccessToken: { type: String, default: "" },
+  stripeConnectRefreshToken: { type: String, default: "" },
+  stripeConnectEmail: { type: String, default: "" },
   paymentsEnabled: { type: Boolean, default: false },
+  paymentPolicy: { type: String, enum: ["always", "optional", "none"], default: "optional" },
   platformFeePercent: { type: Number, default: 5 },
   paymentIntegrations: { type: [Schema.Types.Mixed], default: [] },
   aiProvider: {
@@ -732,6 +842,8 @@ const StoreSchema = new Schema<IStore>({
   campaigns: { type: [CampaignSchema], default: [] },
   smartForms: { type: [Schema.Types.Mixed], default: [] },
   agentConfig: { type: AgentConfigSchema, default: null },
+  currency: { type: String, default: "USD" },
+  timezone: { type: String, default: "" },
 }, { timestamps: true });
 
 export const Store = mongoose.models.Store || mongoose.model<IStore>("Store", StoreSchema);

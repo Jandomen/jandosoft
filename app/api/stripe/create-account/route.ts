@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Store } from "@/lib/models/Store";
-import { stripe } from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
   try {
-    const { storeId, email } = await req.json();
-    if (!storeId || !email) {
-      return NextResponse.json({ error: "storeId and email required" }, { status: 400 });
+    const { storeId, userId, email } = await req.json();
+    if (!storeId || !userId) {
+      return NextResponse.json({ error: "storeId and userId required" }, { status: 400 });
     }
 
     await connectDB();
@@ -17,37 +16,33 @@ export async function POST(req: NextRequest) {
     }
 
     if (store.stripeAccountId) {
-      return NextResponse.json({ accountId: store.stripeAccountId });
+      return NextResponse.json({ alreadyConnected: true, accountId: store.stripeAccountId });
     }
 
-    const account = await stripe.accounts.create({
-      type: "express",
-      country: "US",
-      email: email,
-      business_type: "individual",
-      business_profile: {
-        name: store.name || "Jandosoft Store",
-        url: process.env.NEXT_PUBLIC_URL || "https://jandosoft.com",
-      },
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
-      },
-    });
+    const state = Buffer.from(JSON.stringify({ storeId, userId })).toString("base64");
 
-    store.stripeAccountId = account.id;
-    await store.save();
+    const baseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
+    const redirectUri = `${baseUrl}/api/stripe/callback`;
 
-    return NextResponse.json({ accountId: account.id });
-  } catch (error: any) {
-    console.error("Error creating Stripe account:", error);
-    const rawMsg = error?.raw?.message || error?.message || "";
-    if (rawMsg.includes("signed up for Connect")) {
+    const client_id = process.env.STRIPE_CONNECT_CLIENT_ID;
+    if (!client_id) {
       return NextResponse.json({
-        error: "Stripe Connect no está activado. Ve a https://dashboard.stripe.com/connect para activarlo.",
-        stripeConnectRequired: true,
-      }, { status: 400 });
+        error: "Stripe Connect no está configurado. El administrador debe agregar STRIPE_CONNECT_CLIENT_ID en el servidor.",
+        setupRequired: true,
+      }, { status: 500 });
     }
-    return NextResponse.json({ error: rawMsg || "Error desconocido al crear cuenta Stripe" }, { status: 500 });
+
+    const authUrl = `https://connect.stripe.com/oauth/authorize?` +
+      `client_id=${client_id}` +
+      `&state=${state}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&response_type=code` +
+      `&scope=read_write` +
+      (email ? `&stripe_user_email=${encodeURIComponent(email)}` : "");
+
+    return NextResponse.json({ url: authUrl });
+  } catch (error: any) {
+    console.error("Error generating Stripe Connect URL:", error);
+    return NextResponse.json({ error: error.message || "Error al generar link de conexión" }, { status: 500 });
   }
 }

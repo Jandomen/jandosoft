@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Minus, Trash2, ShoppingCart, CreditCard, CheckCircle2, Loader2, ChevronLeft, Wallet, Bitcoin, ShoppingBag } from "lucide-react";
 import { useCart } from "./CartProvider";
+import { getCurrencySymbol } from "@/lib/utils/currency";
 
 const PROVIDER_ICONS: Record<string, any> = {
   stripe: CreditCard,
@@ -27,9 +28,9 @@ const PROVIDER_SUB: Record<string, string> = {
 };
 
 export default function CartSidebar({
-  storeId, storeName, slug, paymentsEnabled
+  storeId, storeName, slug, paymentsEnabled, storeCurrency = "USD"
 }: {
-  storeId?: string; storeName: string; slug: string; paymentsEnabled?: boolean;
+  storeId?: string; storeName: string; slug: string; paymentsEnabled?: boolean; storeCurrency?: string;
 }) {
   const { items, removeItem, updateQuantity, clearCart, totalItems, totalPrice } = useCart();
   const [isOpen, setIsOpen] = useState(false);
@@ -42,6 +43,7 @@ export default function CartSidebar({
   const [paymentId, setPaymentId] = useState("");
   const [availableProviders, setAvailableProviders] = useState<{ provider: string; label: string }[]>([]);
 
+  const symbol = getCurrencySymbol(storeCurrency);
   const canCheckout = storeId && paymentsEnabled;
 
   useEffect(() => {
@@ -70,10 +72,11 @@ export default function CartSidebar({
         body: JSON.stringify({
           storeId,
           amount: totalPrice,
-          currency: "USD",
+          currency: storeCurrency,
           description: items.map(i => `${i.quantity}x ${i.name}`).join(", "),
           customerEmail,
           customerName,
+          paymentMethod,
           items: items.map(i => ({ name: i.name, price: i.price, quantity: i.quantity })),
         }),
       });
@@ -174,13 +177,13 @@ export default function CartSidebar({
                       {items.map(item => (
                         <div key={item.id} className="flex justify-between text-xs font-medium">
                           <span className="text-zinc-500">{item.quantity}x {item.name}</span>
-                          <span className="font-black text-zinc-950">${(item.price * item.quantity).toFixed(2)}</span>
+                          <span className="font-black text-zinc-950">{symbol}{(item.price * item.quantity).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
                     <div className="border-t border-zinc-100 pt-2 flex justify-between text-sm font-black italic">
                       <span className="text-zinc-950">Total</span>
-                      <span className="text-red-600">${totalPrice.toFixed(2)}</span>
+                      <span className="text-red-600">{symbol}{totalPrice.toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -254,7 +257,7 @@ export default function CartSidebar({
                     {checkoutLoading ? (
                       <><Loader2 className="w-4 h-4 animate-spin" /> PROCESANDO...</>
                     ) : (
-                      <><CreditCard className="w-4 h-4" /> PAGAR ${totalPrice.toFixed(2)}</>
+                      <><CreditCard className="w-4 h-4" /> PAGAR {symbol}{totalPrice.toFixed(2)}</>
                     )}
                   </motion.button>
                 </div>
@@ -276,7 +279,7 @@ export default function CartSidebar({
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-black italic text-zinc-950 truncate">{item.name}</p>
-                        <p className="text-[11px] font-bold text-red-600">${item.price.toFixed(2)}</p>
+                        <p className="text-[11px] font-bold text-red-600">{symbol}{item.price.toFixed(2)}</p>
                       </div>
                       <div className="flex items-center gap-1">
                         <button
@@ -306,7 +309,7 @@ export default function CartSidebar({
               <div className="border-t border-zinc-100 p-4 space-y-3 shrink-0">
                 <div className="flex justify-between text-base font-black italic">
                   <span className="text-zinc-950">Total</span>
-                  <span className="text-red-600">${totalPrice.toFixed(2)}</span>
+                  <span className="text-red-600">{symbol}{totalPrice.toFixed(2)}</span>
                 </div>
                 {canCheckout ? (
                   <motion.button

@@ -198,6 +198,11 @@ body {
 .dark .border-amber-200\/50 { border-color: var(--border); }
 .dark .border-rose-200 { border-color: var(--border); }
 
+/* ── Dark mode: email verification banner (rose/pink tones) ── */
+.dark .from-rose-50 { --tw-gradient-from: var(--card); }
+.dark .to-pink-50 { --tw-gradient-to: color-mix(in srgb, var(--card) 85%, #ec4899 15%); }
+.dark .text-rose-900 { color: #fecdd3; }
+
 /* ── Dark mode: semi-transparent white cards ── */
 .dark .bg-white\/80 { background: var(--card); }
 .dark .bg-white\/90 { background: var(--card); }

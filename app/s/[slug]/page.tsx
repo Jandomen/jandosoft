@@ -9,6 +9,8 @@ import TrackingWrapper from "@/components/TrackingWrapper";
 import { ThemeProvider } from "@/components/public/ThemeProvider";
 import { StoreMap } from "@/components/maps/StoreMap";
 import { Star, Mail, MessageCircle, Calendar, ChevronRight, MapPin, Phone } from "lucide-react";
+import { getCurrencySymbol } from "@/lib/utils/currency";
+import GallerySection from "@/components/public/GallerySection";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -91,6 +93,8 @@ export default async function StoreMainPage({ params, searchParams }: Props) {
   const locale = getLocale(store);
   const t = getPublicPageTranslations(locale);
   const primary = getPrimaryColor(store);
+  const storeCurrency = (store as any).currency || "USD";
+  const symbol = getCurrencySymbol(storeCurrency);
   const gallery = (store as any).galleryItems || [];
   const testimonials = (store as any).testimonials || [];
   const menuItems = (store as any).menuItems || [];
@@ -270,7 +274,7 @@ export default async function StoreMainPage({ params, searchParams }: Props) {
                   <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">{s.name}</h3>
                   {s.desc && <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2">{s.desc}</p>}
                   <div className="flex items-center justify-between pt-1">
-                    <span className="font-black text-sm" style={{ color: primary }}>${s.price}</span>
+                    <span className="font-black text-sm" style={{ color: primary }}>{symbol}{s.price}</span>
                     {s.duration && <span className="text-[10px] font-medium text-zinc-400">{s.duration} min</span>}
                   </div>
                 </div>
@@ -303,7 +307,7 @@ export default async function StoreMainPage({ params, searchParams }: Props) {
                       <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">{item.name}</h4>
                       {item.desc && <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1">{item.desc}</p>}
                     </div>
-                    <span className="font-black text-sm shrink-0" style={{ color: primary }}>${item.price}</span>
+                    <span className="font-black text-sm shrink-0" style={{ color: primary }}>{symbol}{item.price}</span>
                   </div>
                 ))}
               </div>
@@ -317,7 +321,7 @@ export default async function StoreMainPage({ params, searchParams }: Props) {
                     <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">{p.name}</h3>
                     {p.desc && <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2">{p.desc}</p>}
                     <div className="flex items-center justify-between pt-1">
-                      <span className="font-black text-sm" style={{ color: primary }}>${p.price}</span>
+                      <span className="font-black text-sm" style={{ color: primary }}>{symbol}{p.price}</span>
                       {p.stock !== undefined && <span className={`text-[10px] font-medium ${p.stock > 0 ? "text-emerald-600" : "text-red-500"}`}>{p.stock > 0 ? `${p.stock} en stock` : "Agotado"}</span>}
                     </div>
                   </div>
@@ -361,22 +365,7 @@ export default async function StoreMainPage({ params, searchParams }: Props) {
 
         {/* ===== GALLERY ===== */}
         {gallery.length > 0 && (
-          <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-12 md:pb-20">
-            <div className="flex flex-col items-center mb-10 md:mb-14">
-              <SectionBadge label={t.sectionGallery} primary={primary} />
-              <h2 className="text-2xl md:text-4xl font-black text-zinc-900 dark:text-white text-center tracking-tight">
-                {t.sectionGallery}
-              </h2>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-              {gallery.slice(0, 8).map((item: any) => (
-                <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer" className="group relative aspect-square rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 shadow-sm hover:shadow-md transition-all">
-                  <img src={item.url} alt={item.alt || ""} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                </a>
-              ))}
-            </div>
-          </section>
+          <GallerySection items={gallery} sectionLabel={t.sectionGallery} primary={primary} />
         )}
 
         {/* ===== MAP ===== */}

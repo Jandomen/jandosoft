@@ -4,6 +4,7 @@ import { getPublicStore } from "@/lib/store-utils";
 import { Briefcase } from "lucide-react";
 import TrackingWrapper from "@/components/TrackingWrapper";
 import { ThemeProvider } from "@/components/public/ThemeProvider";
+import { getCurrencySymbol } from "@/lib/utils/currency";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -22,6 +23,8 @@ export default async function ServicesPage({ params }: Props) {
   if (!store) notFound();
 
   const services = (store as any).services || [];
+  const storeCurrency = (store as any).currency || "USD";
+  const symbol = getCurrencySymbol(storeCurrency);
 
   return (
     <ThemeProvider>
@@ -69,7 +72,7 @@ export default async function ServicesPage({ params }: Props) {
                 </div>
                 <p className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">{s.name}</p>
                 {s.desc && <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">{s.desc}</p>}
-                {s.price && <p className="text-2xl sm:text-3xl font-bold text-red-600">${s.price.toFixed(2)}</p>}
+                {s.price && <p className="text-2xl sm:text-3xl font-bold text-red-600">{symbol}{s.price.toFixed(2)}</p>}
               </div>
             ))}
           </div>

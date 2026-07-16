@@ -72,25 +72,25 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-function formatMessageTime(dateStr: string) {
+function formatMessageTime(dateStr: string, t: (key: string) => string) {
   const d = new Date(dateStr);
   const now = new Date();
   const diff = now.getTime() - d.getTime();
-  if (diff < 60000) return "ahora";
+  if (diff < 60000) return t("messages.just_now");
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
   if (diff < 86400000) return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
   return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}`;
 }
 
-function formatDateSeparator(dateStr: string) {
+function formatDateSeparator(dateStr: string, t: (key: string) => string, locale: string) {
   const d = new Date(dateStr);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const msgDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diffDays = Math.round((today.getTime() - msgDate.getTime()) / 86400000);
-  if (diffDays === 0) return "Hoy";
-  if (diffDays === 1) return "Ayer";
-  return d.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" });
+  if (diffDays === 0) return t("messages.today");
+  if (diffDays === 1) return t("messages.yesterday");
+  return d.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
 }
 
 function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg" }) {
@@ -103,7 +103,7 @@ function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg"
 }
 
 export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [currentUser, setCurrentUser] = useState<UserInfo | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
@@ -159,39 +159,53 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
   // Global SSE for all user notifications
   useEffect(() => {
     if (!currentUser?._id) return;
-    const es = new EventSource("/api/notifications/stream");
-    esRef.current = es;
-    es.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "message:new") {
-          const msg = data.payload?.message;
-          if (!msg) return;
-          const isFromOther = msg.senderId !== currentUser._id;
-          if (isFromOther) {
-            if (msg.conversationId !== activeConvId) {
-              playNotificationSound();
-              setUnreadMap(prev => ({ ...prev, [msg.conversationId]: (prev[msg.conversationId] || 0) + 1 }));
+    let es: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let closed = false;
+
+    const connect = () => {
+      if (closed) return;
+      if (es) { try { es.close(); } catch {} }
+      es = new EventSource("/api/notifications/stream");
+      esRef.current = es;
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "message:new") {
+            const msg = data.payload?.message;
+            if (!msg) return;
+            const isFromOther = msg.senderId !== currentUser._id;
+            if (isFromOther) {
+              if (msg.conversationId !== activeConvId) {
+                playNotificationSound();
+                setUnreadMap(prev => ({ ...prev, [msg.conversationId]: (prev[msg.conversationId] || 0) + 1 }));
+              }
             }
+            setConversations(prev => {
+              const updated = prev.map(c => c._id === msg.conversationId
+                ? { ...c, lastMessage: msg.content, lastSenderId: msg.senderId, lastMessageAt: msg.createdAt }
+                : c);
+              return updated.sort((a, b) => new Date(b.lastMessageAt || b.updatedAt).getTime() - new Date(a.lastMessageAt || a.updatedAt).getTime());
+            });
           }
-          setConversations(prev => {
-            const updated = prev.map(c => c._id === msg.conversationId
-              ? { ...c, lastMessage: msg.content, lastSenderId: msg.senderId, lastMessageAt: msg.createdAt }
-              : c);
-            return updated.sort((a, b) => new Date(b.lastMessageAt || b.updatedAt).getTime() - new Date(a.lastMessageAt || a.updatedAt).getTime());
-          });
-        }
-        if (data.type === "conversation:new") {
-          loadConversations();
-        }
-      } catch {}
+          if (data.type === "conversation:new") {
+            loadConversations();
+          }
+        } catch {}
+      };
+      es.onerror = () => {
+        es?.close();
+        esRef.current = null;
+        if (!closed) reconnectTimer = setTimeout(connect, 3000);
+      };
     };
-    es.onerror = () => {
-      es.close();
-      esRef.current = null;
-    };
+
+    connect();
+
     return () => {
-      es.close();
+      closed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      es?.close();
       esRef.current = null;
     };
   }, [currentUser?._id, activeConvId, loadConversations]);
@@ -199,22 +213,41 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
   // Reconnect on activeConvId change for per-conv messages
   useEffect(() => {
     if (!activeConvId) return;
-    const es = new EventSource(`/api/conversations/${activeConvId}/stream`);
-    es.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "message:new" && data.payload?.message?.conversationId === activeConvId) {
-          setMessages(prev => [...prev, data.payload.message]);
-          fetch(`/api/conversations/${activeConvId}/read`, { method: "PATCH" }).catch(() => {});
-          setUnreadMap(prev => ({ ...prev, [activeConvId]: 0 }));
-        }
-        if (data.type === "message:read" && data.payload?.conversationId === activeConvId) {
-          setMessages(prev => prev.map(m => !m.readAt && m.senderId !== currentUser?._id
-            ? { ...m, readAt: data.payload.readAt } : m));
-        }
-      } catch {}
+    let es: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let closed = false;
+
+    const connect = () => {
+      if (closed) return;
+      if (es) { try { es.close(); } catch {} }
+      es = new EventSource(`/api/conversations/${activeConvId}/stream`);
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "message:new" && data.payload?.message?.conversationId === activeConvId) {
+            setMessages(prev => [...prev, data.payload.message]);
+            fetch(`/api/conversations/${activeConvId}/read`, { method: "PATCH" }).catch(() => {});
+            setUnreadMap(prev => ({ ...prev, [activeConvId]: 0 }));
+          }
+          if (data.type === "message:read" && data.payload?.conversationId === activeConvId) {
+            setMessages(prev => prev.map(m => !m.readAt && m.senderId !== currentUser?._id
+              ? { ...m, readAt: data.payload.readAt } : m));
+          }
+        } catch {}
+      };
+      es.onerror = () => {
+        es?.close();
+        if (!closed) reconnectTimer = setTimeout(connect, 3000);
+      };
     };
-    return () => es.close();
+
+    connect();
+
+    return () => {
+      closed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      es?.close();
+    };
   }, [activeConvId, currentUser?._id]);
 
   const loadMessages = useCallback(async (convId: string) => {
@@ -367,7 +400,7 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
               </motion.button>
               <Avatar name={otherUser?.name || "U"} size="sm" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-black italic text-white truncate">{otherUser?.name || "Usuario"}</p>
+                <p className="text-sm font-black italic text-white truncate">{otherUser?.name || t("messages.user")}</p>
                 <p className="text-[9px] text-zinc-500 font-medium">{otherUser?.email || ""}</p>
               </div>
             </>
@@ -377,8 +410,8 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
                 <MessageSquare className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-black italic text-white tracking-tight uppercase">Mensajes</h3>
-                <p className="text-[9px] text-zinc-500 font-medium">Bandeja de entrada</p>
+                <h3 className="text-sm font-black italic text-white tracking-tight uppercase">{t("messages.title")}</h3>
+                <p className="text-[9px] text-zinc-500 font-medium">{t("messages.inbox")}</p>
               </div>
               {totalUnread > 0 && (
                 <span className="w-5 h-5 bg-gradient-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center text-[8px] font-black text-white shadow-lg shadow-red-500/30 shrink-0">
@@ -419,7 +452,7 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="Buscar usuarios..."
+              placeholder={t("messages.search_placeholder")}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 text-sm outline-none focus:bg-white dark:focus:bg-zinc-800 focus:border-red-200 dark:focus:border-red-500 focus:shadow-lg focus:shadow-red-100/50 dark:focus:shadow-red-900/20 transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-zinc-950 dark:text-white"
@@ -434,7 +467,7 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
             {!searching && searchQuery.length >= 2 && searchResults.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 text-zinc-400">
                 <User className="w-10 h-10 mb-3 text-zinc-200 dark:text-zinc-700" />
-                <p className="text-sm font-medium">Sin resultados</p>
+                <p className="text-sm font-medium">{t("messages.no_results")}</p>
               </div>
             )}
             {searchResults.map(user => (
@@ -461,7 +494,7 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
             {searchQuery.length < 2 && (
               <div className="flex flex-col items-center justify-center py-12 text-zinc-400">
                 <Search className="w-10 h-10 mb-3 text-zinc-200 dark:text-zinc-700" />
-                <p className="text-sm font-medium">Escribe al menos 2 caracteres</p>
+                <p className="text-sm font-medium">{t("messages.min_chars")}</p>
               </div>
             )}
           </div>
@@ -474,14 +507,14 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
           {contacts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-zinc-400">
               <Users className="w-12 h-12 mb-4 text-zinc-200 dark:text-zinc-700" />
-              <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">Sin contactos</p>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Agrega usuarios a tu lista de contactos</p>
+              <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">{t("messages.no_contacts")}</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{t("messages.no_contacts_desc")}</p>
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => { setView("search"); setSearchQuery(""); setTimeout(() => searchInputRef.current?.focus(), 100); }}
                 className="mt-5 px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl text-xs font-black italic hover:from-red-700 hover:to-red-800 transition-all shadow-lg shadow-red-200/50 dark:shadow-red-900/30"
               >
-                BUSCAR USUARIOS
+                {t("messages.search_users")}
               </motion.button>
             </div>
           ) : (
@@ -490,7 +523,7 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
                 <div key={contact._id} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all group">
                   <Avatar name={contact.contactName || contact.contactEmail} size="sm" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-zinc-950 dark:text-white truncate">{contact.contactName || "Sin nombre"}</p>
+                    <p className="text-sm font-bold text-zinc-950 dark:text-white truncate">{contact.contactName || t("messages.no_name")}</p>
                     <p className="text-xs text-zinc-400 dark:text-zinc-500 truncate">{contact.contactEmail}</p>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
@@ -526,14 +559,14 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
           ) : conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
               <MessageSquare className="w-12 h-12 mb-4 text-zinc-200 dark:text-zinc-700" />
-              <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">Sin conversaciones</p>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Inicia una nueva conversación</p>
+              <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">{t("messages.no_conversations")}</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{t("messages.no_conversations_desc")}</p>
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => { setView("search"); setSearchQuery(""); setTimeout(() => searchInputRef.current?.focus(), 100); }}
                 className="mt-5 px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl text-xs font-black italic hover:from-red-700 hover:to-red-800 transition-all shadow-lg shadow-red-200/50 dark:shadow-red-900/30"
               >
-                NUEVA CONVERSACIÓN
+                {t("messages.new_conversation")}
               </motion.button>
             </div>
           ) : (
@@ -560,7 +593,7 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
                     <div className="flex items-center justify-between gap-2">
                       <p className={cn("text-sm truncate", unread > 0 ? "font-black italic text-zinc-950 dark:text-white" : "font-bold text-zinc-800 dark:text-zinc-200")}>{other.name}</p>
                       {conv.lastMessageAt && (
-                        <span className="text-[9px] text-zinc-400 dark:text-zinc-500 whitespace-nowrap shrink-0 font-medium">{formatMessageTime(conv.lastMessageAt)}</span>
+                        <span className="text-[9px] text-zinc-400 dark:text-zinc-500 whitespace-nowrap shrink-0 font-medium">{formatMessageTime(conv.lastMessageAt, t)}</span>
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 mt-0.5">
@@ -568,7 +601,7 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
                         <CheckCheck className={cn("w-3 h-3 shrink-0", unread > 0 ? "text-blue-400" : "text-zinc-300 dark:text-zinc-600")} />
                       )}
                       <p className={cn("text-xs truncate", unread > 0 ? "font-bold text-zinc-700 dark:text-zinc-300" : "text-zinc-400 dark:text-zinc-500")}>
-                        {conv.lastMessage || "Sin mensajes"}
+                        {conv.lastMessage || t("messages.no_messages")}
                       </p>
                     </div>
                   </div>
@@ -591,8 +624,8 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
                 <MessageSquare className="w-10 h-10 mb-3 text-zinc-200 dark:text-zinc-700" />
-                <p className="text-sm font-medium">Sin mensajes aún</p>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Escribe el primer mensaje</p>
+                <p className="text-sm font-medium">{t("messages.no_messages_yet")}</p>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{t("messages.write_first")}</p>
               </div>
             ) : (
               <>
@@ -605,7 +638,7 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
                       {showDateSep && (
                         <div className="flex items-center gap-3 py-3">
                           <div className="flex-1 h-px bg-zinc-100 dark:bg-zinc-800" />
-                          <span className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">{formatDateSeparator(msg.createdAt)}</span>
+                          <span className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">{formatDateSeparator(msg.createdAt, t, language)}</span>
                           <div className="flex-1 h-px bg-zinc-100 dark:bg-zinc-800" />
                         </div>
                       )}
@@ -660,7 +693,7 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
                             {msg.content}
                           </div>
                           <div className={cn("flex items-center gap-1 mt-0.5 px-1", isMine ? "justify-end" : "")}>
-                            <span className="text-[8px] text-zinc-400 dark:text-zinc-500 font-medium">{formatMessageTime(msg.createdAt)}</span>
+                            <span className="text-[8px] text-zinc-400 dark:text-zinc-500 font-medium">{formatMessageTime(msg.createdAt, t)}</span>
                             {isMine && (
                               msg.readAt
                                 ? <CheckCheck className="w-2.5 h-2.5 text-blue-500" />
@@ -688,7 +721,7 @@ export default function MessagesPanel({ onClose }: { onClose?: () => void }) {
               <input
                 ref={inputRef}
                 type="text"
-                placeholder="Escribe un mensaje..."
+                placeholder={t("messages.write_placeholder")}
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => {

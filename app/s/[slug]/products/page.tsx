@@ -58,7 +58,7 @@ export default async function ProductsPage({ params }: Props) {
           </p>
         </div>
 
-        <StoreProductClient products={products} storeName={store.name} slug={slug} storeId={store._id?.toString()} paymentsEnabled={store.paymentsEnabled} />
+        <StoreProductClient products={products} storeName={store.name} slug={slug} storeId={store._id?.toString()} paymentsEnabled={store.paymentsEnabled} storeCurrency={(store as any).currency || "USD"} />
       </main>
 
       <footer className="border-t border-zinc-200 dark:border-zinc-800 py-10">

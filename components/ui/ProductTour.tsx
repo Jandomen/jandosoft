@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getTourConfig, type TourStep, type TourConfig } from "./tourSteps";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 interface PersistedState {
   currentStep: number;
@@ -37,7 +38,8 @@ function clearState(config: TourConfig) {
 }
 
 export default function ProductTour({ isNewUser, emailVerified, manualTrigger }: ProductTourProps) {
-  const config = useMemo(() => getTourConfig(emailVerified), [emailVerified]);
+  const { t } = useLanguage();
+  const config = useMemo(() => getTourConfig(emailVerified, t), [emailVerified, t]);
   const { steps } = config;
 
   const [visible, setVisible] = useState(false);
@@ -456,12 +458,12 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
   const renderAgentBubble = (message: string) => (
     <div className="flex items-start gap-3 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/40 dark:to-orange-950/40 rounded-2xl p-4 border border-red-100 dark:border-red-900/30">
       <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-orange-400 flex items-center justify-center shrink-0 shadow-sm">
-        <Bot className="w-5 h-5 text-white" />
-      </div>
-      <div>
-        <p className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-1">
-          Agente IA
-        </p>
+          <Bot className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <p className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-1">
+            {t("tour.agente_ia")}
+          </p>
         <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
           {message}
         </p>
@@ -492,35 +494,35 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
     if (id === "create_store" || id === "create_btn" || id === "ai_agent" || id === "chat" || id === "explore") {
       return (
         <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium text-center italic">
-          Haz clic en el elemento resaltado para continuar
+          {t("tour.hint_click")}
         </p>
       );
     }
     if (id === "form_name") {
       return (
         <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium text-center italic">
-          Escribe el nombre de tu empresa
+          {t("tour.hint_name")}
         </p>
       );
     }
     if (id === "form_desc") {
       return (
         <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium text-center italic">
-          Describe tu negocio
+          {t("tour.hint_desc")}
         </p>
       );
     }
     if (id === "form_industry" || id === "form_type") {
       return (
         <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium text-center italic">
-          Selecciona una opción
+          {t("tour.hint_select")}
         </p>
       );
     }
     if (id === "form_submit") {
       return (
         <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium text-center italic">
-          Presiona 'Crear' para finalizar
+          {t("tour.hint_submit")}
         </p>
       );
     }
@@ -593,13 +595,13 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
                 className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 p-3 rounded-xl text-xs font-bold"
               >
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
-                ¡Completado!
+                {t("tour.completed")}
               </motion.div>
             )}
 
             {!targetFound && hasTarget && (
               <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-xl p-3 text-center font-medium">
-                Esperando que el elemento aparezca...
+                {t("tour.waiting_element")}
               </p>
             )}
 
@@ -611,7 +613,7 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
                 onClick={() => setStep((s) => Math.min(s + 1, steps.length - 1))}
                 className="w-full py-3 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl text-xs font-bold shadow-md shadow-red-600/20 hover:from-red-700 hover:to-red-600 transition-all flex items-center justify-center gap-2"
               >
-                <Bot className="w-4 h-4" /> Probar IA ahora
+                <Bot className="w-4 h-4" /> {t("tour.btn_test_ai")}
               </motion.button>
             )}
 
@@ -623,14 +625,14 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
                   onClick={handlePrev}
                   className="px-3 py-2.5 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all flex items-center gap-1 shrink-0"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" /> Atrás
+                  <ChevronLeft className="w-3.5 h-3.5" /> {t("tour.btn_back")}
                 </button>
               ) : (
                 <button
                   onClick={handleSkip}
                   className="px-3 py-2.5 rounded-xl text-xs font-semibold text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shrink-0"
                 >
-                  Saltar
+                  {t("tour.btn_skip")}
                 </button>
               )}
 
@@ -646,9 +648,9 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
                 {autoCompleting ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : isLast ? (
-                  <>Listo <ArrowRight className="w-3.5 h-3.5" /></>
+                  <> {t("tour.btn_done")} <ArrowRight className="w-3.5 h-3.5" /></>
                 ) : (
-                  <>Siguiente <ChevronRight className="w-3.5 h-3.5" /></>
+                  <> {t("tour.btn_next")} <ChevronRight className="w-3.5 h-3.5" /></>
                 )}
               </button>
 
@@ -656,7 +658,7 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
                 <button
                   onClick={handlePause}
                   className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-all shrink-0"
-                  title="Pausar tour"
+                  title={t("tour.btn_pause")}
                 >
                   <Pause className="w-4 h-4 text-zinc-500" />
                 </button>
@@ -711,7 +713,7 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
 
           {!targetFound && hasTarget && !isVerifyStep && (
             <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-xl p-3 text-center font-medium">
-              Esperando que el elemento aparezca...
+              {t("tour.waiting_element")}
             </p>
           )}
 
@@ -734,7 +736,7 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
               onClick={() => setStep((s) => Math.min(s + 1, steps.length - 1))}
               className="w-full py-3 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl text-xs font-bold shadow-md shadow-red-600/20 hover:from-red-700 hover:to-red-600 transition-all flex items-center justify-center gap-2"
             >
-              <Bot className="w-4 h-4" /> Probar IA ahora
+              <Bot className="w-4 h-4" /> {t("tour.btn_test_ai")}
             </motion.button>
           )}
 
@@ -743,12 +745,12 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
               <div className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
                 <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">
-                  Revisa tu bandeja de entrada y haz clic en el enlace de verificación.
+                  {t("tour.verify_inbox")}
                 </p>
               </div>
               {verificationSent ? (
                 <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
-                  <CheckCircle2 className="w-4 h-4" /> Correo reenviado
+                  <CheckCircle2 className="w-4 h-4" /> {t("tour.verify_sent")}
                 </div>
               ) : (
                 <button
@@ -759,12 +761,12 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
                   {sendingVerification ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <>REENVIAR CORREO</>
+                    <> {t("tour.verify_resend")}</>
                   )}
                 </button>
               )}
               <p className="text-[9px] text-rose-400 italic text-center">
-                ¿No lo recibes? Revisa tu carpeta de spam.
+                {t("tour.verify_spam")}
               </p>
             </div>
           )}
@@ -801,7 +803,7 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
               ) : isLast ? (
                 <>Listo <ArrowRight className="w-3.5 h-3.5" /></>
               ) : (
-                <>Continuar <ArrowRight className="w-3.5 h-3.5" /></>
+                <> {t("tour.btn_continue")} <ArrowRight className="w-3.5 h-3.5" /></>
               )}
             </button>
           </div>
@@ -844,7 +846,7 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
           className="fixed bottom-6 right-6 z-[250] flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-2xl shadow-2xl shadow-red-600/30 hover:from-red-700 hover:to-red-600 transition-all font-bold text-xs"
         >
           <Play className="w-4 h-4 fill-white" />
-          Continuar Tour
+          {t("tour.btn_resume")}
         </motion.button>
       )}
 

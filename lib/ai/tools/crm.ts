@@ -202,6 +202,7 @@ export async function executeCRMTool(name: string, args: any, store: any, userId
       const maxId = Math.max(0, ...s.customers.map((c: any) => c.id || 0));
       s.customers.push({ id: maxId + 1, name: args.name, email: args.email || "", phone: args.phone || "" });
       await s.save();
+      try { const { notifyOwner } = await import("@/lib/notify"); await notifyOwner(String((store as any).ownerId || (store as any).userId), String(storeId), "customer", "Nuevo cliente registrado", `${args.name} - ${args.email || ""}`); } catch {}
       return { success: true, message: `Cliente "${args.name}" agregado con éxito` };
     }
 

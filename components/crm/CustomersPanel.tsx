@@ -78,6 +78,9 @@ export default function CustomersPanel({ storeId }: { storeId: string }) {
   const [showPromotion, setShowPromotion] = useState(false);
   const [promotion, setPromotion] = useState({ subject: "", message: "" });
   const [promoChannel, setPromoChannel] = useState<"email" | "whatsapp" | "both">("email");
+  const [showQuickEmail, setShowQuickEmail] = useState(false);
+  const [quickEmail, setQuickEmail] = useState({ to: "", subject: "", body: "" });
+  const [sendingQuick, setSendingQuick] = useState(false);
   const [sendingPromotion, setSendingPromotion] = useState(false);
   const [promotionResult, setPromotionResult] = useState("");
 
@@ -122,6 +125,29 @@ export default function CustomersPanel({ storeId }: { storeId: string }) {
     });
     setError("");
     setShowModal(true);
+  };
+
+  const sendQuickEmail = async () => {
+    if (!quickEmail.to || !quickEmail.subject || !quickEmail.body) return;
+    setSendingQuick(true);
+    try {
+      const res = await fetch("/api/email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: quickEmail.to, subject: quickEmail.subject, content: quickEmail.body }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setQuickEmail({ to: "", subject: "", body: "" });
+        setShowQuickEmail(false);
+        setError("");
+      } else {
+        setError(data.error || "Error al enviar");
+      }
+    } catch {
+      setError("Error de conexión");
+    }
+    setSendingQuick(false);
   };
 
   const handleSave = async () => {
@@ -310,6 +336,11 @@ export default function CustomersPanel({ storeId }: { storeId: string }) {
           className="flex items-center gap-1.5 px-3.5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] md:text-xs font-black italic hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
           <Send className="w-3.5 h-3.5" />
           {t("customers.send_promotion_btn")}
+        </motion.button>
+        <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setQuickEmail({ to: "", subject: "", body: "" }); setShowQuickEmail(true); }}
+          className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white text-red-600 border-2 border-red-200 rounded-xl text-[10px] md:text-xs font-black italic hover:bg-red-50 transition-all">
+          <Mail className="w-3.5 h-3.5" />
+          Correo rápido
         </motion.button>
       </div>
 
@@ -729,6 +760,55 @@ export default function CustomersPanel({ storeId }: { storeId: string }) {
                     {sendingPromotion ? t("customers.promotion_sending") : t("customers.promotion_send_to").replace("{count}", String(customers.filter(c => promoChannel === "whatsapp" ? c.phone : c.email).length))}
                   </motion.button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Quick Email Modal */}
+      <AnimatePresence>
+        {showQuickEmail && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setShowQuickEmail(false)}
+          >
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }} onClick={e => e.stopPropagation()}
+              className="bg-white rounded-3xl w-full max-w-md shadow-2xl"
+            >
+              <div className="flex items-center justify-between p-4 md:p-6 border-b border-zinc-100">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-red-50 rounded-xl"><Mail className="w-4 h-4 text-red-600" /></div>
+                  <h4 className="text-sm md:text-base font-black italic uppercase tracking-tighter">Correo rápido</h4>
+                </div>
+                <button onClick={() => setShowQuickEmail(false)} className="p-1 text-zinc-400 hover:text-zinc-700 rounded-lg hover:bg-zinc-50 transition-all">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-4 md:p-6 space-y-4">
+                <div>
+                  <label className="text-[9px] md:text-[10px] font-black italic text-zinc-500 uppercase tracking-wider mb-1.5 block">Para</label>
+                  <input type="email" placeholder="correo@ejemplo.com" value={quickEmail.to} onChange={e => setQuickEmail({...quickEmail, to: e.target.value})}
+                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-red-200 transition-all" />
+                </div>
+                <div>
+                  <label className="text-[9px] md:text-[10px] font-black italic text-zinc-500 uppercase tracking-wider mb-1.5 block">Asunto</label>
+                  <input type="text" placeholder="Asunto del correo" value={quickEmail.subject} onChange={e => setQuickEmail({...quickEmail, subject: e.target.value})}
+                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-red-200 transition-all" />
+                </div>
+                <div>
+                  <label className="text-[9px] md:text-[10px] font-black italic text-zinc-500 uppercase tracking-wider mb-1.5 block">Mensaje</label>
+                  <textarea placeholder="Escribe tu mensaje..." value={quickEmail.body} onChange={e => setQuickEmail({...quickEmail, body: e.target.value})}
+                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-28" />
+                </div>
+                {error && <p className="text-[10px] text-red-500 font-bold italic">{error}</p>}
+                <motion.button whileTap={{ scale: 0.97 }} onClick={sendQuickEmail}
+                  disabled={!quickEmail.to || !quickEmail.subject || !quickEmail.body || sendingQuick}
+                  className="w-full flex items-center justify-center gap-1.5 px-5 py-3 bg-red-600 text-white rounded-xl text-xs font-black italic hover:bg-red-700 transition-all shadow-lg shadow-red-100 disabled:opacity-50">
+                  {sendingQuick ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  {sendingQuick ? "Enviando..." : "Enviar correo"}
+                </motion.button>
               </div>
             </motion.div>
           </motion.div>

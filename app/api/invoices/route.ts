@@ -8,6 +8,7 @@ import {
   generateQRContent,
   getNextInvoiceNumber,
 } from "@/lib/verifactu";
+import { notifyOwner } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +110,10 @@ export async function POST(req: NextRequest) {
       signedAt: issuedAt,
       organizationId: auth?.organizationId || null,
     });
+
+    if (auth?.userId && body.storeId) {
+      await notifyOwner(auth.userId, body.storeId, "invoice", "Nueva factura creada", `Factura #${invoiceNumber} - $${body.amount}`);
+    }
 
     return NextResponse.json({ invoice });
   } catch (error) {

@@ -32,7 +32,18 @@ export type ModuleId =
   | "inventory"
   | "gallery"
   | "testimonials"
-  | "documents";
+  | "documents"
+  | "restaurant"
+  | "floor_plan"
+  | "restaurant_orders"
+  | "reservations"
+  | "promotions"
+  | "loyalty"
+  | "restaurant_reviews"
+  | "waiter_calls"
+  | "barbers"
+  | "queue"
+  | "barber_history";
 
 export interface ModuleDefinition {
   id: ModuleId;
@@ -180,6 +191,41 @@ export const MODULES: Record<ModuleId, ModuleDefinition> = {
     id: "documents", nameKey: "nav.documents", descKey: "", icon: "FileText",
     sectionKey: "documents", group: "industry",
   },
+  restaurant: {
+    id: "restaurant", nameKey: "nav.restaurant", descKey: "", icon: "UtensilsCrossed",
+    sectionKey: "restaurant", group: "industry",
+  },
+  floor_plan: {
+    id: "floor_plan", nameKey: "nav.floor_plan", descKey: "", icon: "LayoutGrid",
+    sectionKey: "floor_plan", group: "industry",
+  },
+  restaurant_orders: {
+    id: "restaurant_orders", nameKey: "nav.restaurant_orders", descKey: "", icon: "ClipboardList",
+    sectionKey: "restaurant_orders", group: "industry",
+  },
+  reservations: {
+    id: "reservations", nameKey: "nav.reservations", descKey: "", icon: "CalendarCheck",
+    sectionKey: "reservations", group: "industry",
+  },
+  promotions: {
+    id: "promotions", nameKey: "nav.promotions", descKey: "", icon: "Tag",
+    sectionKey: "promotions", group: "industry",
+  },
+  loyalty: {
+    id: "loyalty", nameKey: "nav.loyalty", descKey: "", icon: "Award",
+    sectionKey: "loyalty", group: "industry",
+  },
+  restaurant_reviews: {
+    id: "restaurant_reviews", nameKey: "nav.restaurant_reviews", descKey: "", icon: "MessageSquare",
+    sectionKey: "restaurant_reviews", group: "industry",
+  },
+  waiter_calls: {
+    id: "waiter_calls", nameKey: "nav.waiter_calls", descKey: "", icon: "Bell",
+    sectionKey: "waiter_calls", group: "industry",
+  },
+  barbers: { id: "barbers", nameKey: "nav.barbers", descKey: "", icon: "Scissors", sectionKey: "barbers", group: "industry" },
+  queue: { id: "queue", nameKey: "nav.queue", descKey: "", icon: "Users", sectionKey: "queue", group: "industry" },
+  barber_history: { id: "barber_history", nameKey: "nav.barber_history", descKey: "", icon: "Clock", sectionKey: "barber_history", group: "industry" },
 };
 
 export const MODULE_GROUPS = [

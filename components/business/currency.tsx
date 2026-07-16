@@ -5,7 +5,8 @@ import {
   Building2, Layers, User, CheckCircle2, AlertTriangle, Edit3, Sparkles, ImageIcon,
   BarChart3, ConciergeBell, UtensilsCrossed, BookHeart, GraduationCap,
   Presentation, UserRound, Award, Briefcase, FolderKanban, Gavel,
-  ClipboardPlus, Pill, Stethoscope, Warehouse, Star, Scissors, Scale, ShoppingBag
+  ClipboardPlus, Pill, Stethoscope, Warehouse, Star, Scissors, Scale, ShoppingBag,
+  LayoutGrid, ClipboardList, Tag, Bell, MessageSquare
 } from "lucide-react";
 
 export const CURRENCIES: { code: string; symbol: string; name: string; rate: number }[] = [
@@ -64,4 +65,6 @@ export const MODULE_ICONS: Record<string, React.ReactNode> = {
   ClipboardPlus: <FileText />, Pill: <Package />, Stethoscope: <Store />,
   Warehouse: <Layers />, Image: <ImageIcon />, Star: <Sparkles />,
   Scissors: <Edit3 />, Scale: <AlertTriangle />, ShoppingBag: <ShoppingCart />,
+  LayoutGrid: <LayoutGrid />, ClipboardList: <ClipboardList />, Tag: <Tag />,
+  Bell: <Bell />, MessageSquare: <MessageSquare />,
 };

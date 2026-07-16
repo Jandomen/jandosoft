@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
+import { getCurrencySymbol } from "@/lib/utils/currency";
 
 let wallpoetBase64: string | null = null;
 let wallpoetLoaded = false;
@@ -119,7 +120,7 @@ export async function generatePaymentReceiptPDF(transaction: {
   doc.setFontSize(10);
   const rowY = y + 8;
   doc.text(transaction.description || "Pago", 25, rowY);
-  doc.text(`${transaction.currency === "MXN" ? "$" : "$"}${transaction.amount.toFixed(2)} ${transaction.currency}`, 170, rowY, { align: "right" });
+  doc.text(`${getCurrencySymbol(transaction.currency)}${transaction.amount.toFixed(2)} ${transaction.currency}`, 170, rowY, { align: "right" });
 
   const totalY = rowY + 10;
   doc.setDrawColor(255, 0, 0);
@@ -129,7 +130,7 @@ export async function generatePaymentReceiptPDF(transaction: {
   doc.setFontSize(12);
   doc.text("TOTAL PAGADO:", 110, totalY + 8);
   doc.setTextColor(255, 0, 0);
-  doc.text(`${transaction.currency === "MXN" ? "$" : "$"}${transaction.amount.toFixed(2)} ${transaction.currency}`, 170, totalY + 8, { align: "right" });
+  doc.text(`${getCurrencySymbol(transaction.currency)}${transaction.amount.toFixed(2)} ${transaction.currency}`, 170, totalY + 8, { align: "right" });
 
   doc.setTextColor(161, 161, 170);
   doc.setFont("helvetica", "normal");

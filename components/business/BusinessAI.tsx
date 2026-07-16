@@ -32,6 +32,7 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
   const [messages, setMessages] = useState<{ role: string; content: string; timestamp: number }[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [lastProvider, setLastProvider] = useState<string>("");
   const voice = useVoiceInput({ autoSend: true, onResult: (text) => handleSend(text) });
   const clearChat = () => {
     localStorage.removeItem(storageKey);
@@ -997,6 +998,8 @@ Puedes MODIFICAR los datos del negocio actual. Para ello, incluye al final de tu
 
 REGLAS:
 - Siempre confirma con el usuario ANTES de eliminar algo.
+- IMPORTANTE: Si el usuario pide eliminar TODOS los elementos de un tipo (ej. "elimina todos los servicios", "borra todo"), PRIMERO lista los elementos que vas a eliminar y pide confirmación explícita. NO generes las acciones de eliminación hasta que el usuario confirme con "sí" o "confirmo". Si el usuario responde "sí" a una pregunta de confirmación previa, SÍ procede a generar las acciones de eliminación.
+- Si el usuario confirma la eliminación, genera TODAS las acciones deleteService/deleteProduct/deleteCustomer/etc necesarias en un solo bloque JSON.
 - Después de crear algo, confirma el nombre y nuevo ID en tu mensaje.
 - Precios y montos en dólares.
 - No inventes datos que no existan en el contexto.
@@ -1004,7 +1007,7 @@ REGLAS:
 - Responde en español profesional y amigable.
 - Si ves que falta configuración importante (Stripe no conectado, empresa no pública, etc.), sugiere amablemente cómo mejorarlo.
 - Puedes gestionar citas/agenda: crear (addAppointment), modificar (updateAppointment) y cancelar (cancelAppointment). Usa fechas implícitas ("mañana", "próximo lunes") sin preguntar de más.
-- Puedes enviar correos electrónicos (sendEmail) a cualquier dirección de email. Incluye los campos: to (destinatario), subject (asunto) y content (contenido HTML del mensaje).
+- Puedes enviar correos electrónicos (sendEmail) a cualquier dirección de email desde aquí o desde los botones "Correo rápido" en Clientes y Campañas. Incluye los campos: to (destinatario), subject (asunto) y content (contenido HTML del mensaje).
 - Puedes gestionar servicios: crear (addService), modificar (updateService) y eliminar (deleteService).
 - Puedes crear campañas de marketing (addCampaign) de tipo email o sms. También editarlas (updateCampaign) y eliminarlas (deleteCampaign).
 - Puedes crear automatizaciones (addAutomation) con triggers: new_order, new_customer, new_product, low_stock, payment_received y actionTypes: send_notification, send_email, webhook, send_telegram, send_discord, send_slack, post_to_social, ai_generate. También editarlas (updateAutomation) y eliminarlas (deleteAutomation).
@@ -1039,7 +1042,7 @@ LÍMITES ÉTICOS:
 - Si el usuario pide algo fuera del alcance de la gestión del negocio, responde amablemente que no puedes ayudar con eso y sugiere algo relacionado al negocio.`;
 
       const systemContent = ac.systemPrompt
-        ? `${ac.systemPrompt}\n\n${contextInfo}\n\nIMPORTANTE - Puedes MODIFICAR los datos del negocio actual. Para ello, incluye al final de tu respuesta un bloque JSON con las acciones a ejecutar, usando el formato estandar de Jandosoft.\n\nREGLAS:\n- Siempre confirma con el usuario ANTES de eliminar algo.\n- Después de crear algo, confirma el nombre y nuevo ID en tu mensaje.\n- Precios y montos en dólares.\n- No inventes datos que no existan en el contexto.\n- Si el usuario pide modificar datos, genera el JSON y explícale qué hiciste.\n- Responde en español profesional y amigable.\n- Puedes enviar correos electrónicos (sendEmail) con los campos to, subject y content.
+        ? `${ac.systemPrompt}\n\n${contextInfo}\n\nIMPORTANTE - Puedes MODIFICAR los datos del negocio actual. Para ello, incluye al final de tu respuesta un bloque JSON con las acciones a ejecutar, usando el formato estandar de Jandosoft.\n\nREGLAS:\n- Siempre confirma con el usuario ANTES de eliminar algo.\n- IMPORTANTE: Si el usuario pide eliminar TODOS los elementos de un tipo (ej. "elimina todos los servicios", "borra todo"), PRIMERO lista los elementos que vas a eliminar y pide confirmación explícita. NO generes las acciones de eliminación hasta que el usuario confirme con "sí" o "confirmo". Si el usuario responde "sí" a una pregunta de confirmación previa, SÍ procede a generar las acciones de eliminación.\n- Si el usuario confirma la eliminación, genera TODAS las acciones deleteService/deleteProduct/deleteCustomer/etc necesarias en un solo bloque JSON.\n- Después de crear algo, confirma el nombre y nuevo ID en tu mensaje.\n- Precios y montos en dólares.\n- No inventes datos que no existan en el contexto.\n- Si el usuario pide modificar datos, genera el JSON y explícale qué hiciste.\n- Responde en español profesional y amigable.\n- Puedes enviar correos electrónicos (sendEmail) con los campos to, subject y content.
 - Puedes gestionar clientes legales (addClient/updateClient/deleteClient), expedientes (addCaseFile/updateCaseFile/deleteCaseFile), audiencias (addHearing/updateHearing/deleteHearing), documentos (addDocument/updateDocument/deleteDocument), historiales médicos (addMedicalRecord/updateMedicalRecord/deleteMedicalRecord), recetas (addPrescription/updatePrescription/deletePrescription), doctores (addDoctor/updateDoctor/deleteDoctor), inventario (addInventoryItem/updateInventoryItem/deleteInventoryItem), galería (addGalleryItem/updateGalleryItem/deleteGalleryItem), testimonios (addTestimonial/updateTestimonial/deleteTestimonial), clases (addClass/updateClass/deleteClass), cursos (addCourse/updateCourse/deleteCourse), estudiantes (addStudent/updateStudent/deleteStudent), calificaciones (addGrade/updateGrade/deleteGrade), menú (addMenuItem/updateMenuItem/deleteMenuItem) y recetas de cocina (addRecipe/updateRecipe/deleteRecipe).\n- Puedes crear automatizaciones (addAutomation) con triggers: new_order, new_customer, new_product, low_stock, payment_received y actionTypes: send_notification, send_email, webhook, send_telegram, send_discord, send_slack, post_to_social, ai_generate. También editarlas y eliminarlas.\n\nLÍMITES ÉTICOS:\n- NO compartas, repitas ni expongas información personal de los clientes (emails, teléfonos, nombres completos) a menos que el usuario sea el dueño del negocio y esté consultando sus propios datos.\n- NO des consejos financieros, contables, legales ni médicos.\n- NO generes contenido ofensivo, discriminatorio, engañoso o inapropiado.\n- NO inventes transacciones, productos o clientes que no existan en el contexto.`
         : defaultSystem;
 
@@ -1054,11 +1057,20 @@ LÍMITES ÉTICOS:
           overrideSystem: true,
           model: ac.model ? `openai/${ac.model}` : undefined,
           temperature: ac.temperature,
+          storeId: store?._id || store?.id || "",
         })
       });
       const data = await response.json();
       let botContent = data.text || "Error al procesar";
       if (data.error) botContent = `Error: ${data.error}`;
+      if (data.provider) setLastProvider(data.provider);
+
+      if (data.limitReached && data.plans && data.plans.length > 0) {
+        const plansMsg = "\n\n---\n**Upgrada tu plan para continuar:**\n\n" +
+          data.plans.map((p: any) => `• **${p.name}** — $${p.price}/mes — ${p.desc}`).join("\n") +
+          "\n\n[Ver planes y upgradear](/dashboard?tab=plans)";
+        botContent += plansMsg;
+      }
 
       const jsonMatch = botContent.match(/```json\n?([\s\S]*?)```/);
       if (jsonMatch) {
@@ -1099,6 +1111,11 @@ LÍMITES ÉTICOS:
         <span className="ml-auto text-[9px] md:text-[10px] font-black italic px-2 md:px-3 py-1 rounded-full bg-zinc-100 text-zinc-500 shrink-0">
           {maxMessages - recentUserMessages} msgs
         </span>
+        {lastProvider && (
+          <span className={cn("text-[9px] md:text-[10px] font-black italic px-2 md:px-3 py-1 rounded-full shrink-0", lastProvider === "platform" ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600")}>
+            {lastProvider === "platform" ? "🌐 Platform" : `🤖 ${lastProvider}`}
+          </span>
+        )}
       </div>
       <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-3 md:space-y-4 mb-4 md:mb-6 pr-1 md:pr-2">
         {messages.map((m, i) => (

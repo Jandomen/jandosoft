@@ -54,7 +54,7 @@ export default async function ReservarPage({ params }: Props) {
           <p className="text-zinc-400 dark:text-zinc-500 font-medium text-xs uppercase tracking-widest">Selecciona un servicio y elige el horario disponible</p>
         </div>
 
-        <BookingWidget slug={slug} services={services} />
+        <BookingWidget slug={slug} services={services} storeId={(store as any)._id} paymentIntegrations={(store as any).paymentIntegrations || []} paymentPolicy={(store as any).paymentPolicy || "optional"} />
       </main>
 
       <footer className="border-t border-zinc-200 dark:border-zinc-800 py-10">

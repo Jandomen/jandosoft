@@ -3,10 +3,9 @@ import { connectDB } from "@/lib/mongodb";
 import { Store } from "@/lib/models/Store";
 import { validateAIProvider } from "@/lib/ai-providers/registry";
 
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ storeId: string }> }) {
   try {
-    const { searchParams } = new URL(req.url);
-    const storeId = searchParams.get("storeId");
+    const { storeId } = await params;
     if (!storeId) return NextResponse.json({ error: "storeId required" }, { status: 400 });
 
     await connectDB();

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Customer } from "@/lib/models/Customer";
 import { getAuthFromHeaders, getAuthFromCookies } from "@/lib/auth";
+import { notifyOwner } from "@/lib/notify";
 
 async function getAuth(req: NextRequest) {
   return getAuthFromHeaders(req) || await getAuthFromCookies();
@@ -45,6 +46,10 @@ export async function POST(req: NextRequest) {
         notes: row.notes || "",
       });
       created++;
+    }
+
+    if (created > 0) {
+      await notifyOwner(auth.userId, storeId, "customer", "Clientes importados", `${created} clientes importados correctamente`);
     }
 
     return NextResponse.json({ success: true, created, skipped, total: rows.length });

@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Check,
   Minus,
+  Bitcoin,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,51 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
   const [plans, setPlans] = useState<any[]>(PLANS);
   const [freePlan] = useState<any>(FREE_PLAN);
   const [comparisonFeatures, setComparisonFeatures] = useState<any[]>([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
+
+  const PLAN_PAYMENT_METHODS = [
+    { id: "stripe", label: "Tarjeta de crédito/débito", icon: CreditCard, color: "#635BFF" },
+    { id: "nowpayments", label: "Criptomonedas (BTC, ETH, USDT...)", icon: Bitcoin, color: "#6C3EC1" },
+  ];
+
+  const handlePlanClick = (planId: string) => {
+    if (!isLogged) { onLoginRequest?.(); return; }
+    if (!userEmail) { showToast(t("plans.not_logged"), "info"); return; }
+    setPendingPlanId(planId);
+    setShowPaymentModal(true);
+  };
+
+  const handlePayWithMethod = async (paymentMethod: string) => {
+    if (!pendingPlanId || !userEmail) return;
+    setShowPaymentModal(false);
+    setSelectedPlan(pendingPlanId);
+    setStripeError(null);
+    setIsProcessing(true);
+
+    try {
+      const res = await fetch("/api/plan-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: userEmail,
+          name: userEmail?.split("@")[0] || "Customer",
+          planId: pendingPlanId,
+          paymentMethod,
+        }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setStripeError(data.error || "Error al iniciar pago");
+        setIsProcessing(false);
+      }
+    } catch {
+      setStripeError("Error de conexión");
+      setIsProcessing(false);
+    }
+  };
 
   useEffect(() => {
     fetch("/api/admin/plans")
@@ -94,7 +140,12 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
     const params = new URLSearchParams(window.location.search);
     const stripeSuccess = params.get("stripe_success");
     const stripeCancel = params.get("stripe_cancel");
-    if (stripeSuccess) {
+    const paypalSuccess = params.get("paypal_plan_success");
+    const mpSuccess = params.get("mercadopago_plan_success");
+    const planParam = params.get("plan");
+
+    if (stripeSuccess || paypalSuccess || mpSuccess) {
+      if (planParam) setSelectedPlan(planParam);
       setIsBought(true);
       window.history.replaceState({}, "", window.location.pathname);
     }
@@ -189,7 +240,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-20 pb-20 italic">
+    <div className="max-w-7xl mx-auto space-y-24 pb-20 italic">
       <div className="text-center space-y-4 max-w-3xl mx-auto">
         <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-full text-xs font-black border border-red-100 italic">
           <Zap className="w-3.5 h-3.5" /> {t("plans.badge")}
@@ -223,7 +274,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
       </div>
 
       {/* Carousel */}
-      <div className="relative max-w-6xl mx-auto px-4 md:px-6">
+      <div className="relative max-w-6xl mx-auto px-4 md:px-6 pt-8 pb-4">
         {/* Screen reader hint for scrollable carousel */}
         {plans.length > 2 && (
           <p className="sr-only" role="status" aria-live="polite">
@@ -233,7 +284,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
 
         <div
           ref={carouselRef}
-          className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4"
+          className="flex overflow-x-auto overflow-y-visible snap-x snap-mandatory scroll-smooth pb-4"
           style={{
             scrollbarWidth: "none",
             msOverflowStyle: "none",
@@ -251,15 +302,15 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
                 className={cn(
-                  "snap-start shrink-0 relative bg-white rounded-[2.5rem] border-2 p-7 md:p-8 flex flex-col transition-all duration-300",
+                  "snap-start shrink-0 relative bg-white rounded-[2.5rem] border-2 p-8 md:p-10 flex flex-col transition-all duration-300",
                   plans.length === 1 && "mx-auto",
                   popular
                     ? "border-red-600 shadow-2xl shadow-red-600/10 z-10"
                     : "border-zinc-100 hover:border-zinc-200 shadow-xl"
                 )}
                 style={{
-                  flex: plans.length <= 2 ? `0 0 calc((100% - ${plans.length > 1 ? "2.5rem" : "0px"}) / ${plans.length})` : "0 0 min(75vw, 420px)",
-                  maxWidth: plans.length === 1 ? "480px" : plans.length === 2 ? "480px" : "none",
+                  flex: plans.length <= 2 ? `0 0 calc((100% - ${plans.length > 1 ? "2.5rem" : "0px"}) / ${plans.length})` : "0 0 min(80vw, 440px)",
+                  maxWidth: plans.length === 1 ? "500px" : plans.length === 2 ? "500px" : "none",
                   transform: popular && plans.length > 2 ? "scale(1.05)" : popular && plans.length <= 2 ? "scale(1.03)" : "none",
                   zIndex: popular ? 10 : undefined,
                 }}
@@ -270,32 +321,32 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
                   </div>
                 )}
 
-                <div className="space-y-6 flex flex-col flex-1">
-                  <div>
-                    <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t(plan.nameKey ?? plan.name)}</h3>
-                    <p className="text-[11px] text-zinc-500 font-medium mt-2 leading-relaxed">{t(plan.descKey ?? "")}</p>
+                <div className="space-y-8 flex flex-col flex-1">
+                  <div className="text-center">
+                    <h3 className="text-2xl md:text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">{t(plan.nameKey ?? plan.name)}</h3>
+                    <p className="text-xs text-zinc-500 font-medium mt-3 leading-relaxed">{t(plan.descKey ?? "")}</p>
                   </div>
 
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl md:text-5xl font-black italic text-zinc-950 tracking-tighter">{geo.formatPrice(plan.price)}</span>
-                    <span className="text-zinc-400 font-black text-xs italic uppercase">{t("plans.per_month")}</span>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-5xl md:text-6xl font-black italic text-zinc-950 tracking-tighter">{geo.formatPrice(plan.price)}</span>
+                    <span className="text-zinc-400 font-black text-sm italic uppercase">{t("plans.per_month")}</span>
                     {geo.currencyCode !== "USD" && (
                       <span className="text-[10px] text-zinc-400 font-medium ml-1">(${plan.price} USD)</span>
                     )}
                   </div>
 
-                  <div className="space-y-2.5 flex-1">
-                    {resolvedFeatures.slice(0, 6).map((feat: string) => (
+                  <div className="space-y-3 flex-1">
+                    {resolvedFeatures.slice(0, 8).map((feat: string) => (
                       <div key={feat} className="flex items-start gap-3">
                         <div className={cn("p-0.5 rounded-full mt-0.5", popular ? "bg-red-600" : "bg-emerald-500")}>
                           <Check className="w-3 h-3 text-white" />
                         </div>
-                        <span className="text-xs font-bold text-zinc-700 italic">{t(feat)}</span>
+                        <span className="text-sm font-bold text-zinc-700 italic">{t(feat)}</span>
                       </div>
                     ))}
-                    {resolvedFeatures.length > 6 && (
+                    {resolvedFeatures.length > 8 && (
                       <p className="text-[10px] font-bold text-zinc-400 italic pl-7">
-                        +{resolvedFeatures.length - 6} más
+                        +{resolvedFeatures.length - 8} más
                       </p>
                     )}
                   </div>
@@ -303,10 +354,10 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
                   <div className="pt-4">
                     <motion.button
                       whileTap={{ scale: 0.97 }}
-                      onClick={() => handleSelectPlan(plan.id)}
+                      onClick={() => handlePlanClick(plan.id)}
                       disabled={isProcessing && selectedPlan === plan.id}
                       className={cn(
-                        "w-full py-3.5 rounded-xl font-black text-xs italic transition-all shadow-lg flex items-center justify-center gap-2 uppercase tracking-wider",
+                        "w-full py-4 rounded-2xl font-black text-sm italic transition-all shadow-lg flex items-center justify-center gap-2 uppercase tracking-wider",
                         popular
                           ? "bg-red-600 text-white hover:bg-red-700 shadow-red-200"
                           : "bg-zinc-950 text-white hover:bg-zinc-800"
@@ -444,7 +495,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
           onClick={() => {
             if (isLogged) {
               const popular = plans.find((p) => p.popular);
-              if (popular) handleSelectPlan(popular.id);
+              if (popular) handlePlanClick(popular.id);
             } else {
               onLoginRequest?.();
             }
@@ -454,6 +505,59 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
           {isLogged ? t("plans.cta_business") : t("plans.cta_create_free")} <ChevronRight className="w-5 h-5" />
         </motion.button>
       </div>
+
+      <AnimatePresence>
+        {showPaymentModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center max-[400px]:p-3 p-6"
+            onClick={() => setShowPaymentModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="w-full max-w-md bg-white max-[400px]:rounded-[2rem] max-[400px]:p-5 rounded-[3rem] p-8 shadow-4xl relative"
+              onClick={e => e.stopPropagation()}
+            >
+              <button onClick={() => setShowPaymentModal(false)} className="absolute top-4 right-4 p-2 hover:bg-zinc-100 rounded-xl transition-colors">
+                <X className="w-5 h-5 text-zinc-400" />
+              </button>
+
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-black italic text-zinc-950 uppercase tracking-tighter">Elige método de pago</h3>
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1 italic">
+                  Plan {plans.find(p => p.id === pendingPlanId)?.name || ""}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {PLAN_PAYMENT_METHODS.map((method) => {
+                  const Icon = method.icon;
+                  return (
+                    <motion.button
+                      key={method.id}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => handlePayWithMethod(method.id)}
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-zinc-100 hover:border-zinc-200 hover:shadow-md transition-all text-left group"
+                    >
+                      <div className="p-2.5 rounded-xl" style={{ backgroundColor: method.color + "12" }}>
+                        <Icon className="w-5 h-5" style={{ color: method.color }} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-black italic text-zinc-950">{method.label}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-zinc-500 transition-colors" />
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              <p className="text-[9px] text-zinc-400 font-bold text-center mt-4 italic">
+                Suscripción mensual recurrente. Cancela cuando quieras.
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isProcessing && !isBought && (

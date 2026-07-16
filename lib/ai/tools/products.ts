@@ -155,6 +155,7 @@ export async function executeProductTool(name: string, args: any, store: any, _u
     const maxId = Math.max(0, ...s.products.map((p: any) => p.id || 0));
     s.products.push({ id: maxId + 1, name: args.name, price: args.price, stock: args.stock ?? 0 });
     await s.save();
+    try { const { notifyOwner } = await import("@/lib/notify"); await notifyOwner(String((store as any).ownerId || (store as any).userId), String(storeId), "info", "Nuevo producto creado", `${args.name} - $${args.price}`); } catch {}
     return { success: true, message: `Producto "${args.name}" creado con éxito` };
   }
 
@@ -170,6 +171,7 @@ export async function executeProductTool(name: string, args: any, store: any, _u
     const maxId = Math.max(0, ...s.services.map((sv: any) => sv.id || 0));
     s.services.push({ id: maxId + 1, name: args.name, desc: args.desc || "", price: args.price, duration: args.duration || 60 });
     await s.save();
+    try { const { notifyOwner } = await import("@/lib/notify"); await notifyOwner(String((store as any).ownerId || (store as any).userId), String(storeId), "info", "Nuevo servicio creado", `${args.name} - $${args.price}`); } catch {}
     return { success: true, message: `Servicio "${args.name}" creado con éxito` };
   }
 
@@ -205,6 +207,7 @@ export async function executeProductTool(name: string, args: any, store: any, _u
     const maxId = Math.max(0, ...s.orders.map((o: any) => o.id || 0));
     s.orders.push({ id: maxId + 1, product: args.product, amount: args.amount, status: args.status || "Pendiente" });
     await s.save();
+    try { const { notifyOwner } = await import("@/lib/notify"); await notifyOwner(String((store as any).ownerId || (store as any).userId), String(storeId), "order", "Nuevo pedido recibido", `${args.customerName || "Cliente"} - ${args.product} - $${args.amount}`); } catch {}
     return { success: true, message: `Orden creada: ${args.product} por $${args.amount}` };
   }
 

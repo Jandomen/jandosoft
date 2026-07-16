@@ -350,7 +350,7 @@ export const TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "update_agent_config",
-      description: "Update the AI agent configuration (colors, welcome message, etc.)",
+      description: "Update the AI agent configuration (colors, welcome message, theme, etc.)",
       parameters: {
         type: "object",
         properties: {
@@ -371,6 +371,24 @@ export const TOOLS: ToolDefinition[] = [
           headerTextColor: { type: "string", description: "Header text color hex" },
           botBubbleColor: { type: "string", description: "Bot message bubble background hex" },
           userBubbleColor: { type: "string", description: "User message bubble background hex" },
+          chatBgColor: { type: "string", description: "Chat background color hex" },
+          inputBgColor: { type: "string", description: "Input field background color hex" },
+          inputBorderColor: { type: "string", description: "Input field border color hex" },
+          inputFocusColor: { type: "string", description: "Input focus highlight color hex" },
+          inputTextColor: { type: "string", description: "Input text color hex" },
+          botTextColor: { type: "string", description: "Bot message text color hex" },
+          userTextColor: { type: "string", description: "User message text color hex" },
+          fontFamily: { type: "string", description: "Chat font family CSS value" },
+          buttonSize: { type: "number", description: "Widget button size in pixels (40-80)" },
+          buttonPosition: { type: "string", description: "Widget button position: bottom-right, bottom-left" },
+          buttonStyle: { type: "string", description: "Widget button style: circle, square, pill" },
+          chatWidth: { type: "number", description: "Chat window width in pixels (300-500)" },
+          chatHeight: { type: "number", description: "Chat window height in pixels (400-700)" },
+          animationType: { type: "string", description: "Chat open animation: slide, fade, scale" },
+          inputRadius: { type: "number", description: "Input field border radius in pixels" },
+          bubbleRadius: { type: "number", description: "Message bubble border radius in pixels" },
+          theme: { type: "string", description: "Theme preset name: custom, default, dark, light, chatgpt, whatsapp, discord, minimal, luxury, ocean, forest, sunset" },
+          lang: { type: "string", description: "Widget language code (es, en, pt, fr, de, it)" },
         },
       },
     },
@@ -467,6 +485,24 @@ export async function executeAdminTool(name: string, args: any, store: any, user
     if (args.headerTextColor !== undefined) config.headerTextColor = args.headerTextColor;
     if (args.botBubbleColor !== undefined) config.botBubbleColor = args.botBubbleColor;
     if (args.userBubbleColor !== undefined) config.userBubbleColor = args.userBubbleColor;
+    if (args.chatBgColor !== undefined) config.chatBgColor = args.chatBgColor;
+    if (args.inputBgColor !== undefined) config.inputBgColor = args.inputBgColor;
+    if (args.inputBorderColor !== undefined) config.inputBorderColor = args.inputBorderColor;
+    if (args.inputFocusColor !== undefined) config.inputFocusColor = args.inputFocusColor;
+    if (args.inputTextColor !== undefined) config.inputTextColor = args.inputTextColor;
+    if (args.botTextColor !== undefined) config.botTextColor = args.botTextColor;
+    if (args.userTextColor !== undefined) config.userTextColor = args.userTextColor;
+    if (args.fontFamily !== undefined) config.fontFamily = args.fontFamily;
+    if (args.buttonSize !== undefined) config.buttonSize = args.buttonSize;
+    if (args.buttonPosition !== undefined) config.buttonPosition = args.buttonPosition;
+    if (args.buttonStyle !== undefined) config.buttonStyle = args.buttonStyle;
+    if (args.chatWidth !== undefined) config.chatWidth = args.chatWidth;
+    if (args.chatHeight !== undefined) config.chatHeight = args.chatHeight;
+    if (args.animationType !== undefined) config.animationType = args.animationType;
+    if (args.inputRadius !== undefined) config.inputRadius = args.inputRadius;
+    if (args.bubbleRadius !== undefined) config.bubbleRadius = args.bubbleRadius;
+    if (args.theme !== undefined) config.theme = args.theme;
+    if (args.lang !== undefined) config.lang = args.lang;
     (s as any).agentConfig = config;
     await s.save();
     return { success: true, message: "Configuración del agente actualizada" };

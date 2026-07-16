@@ -6,7 +6,7 @@ import {
   Bot, ChevronRight, ChevronLeft, ArrowLeft, Plus, Trash2, BarChart3,
   TrendingUp, Clock, Edit3, X, Send, Loader2, Sparkles, User,
   Settings, CheckCircle2, Layers, Download, ExternalLink,
-  ImageIcon, Upload, Link, Mic, MicOff, Paperclip, Search, BookOpen, Zap, Copy, Globe, Megaphone,   FileText, Menu, MessageSquare, FileSpreadsheet, AlertTriangle, HelpCircle, Code, ChevronUp, ChevronDown, Plug, Volume2, VolumeX
+  ImageIcon, Upload, Link, Mic, MicOff, Paperclip, Search, BookOpen, Zap, Copy, Globe, Megaphone,   FileText, Menu, MessageSquare, FileSpreadsheet, AlertTriangle, HelpCircle, Code, ChevronUp, ChevronDown, Plug, Volume2, VolumeX, Bell, CheckCheck
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -46,12 +46,27 @@ import TestimonialsPanel from "./industry/TestimonialsPanel";
 import DocumentsPanel from "./industry/DocumentsPanel";
 import QRButton from "@/components/business/QRButton";
 
+import RestaurantDashboard from "@/components/restaurant/RestaurantDashboard";
+import FloorPlanEditor from "@/components/restaurant/FloorPlanEditor";
+import OrdersPanel from "@/components/restaurant/OrdersPanel";
+import ReservationsPanel from "@/components/restaurant/ReservationsPanel";
+import PromotionsPanel from "@/components/restaurant/PromotionsPanel";
+import LoyaltyPanel from "@/components/restaurant/LoyaltyPanel";
+import ReviewsPanel from "@/components/restaurant/ReviewsPanel";
+import WaiterCallsPanel from "@/components/restaurant/WaiterCallsPanel";
+
+import BarbersPanel from "@/components/barbershop/BarbersPanel";
+import QueuePanel from "@/components/barbershop/QueuePanel";
+import BarberHistoryPanel from "@/components/barbershop/BarberHistoryPanel";
+
+import ChatAppearancePanel from "./ChatAppearancePanel";
+
 
 interface BusinessDashboardProps {
   userStore: any;
   userEmail: string;
   storeId: string | number;
-  planLimits?: { maxStores: number; maxProductsPerStore: number; maxMessages: number; maxAutomations: number };
+  planLimits?: { maxStores: number; maxProductsPerStore: number; maxMessages: number; maxAutomations: number; maxAppointments?: number; maxCampaigns?: number; maxCustomers?: number };
   planExpired?: boolean;
   onNavigateToPricing?: () => void;
   onBack?: () => void;
@@ -84,6 +99,19 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
   useEffect(() => { setWidgetOrigin(window.location.origin); }, []);
 
   const [section, setSection] = useState<string>((initialSection as any) || "dashboard");
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState("");
+
+  const isFreePlan = !planLimits || planLimits.maxStores <= 1;
+
+  const handleSectionChange = (newSection: string) => {
+    if (isFreePlan && (newSection === "analytics" || newSection === "campaigns")) {
+      setUpgradeMessage(newSection === "analytics" ? "Analytics está disponible desde el plan Starter ($29/mes)" : "Las campañas están disponibles desde el plan Starter ($29/mes)");
+      setShowUpgradeModal(true);
+      return;
+    }
+    setSection(newSection);
+  };
 
   useEffect(() => {
     if (initialSection) setSection(initialSection as any);
@@ -99,6 +127,10 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
   const [products, setProducts] = useState<{ id: number; name: string; price: number; currency: string; priceUSD: number; stock: number; images: string[] }[]>([]);
   const [services, setServices] = useState<{ id: number; name: string; desc: string; price: number; duration: number }[]>([]);
   const [showAddService, setShowAddService] = useState(false);
+  const [confirmDeleteAllServices, setConfirmDeleteAllServices] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [editingService, setEditingService] = useState<any | null>(null);
   const [serviceForm, setServiceForm] = useState({ name: "", desc: "", price: "", duration: "60" });
   const [customers, setCustomers] = useState<{ id: number; name: string; email: string; phone: string }[]>([]);
@@ -137,6 +169,24 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
     headerTextColor: "#ffffff",
     botBubbleColor: "#f4f4f5",
     userBubbleColor: "#dc2626",
+    chatBgColor: "#f9fafb",
+    inputBgColor: "#ffffff",
+    inputBorderColor: "#e4e4e7",
+    inputFocusColor: "#dc2626",
+    inputTextColor: "#18181b",
+    botTextColor: "#18181b",
+    userTextColor: "#ffffff",
+    fontFamily: "",
+    buttonSize: 56,
+    buttonPosition: "bottom-right",
+    buttonStyle: "circle",
+    chatWidth: 380,
+    chatHeight: 540,
+    animationType: "slide",
+    inputRadius: 12,
+    bubbleRadius: 16,
+    theme: "custom",
+    lang: "",
   });
   const [agentConfigTab, setAgentConfigTab] = useState<"general" | "widget">("general");
   const [installTab, setInstallTab] = useState<"html" | "shopify" | "woocommerce" | "wix" | "wordpress">("html");
@@ -165,7 +215,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
   const [showSettings, setShowSettings] = useState(false);
   const [editingStore, setEditingStore] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [settingsForm, setSettingsForm] = useState({ name: "", desc: "", industry: "", slug: "", image: "", location: "", phone: "", coordinates: null as { lat: number; lng: number } | null });
+  const [settingsForm, setSettingsForm] = useState({ name: "", desc: "", industry: "", slug: "", image: "", location: "", phone: "", currency: "USD", coordinates: null as { lat: number; lng: number } | null });
   const [storeImageUploading, setStoreImageUploading] = useState(false);
   const [publicVisible, setPublicVisible] = useState(false);
   const [publicAIEnabled, setPublicAIEnabled] = useState(false);
@@ -215,10 +265,90 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
           headerTextColor: ac.headerTextColor || "#ffffff",
           botBubbleColor: ac.botBubbleColor || "#f4f4f5",
           userBubbleColor: ac.userBubbleColor || "#dc2626",
+          chatBgColor: ac.chatBgColor || "#f9fafb",
+          inputBgColor: ac.inputBgColor || "#ffffff",
+          inputBorderColor: ac.inputBorderColor || "#e4e4e7",
+          inputFocusColor: ac.inputFocusColor || "#dc2626",
+          inputTextColor: ac.inputTextColor || "#18181b",
+          botTextColor: ac.botTextColor || "#18181b",
+          userTextColor: ac.userTextColor || "#ffffff",
+          fontFamily: ac.fontFamily || "",
+          buttonSize: ac.buttonSize || 56,
+          buttonPosition: ac.buttonPosition || "bottom-right",
+          buttonStyle: ac.buttonStyle || "circle",
+          chatWidth: ac.chatWidth || 380,
+          chatHeight: ac.chatHeight || 540,
+          animationType: ac.animationType || "slide",
+          inputRadius: ac.inputRadius ?? 12,
+          bubbleRadius: ac.bubbleRadius ?? 16,
+          theme: ac.theme || "custom",
+          lang: ac.lang || "",
         });
       }
     }
   }, [userStore?._id || userStore?.id]);
+
+  useEffect(() => {
+    if (!userStore?._id && !userStore?.id) return;
+    let es: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let closed = false;
+
+    const fetchInitial = async () => {
+      try {
+        const res = await fetch(`/api/notifications?limit=20`);
+        if (res.ok) {
+          const data = await res.json();
+          setNotifications(data.notifications || []);
+          setUnreadCount(data.unreadCount || data.notifications?.filter((n: any) => !n.read).length || 0);
+        }
+      } catch {}
+    };
+
+    const connect = () => {
+      if (closed) return;
+      if (es) { try { es.close(); } catch {} }
+      es = new EventSource(`/api/notifications/stream`);
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "notification:new" && data.payload) {
+            setNotifications(prev => [data.payload, ...prev].slice(0, 50));
+            setUnreadCount(prev => prev + 1);
+          }
+        } catch {}
+      };
+      es.onerror = () => {
+        es?.close();
+        if (!closed) reconnectTimer = setTimeout(connect, 3000);
+      };
+    };
+
+    fetchInitial();
+    connect();
+
+    return () => {
+      closed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      es?.close();
+    };
+  }, [userStore?._id || userStore?.id]);
+
+  const markNotificationRead = async (id: string) => {
+    try {
+      await fetch(`/api/notifications`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ notificationId: id }) });
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (e) {}
+  };
+
+  const markAllRead = async () => {
+    try {
+      await fetch(`/api/notifications`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ markAllRead: true }) });
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (e) {}
+  };
 
   const persistStore = (productsData?: any[], customersData?: any[], ordersData?: any[], knowledgebaseData?: any[], automationsData?: any[], campaignsData?: any[], smartFormsData?: any[], servicesData?: any[]) => {
     const data: any = {};
@@ -344,6 +474,10 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
       if (auto.actionType === "send_notification") {
         const msg = auto.actionConfig.message || `⚡ Automatización "${auto.name}" ejecutada`;
         showToast(msg, "info");
+        const triggerSectionMap: Record<string, string> = {
+          new_order: "orders", new_customer: "customers", new_product: "products",
+          low_stock: "products", payment_received: "payments",
+        };
         fetch("/api/notifications", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -352,6 +486,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
             title: `⚡ ${auto.name}`,
             message: msg,
             storeId,
+            link: triggerSectionMap[trigger] ? `/business?section=${triggerSectionMap[trigger]}` : undefined,
           }),
         }).catch(() => {});
       }
@@ -384,6 +519,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 title: `📧 ${auto.name}`,
                 message: `Email enviado a ${auto.actionConfig.to}`,
                 storeId,
+                link: "/business?section=customers",
               }),
             }).catch(() => {});
           }
@@ -483,9 +619,46 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <a href={"/s/" + userStore.slug} target="_blank" className={cn("p-1 hover:bg-zinc-100 rounded-lg transition-all opacity-0 group-hover:opacity-100", (userStore as any)?.isPublic ? "text-emerald-600 hover:text-emerald-700" : "text-zinc-300 hover:text-zinc-500")} title={t("biz.open_site")}>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
-              </div>
+            </div>
+          )}
+          <div className="relative">
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setShowNotifications(!showNotifications)} className="p-1.5 md:p-2 hover:bg-zinc-50 rounded-xl transition-all relative" title="Notificaciones">
+              <Bell className="w-4 h-4 md:w-5 md:h-5 text-zinc-400 hover:text-zinc-950 transition-colors" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 md:w-5 md:h-5 bg-red-500 text-white text-[8px] md:text-[9px] font-black rounded-full flex items-center justify-center animate-pulse">{unreadCount > 99 ? "99+" : unreadCount}</span>
+              )}
+            </motion.button>
+            {showNotifications && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-zinc-100 z-50 overflow-hidden max-h-96">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 bg-zinc-50">
+                    <span className="text-xs font-black text-zinc-950 italic">Notificaciones</span>
+                    {unreadCount > 0 && (
+                      <button onClick={markAllRead} className="text-[9px] font-bold text-red-500 hover:text-red-700 flex items-center gap-1"><CheckCheck className="w-3 h-3" />Marcar leídas</button>
+                    )}
+                  </div>
+                  <div className="overflow-y-auto max-h-72">
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center"><Bell className="w-8 h-8 text-zinc-200 mx-auto mb-2" /><p className="text-xs text-zinc-400">Sin notificaciones</p></div>
+                    ) : notifications.map((n: any) => (
+                      <div key={n._id} onClick={() => { if (!n.read) markNotificationRead(n._id); }} className={cn("px-4 py-3 border-b border-zinc-50 cursor-pointer hover:bg-zinc-50 transition-all", !n.read && "bg-red-50/50")}>
+                        <div className="flex items-start gap-2">
+                          {!n.read && <span className="w-2 h-2 bg-red-500 rounded-full mt-1 shrink-0" />}
+                          <div className="min-w-0">
+                            <p className={cn("text-xs truncate", n.read ? "text-zinc-600" : "text-zinc-950 font-bold")}>{n.title || n.message}</p>
+                            {n.message && n.title && <p className="text-[10px] text-zinc-400 truncate mt-0.5">{n.message}</p>}
+                            <p className="text-[9px] text-zinc-300 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingStore(false); setConfirmDelete(false); setSettingsForm({ name: userStore?.name || "", desc: userStore?.desc || "", industry: userStore?.industry || "", slug: userStore?.slug || "", image: userStore?.image || "", location: (userStore as any)?.location || "", phone: (userStore as any)?.phone || "", coordinates: (userStore as any)?.coordinates || null }); setPublicVisible(!!(userStore as any)?.isPublic); setPublicAIEnabled(!!(userStore as any)?.publicAI); setShowSettings(true); }} className="p-1.5 md:p-2 hover:bg-zinc-50 rounded-xl transition-all" title={t("biz.store_settings")}>
+          </div>
+                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingStore(false); setConfirmDelete(false); setSettingsForm({ name: userStore?.name || "", desc: userStore?.desc || "", industry: userStore?.industry || "", slug: userStore?.slug || "", image: userStore?.image || "", location: (userStore as any)?.location || "", phone: (userStore as any)?.phone || "", currency: (userStore as any)?.currency || "USD", coordinates: (userStore as any)?.coordinates || null }); setPublicVisible(!!(userStore as any)?.isPublic); setPublicAIEnabled(!!(userStore as any)?.publicAI); setShowSettings(true); }} className="p-1.5 md:p-2 hover:bg-zinc-50 rounded-xl transition-all" title={t("biz.store_settings")}>
               <Settings className="w-4 h-4 md:w-5 md:h-5 text-zinc-400 hover:text-zinc-950 transition-colors" />
             </motion.button>
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => { const next = !soundOn; setSoundOn(next); setSoundEnabled(next); }} className="p-1.5 md:p-2 hover:bg-zinc-50 rounded-xl transition-all" title={soundOn ? "Silenciar sonidos" : "Activar sonidos"}>
@@ -521,7 +694,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
               <motion.button
                 key={mod.sectionKey}
                 whileTap={{ scale: 0.92 }}
-                onClick={() => setSection(mod.sectionKey)}
+                onClick={() => handleSectionChange(mod.sectionKey)}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black italic transition-all whitespace-nowrap",
                   section === mod.sectionKey
@@ -531,6 +704,9 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
               >
                 <span className="w-3.5 h-3.5">{MODULE_ICONS[mod.icon]}</span>
                 {t(mod.nameKey)}
+                {isFreePlan && (mod.sectionKey === "analytics" || mod.sectionKey === "campaigns") && (
+                  <span className="text-[7px] bg-amber-100 text-amber-600 px-1 py-0.5 rounded-full font-black">PRO</span>
+                )}
               </motion.button>
             ))}
           </div>
@@ -548,7 +724,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       icon={MODULE_ICONS[mod.icon]}
                       label={t(mod.nameKey)}
                       active={section === mod.sectionKey}
-                      onClick={() => setSection(mod.sectionKey)}
+                      onClick={() => handleSectionChange(mod.sectionKey)}
                     />
                   ))}
                 </div>
@@ -597,12 +773,18 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       { key: "whatsapp", label: "WhatsApp", color: "#25D366", icon: "💬" },
                       { key: "telegram", label: "Telegram", color: "#26A5E4", icon: "✈️" },
                       { key: "gmail", label: "Gmail", color: "#EA4335", icon: "📧" },
-                    ].map(api => {
+                    ].filter(api => {
+                      if (userStore?.integrations?.[api.key]?.enabled) return true;
+                      if (api.key === "stripe" || api.key === "paypal" || api.key === "mercadopago") {
+                        return userStore?.paymentIntegrations?.some((p: any) => p.provider === api.key && p.enabled);
+                      }
+                      return false;
+                    }).map(api => {
                       const connected = userStore?.integrations?.[api.key]?.enabled || userStore?.paymentIntegrations?.some((p: any) => p.provider === api.key && p.enabled);
                       return (
-                        <div key={api.key} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black italic uppercase border transition-all ${connected ? "border-green-200 bg-green-50 text-green-700" : "border-zinc-100 bg-zinc-50 text-zinc-300"}`}>
+                        <div key={api.key} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black italic uppercase border border-green-200 bg-green-50 text-green-700 transition-all">
                           <span>{api.icon}</span> {api.label}
-                          {connected && <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />}
+                          <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
                         </div>
                       );
                     })}
@@ -612,9 +794,9 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                         <span className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
                       </div>
                     )}
-                    {!userStore?.aiProvider?.enabled && (
-                      <button onClick={() => setSection("integrations")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black italic uppercase border border-dashed border-zinc-200 bg-zinc-50 text-zinc-400 hover:border-purple-300 hover:text-purple-500 transition-all">
-                        🤖 + IA Propia
+                    {!userStore?.integrations && !userStore?.paymentIntegrations?.length && !userStore?.aiProvider?.enabled && (
+                      <button onClick={() => setSection("integrations")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black italic uppercase border border-dashed border-zinc-200 bg-zinc-50 text-zinc-400 hover:border-red-300 hover:text-red-500 transition-all">
+                        <Plus className="w-3 h-3" /> Conectar APIs
                       </button>
                     )}
                   </div>
@@ -942,9 +1124,28 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                   <div className="flex items-center gap-3 md:gap-4 flex-wrap">
                     <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("nav.services")} <span className="text-red-600">({services.length})</span></h3>
                   </div>
-                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setEditingService(null); setServiceForm({ name: "", desc: "", price: "", duration: "60" }); setShowAddService(true); }} className="px-5 md:px-6 py-2.5 md:py-3 bg-red-600 text-white rounded-2xl font-black text-[10px] md:text-xs italic hover:bg-red-700 transition-all shadow-xl flex items-center gap-2">
-                    <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /> {t("services.add")}
-                  </motion.button>
+                  <div className="flex items-center gap-2">
+                    {services.length > 0 && (
+                      confirmDeleteAllServices ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] md:text-xs font-bold text-rose-600">¿Eliminar todos?</span>
+                          <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setServices([]); persistStore(undefined, undefined, undefined, undefined, undefined, undefined, undefined, []); setConfirmDeleteAllServices(false); }} className="px-3 py-2 bg-rose-600 text-white rounded-xl font-black text-[10px] md:text-xs hover:bg-rose-700 transition-all">
+                            Sí, eliminar
+                          </motion.button>
+                          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setConfirmDeleteAllServices(false)} className="px-3 py-2 bg-zinc-100 text-zinc-600 rounded-xl font-bold text-[10px] md:text-xs hover:bg-zinc-200 transition-all">
+                            Cancelar
+                          </motion.button>
+                        </div>
+                      ) : (
+                        <motion.button whileTap={{ scale: 0.95 }} onClick={() => setConfirmDeleteAllServices(true)} className="px-4 py-2.5 bg-zinc-100 text-zinc-500 rounded-2xl font-black text-[10px] md:text-xs italic hover:bg-rose-50 hover:text-rose-600 transition-all flex items-center gap-1.5">
+                          <Trash2 className="w-3.5 h-3.5" /> Eliminar todos
+                        </motion.button>
+                      )
+                    )}
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setEditingService(null); setServiceForm({ name: "", desc: "", price: "", duration: "60" }); setShowAddService(true); }} className="px-5 md:px-6 py-2.5 md:py-3 bg-red-600 text-white rounded-2xl font-black text-[10px] md:text-xs italic hover:bg-red-700 transition-all shadow-xl flex items-center gap-2">
+                      <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /> {t("services.add")}
+                    </motion.button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -955,7 +1156,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                           <h4 className="font-black italic text-zinc-950 text-sm md:text-base leading-tight truncate">{s.name}</h4>
                           {s.desc && <p className="text-[11px] md:text-xs text-zinc-400 font-medium italic mt-1 line-clamp-2">{s.desc}</p>}
                         </div>
-                        <span className="text-lg md:text-xl font-black italic text-red-600 shrink-0 whitespace-nowrap">${s.price}</span>
+                        <span className="text-lg md:text-xl font-black italic text-red-600 shrink-0 whitespace-nowrap">{formatPrice(s.price, (userStore as any)?.currency || "USD")}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 text-[8px] md:text-[9px] font-bold text-zinc-400 uppercase italic">
@@ -1483,100 +1684,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       <input type="text" value={agentConfig.widgetHeader} onChange={e => setAgentConfig(c => ({...c, widgetHeader: e.target.value}))} placeholder={t("agentconfig.header_placeholder")} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
                     </div>
                     <div className="border-t border-zinc-100 pt-5">
-                      <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest mb-3 block">{t("agentconfig.widget_colors")}</label>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
-                          <input type="color" value={agentConfig.primaryColor} onChange={e => setAgentConfig(c => ({...c, primaryColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-black text-zinc-500 uppercase italic">Principal</p>
-                            <p className="text-[10px] font-mono font-bold text-zinc-700 truncate">{agentConfig.primaryColor}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
-                          <input type="color" value={agentConfig.secondaryColor} onChange={e => setAgentConfig(c => ({...c, secondaryColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-black text-zinc-500 uppercase italic">Secundario</p>
-                            <p className="text-[10px] font-mono font-bold text-zinc-700 truncate">{agentConfig.secondaryColor}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
-                          <input type="color" value={agentConfig.textColor} onChange={e => setAgentConfig(c => ({...c, textColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-black text-zinc-500 uppercase italic">Texto</p>
-                            <p className="text-[10px] font-mono font-bold text-zinc-700 truncate">{agentConfig.textColor}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-zinc-100 pt-5">
-                      <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest mb-3 block">Apariencia del marco</label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
-                          <input type="color" value={agentConfig.borderColor} onChange={e => setAgentConfig(c => ({...c, borderColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-black text-zinc-500 uppercase italic">Color del borde</p>
-                            <p className="text-[10px] font-mono font-bold text-zinc-700 truncate">{agentConfig.borderColor}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
-                          <div className="w-10 h-10 rounded-xl border-2 border-zinc-200 flex items-center justify-center shrink-0">
-                            <span className="text-xs font-black text-zinc-500">{agentConfig.borderRadius}px</span>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[9px] font-black text-zinc-500 uppercase italic">Border radius</p>
-                            <input type="range" min="0" max="32" value={agentConfig.borderRadius} onChange={e => setAgentConfig(c => ({...c, borderRadius: parseInt(e.target.value)}))} className="w-full accent-red-600" />
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
-                          <div className="w-10 h-10 rounded-xl border-2 border-zinc-200 flex items-center justify-center shrink-0">
-                            <span className="text-[8px] font-black text-zinc-500 leading-tight text-center">Sombra</span>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[9px] font-black text-zinc-500 uppercase italic">Sombra</p>
-                            <select value={agentConfig.shadow} onChange={e => setAgentConfig(c => ({...c, shadow: e.target.value}))} className="w-full bg-zinc-50 p-2 rounded-lg border border-zinc-100 outline-none font-medium text-xs">
-                              <option value="none">Sin sombra</option>
-                              <option value="0 2px 12px rgba(0,0,0,0.08)">Suave</option>
-                              <option value="0 8px 40px rgba(0,0,0,0.12)">Mediana</option>
-                              <option value="0 12px 60px rgba(0,0,0,0.2)">Fuerte</option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-zinc-100 pt-5">
-                      <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest mb-3 block">Colores del chat</label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
-                          <input type="color" value={agentConfig.headerBgColor} onChange={e => setAgentConfig(c => ({...c, headerBgColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-black text-zinc-500 uppercase italic">Fondo del header</p>
-                            <p className="text-[10px] font-mono font-bold text-zinc-700 truncate">{agentConfig.headerBgColor}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
-                          <input type="color" value={agentConfig.headerTextColor} onChange={e => setAgentConfig(c => ({...c, headerTextColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-black text-zinc-500 uppercase italic">Texto del header</p>
-                            <p className="text-[10px] font-mono font-bold text-zinc-700 truncate">{agentConfig.headerTextColor}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
-                          <input type="color" value={agentConfig.botBubbleColor} onChange={e => setAgentConfig(c => ({...c, botBubbleColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-black text-zinc-500 uppercase italic">Burbuja del bot</p>
-                            <p className="text-[10px] font-mono font-bold text-zinc-700 truncate">{agentConfig.botBubbleColor}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
-                          <input type="color" value={agentConfig.userBubbleColor} onChange={e => setAgentConfig(c => ({...c, userBubbleColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-black text-zinc-500 uppercase italic">Burbuja del usuario</p>
-                            <p className="text-[10px] font-mono font-bold text-zinc-700 truncate">{agentConfig.userBubbleColor}</p>
-                          </div>
-                        </div>
-                      </div>
+                      <ChatAppearancePanel config={agentConfig} onChange={setAgentConfig} />
                     </div>
                   </div>
                 )}
@@ -2545,6 +2653,17 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
             {(section as string) === "gallery" && <GalleryPanel storeId={storeId} onSaveStore={onSaveStore} store={userStore} />}
             {(section as string) === "testimonials" && <TestimonialsPanel storeId={storeId} onSaveStore={onSaveStore} store={userStore} />}
             {(section as string) === "documents" && <DocumentsPanel storeId={storeId} onSaveStore={onSaveStore} store={userStore} />}
+            {(section as string) === "restaurant" && <RestaurantDashboard storeId={String(storeId)} store={userStore} onSaveStore={onSaveStore} />}
+            {(section as string) === "floor_plan" && <FloorPlanEditor storeId={String(storeId)} floorPlan={(userStore as any)?.restaurantFloorPlan || {}} tables={((userStore as any)?.restaurantTables || [])} onSave={(fp: any) => onSaveStore?.(storeId, { restaurantFloorPlan: fp, restaurantTables: fp.tables })} />}
+            {(section as string) === "restaurant_orders" && <OrdersPanel storeId={String(storeId)} />}
+            {(section as string) === "reservations" && <ReservationsPanel storeId={String(storeId)} />}
+            {(section as string) === "promotions" && <PromotionsPanel storeId={String(storeId)} />}
+            {(section as string) === "loyalty" && <LoyaltyPanel storeId={String(storeId)} />}
+            {(section as string) === "restaurant_reviews" && <ReviewsPanel storeId={String(storeId)} />}
+            {(section as string) === "waiter_calls" && <WaiterCallsPanel storeId={String(storeId)} />}
+            {(section as string) === "barbers" && <BarbersPanel storeId={String(storeId)} />}
+            {(section as string) === "queue" && <QueuePanel storeId={String(storeId)} />}
+            {(section as string) === "barber_history" && <BarberHistoryPanel storeId={String(storeId)} />}
           </main>
         </div>
 
@@ -2738,6 +2857,16 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       <input type="text" placeholder="+52 55 1234 5678" value={settingsForm.phone} onChange={e => setSettingsForm({...settingsForm, phone: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
                     </div>
                     <div className="space-y-1.5">
+                      <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Moneda de la tienda</label>
+                      <select value={settingsForm.currency} onChange={e => setSettingsForm({...settingsForm, currency: e.target.value})}
+                        className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm">
+                        {CURRENCIES.map(c => (
+                          <option key={c.code} value={c.code}>{c.symbol} {c.code} — {c.name}</option>
+                        ))}
+                      </select>
+                      <p className="text-[7px] md:text-[8px] font-bold text-zinc-400 italic ml-1">Precios, facturas y pagos se mostrarán en esta moneda</p>
+                    </div>
+                    <div className="space-y-1.5">
                       <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Dirección del negocio</label>
                       <AddressAutocomplete
                         storeId={String(storeId)}
@@ -2784,7 +2913,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       <button onClick={() => setEditingStore(false)} className="w-full py-3 md:py-4 bg-zinc-50 text-zinc-600 rounded-xl md:rounded-2xl font-black italic text-[11px] md:text-sm hover:bg-zinc-100 transition-all">
                         {t("biz.config_btn_cancel")}
                       </button>
-                      <button onClick={async () => { try { await onEditStore?.(userStore?._id || userStore?.id, { name: settingsForm.name, desc: settingsForm.desc, industry: settingsForm.industry, slug: settingsForm.slug, image: settingsForm.image, location: settingsForm.location, phone: settingsForm.phone, coordinates: settingsForm.coordinates, isPublic: publicVisible, publicAI: publicAIEnabled }); setShowSettings(false); } catch (e: any) { showToast(e.message || t("status.error"), "error"); } }} disabled={!settingsForm.name} className="w-full py-3 md:py-4 bg-red-600 text-white rounded-xl md:rounded-2xl font-black italic text-[11px] md:text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2">
+                      <button onClick={async () => { try { await onEditStore?.(userStore?._id || userStore?.id, { name: settingsForm.name, desc: settingsForm.desc, industry: settingsForm.industry, slug: settingsForm.slug, image: settingsForm.image, location: settingsForm.location, phone: settingsForm.phone, currency: settingsForm.currency, coordinates: settingsForm.coordinates, isPublic: publicVisible, publicAI: publicAIEnabled }); setShowSettings(false); } catch (e: any) { showToast(e.message || t("status.error"), "error"); } }} disabled={!settingsForm.name} className="w-full py-3 md:py-4 bg-red-600 text-white rounded-xl md:rounded-2xl font-black italic text-[11px] md:text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2">
                         <CheckCircle2 className="w-3.5 h-3.5 md:w-4 md:h-4" /> {t("biz.config_btn_save")}
                       </button>
                     </div>
@@ -2794,6 +2923,27 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
             </motion.div>
           )}
         </AnimatePresence>
+
+        {showUpgradeModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowUpgradeModal(false)}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} onClick={e => e.stopPropagation()}
+              className="bg-white rounded-[2rem] p-8 max-w-md w-full text-center space-y-6 shadow-2xl">
+              <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto">
+                <TrendingUp className="w-8 h-8 text-amber-600" />
+              </div>
+              <h3 className="text-xl font-black italic text-zinc-950">Función premium</h3>
+              <p className="text-sm text-zinc-500 font-medium">{upgradeMessage}</p>
+              <div className="flex gap-3">
+                <button onClick={() => setShowUpgradeModal(false)} className="flex-1 py-3 bg-zinc-100 text-zinc-500 rounded-xl font-black italic text-xs hover:bg-zinc-200 transition-all">
+                  Ahora no
+                </button>
+                <button onClick={() => { setShowUpgradeModal(false); onNavigateToPricing?.(); }} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black italic text-xs hover:bg-red-700 transition-all shadow-lg">
+                  Ver planes
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2804,7 +2954,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 function SideBtn({ icon, label, active, onClick }: { icon: any; label: string; active: boolean; onClick: () => void }) {
   return (
     <motion.button whileTap={{ scale: 0.95 }} onClick={onClick} className={cn("w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl font-black text-xs italic transition-all", active ? "bg-red-600 text-white shadow-lg shadow-red-100" : "text-zinc-500 hover:bg-zinc-100")}>
-      {React.cloneElement(icon, { className: "w-4 h-4" })} {label}
+      {icon ? React.cloneElement(icon, { className: "w-4 h-4" }) : null} {label}
     </motion.button>
   );
 }

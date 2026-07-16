@@ -35,6 +35,9 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, sto
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [form, setForm] = useState({ name: "", type: "email" as "email" | "sms", audience: "all", subject: "", body: "", schedule: "now", scheduledAt: "" });
   const [sending, setSending] = useState<number | null>(null);
+  const [showQuickEmail, setShowQuickEmail] = useState(false);
+  const [quickEmail, setQuickEmail] = useState({ to: "", subject: "", body: "" });
+  const [sendingQuick, setSendingQuick] = useState(false);
 
   const totalSent = campaigns.reduce((s, c) => s + c.stats.sent, 0);
   const totalOpened = campaigns.reduce((s, c) => s + c.stats.opened, 0);
@@ -145,6 +148,29 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, sto
     onPersist(nc);
   };
 
+  const sendQuickEmail = async () => {
+    if (!quickEmail.to || !quickEmail.subject || !quickEmail.body) return;
+    setSendingQuick(true);
+    try {
+      const res = await fetch("/api/email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: quickEmail.to, subject: quickEmail.subject, content: quickEmail.body }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`Correo enviado a ${quickEmail.to}`, "success");
+        setShowQuickEmail(false);
+        setQuickEmail({ to: "", subject: "", body: "" });
+      } else {
+        showToast(data.error || "Error al enviar correo", "error");
+      }
+    } catch {
+      showToast("Error de conexión", "error");
+    }
+    setSendingQuick(false);
+  };
+
   const statusColor = (s: string) =>
     s === "sent" ? "bg-emerald-50 text-emerald-600" :
     s === "sending" ? "bg-blue-50 text-blue-600" :
@@ -172,9 +198,14 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, sto
           </h3>
           <p className="text-[9px] font-wallpoet tracking-[0.2em] text-red-600 uppercase mt-1">JANDOSOFT</p>
         </div>
-        <motion.button whileTap={{ scale: 0.95 }} onClick={openNew} disabled={campaigns.length >= 50} className="px-5 max-[400px]:px-5 px-6 py-2.5 max-[400px]:py-2.5 py-3 bg-red-600 text-white rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs italic hover:bg-red-700 transition-all shadow-xl flex items-center gap-2 disabled:opacity-50">
-          <Plus className="w-3.5 h-3.5 max-[400px]:w-3.5 max-[400px]:h-3.5 w-4 h-4" /> {t("campaigns.new")}
-        </motion.button>
+        <div className="flex items-center gap-2">
+          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowQuickEmail(true)} className="px-5 py-2.5 bg-white text-red-600 border-2 border-red-200 rounded-2xl font-black text-[10px] italic hover:bg-red-50 transition-all shadow-sm flex items-center gap-2">
+            <Mail className="w-3.5 h-3.5" /> Correo rápido
+          </motion.button>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={openNew} disabled={campaigns.length >= 50} className="px-5 py-2.5 bg-red-600 text-white rounded-2xl font-black text-[10px] italic hover:bg-red-700 transition-all shadow-xl flex items-center gap-2 disabled:opacity-50">
+            <Plus className="w-3.5 h-3.5" /> {t("campaigns.new")}
+          </motion.button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -337,6 +368,38 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, sto
 
                 <button onClick={save} disabled={!form.name || !form.subject || !form.body || (form.schedule === "scheduled" && !form.scheduledAt)} className="w-full py-4 md:py-5 bg-red-600 text-white rounded-2xl font-black italic text-sm md:text-base hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2">
                   {editingCampaign ? t("campaigns.form_submit_update") : form.schedule === "scheduled" ? t("campaigns.form_submit_schedule") : t("campaigns.form_submit_draft")}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Quick Email Modal */}
+      <AnimatePresence>
+        {showQuickEmail && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setShowQuickEmail(false)}>
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] p-6 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+              <button onClick={() => setShowQuickEmail(false)} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 text-zinc-400" /></button>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="p-2.5 bg-red-50 rounded-xl"><Mail className="w-5 h-5 text-red-600" /></div>
+                <h3 className="text-lg font-black italic text-zinc-950 uppercase tracking-tighter">Correo rápido</h3>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Para</label>
+                  <input type="email" placeholder="correo@ejemplo.com" value={quickEmail.to} onChange={e => setQuickEmail({...quickEmail, to: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                </div>
+                <div>
+                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Asunto</label>
+                  <input type="text" placeholder="Asunto del correo" value={quickEmail.subject} onChange={e => setQuickEmail({...quickEmail, subject: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                </div>
+                <div>
+                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Mensaje</label>
+                  <textarea placeholder="Escribe tu mensaje..." value={quickEmail.body} onChange={e => setQuickEmail({...quickEmail, body: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-28 mt-1 text-sm" />
+                </div>
+                <button onClick={sendQuickEmail} disabled={!quickEmail.to || !quickEmail.subject || !quickEmail.body || sendingQuick} className="w-full py-3.5 bg-red-600 text-white rounded-2xl font-black italic text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2">
+                  {sendingQuick ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {sendingQuick ? "Enviando..." : "Enviar correo"}
                 </button>
               </div>
             </motion.div>

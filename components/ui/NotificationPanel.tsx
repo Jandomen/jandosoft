@@ -43,27 +43,42 @@ export default function NotificationPanel({ token, onNavigate }: { token: string
   }, [fetchNotifications]);
 
   useEffect(() => {
-    if (!token || eventSourceRef.current) return;
-    const es = new EventSource(`/api/notifications/stream?token=${encodeURIComponent(token)}`);
-    eventSourceRef.current = es;
+    if (!token) return;
+    let es: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let closed = false;
 
-    es.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "notification:new" && data.payload) {
-          setNotifications(prev => [data.payload, ...prev].slice(0, 50));
-          setUnreadCount(prev => prev + 1);
+    const connect = () => {
+      if (closed) return;
+      if (es) { try { es.close(); } catch {} }
+      es = new EventSource(`/api/notifications/stream?token=${encodeURIComponent(token)}`);
+      eventSourceRef.current = es;
+
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "notification:new" && data.payload) {
+            setNotifications(prev => [data.payload, ...prev].slice(0, 50));
+            setUnreadCount(prev => prev + 1);
+          }
+        } catch {}
+      };
+
+      es.onerror = () => {
+        es?.close();
+        eventSourceRef.current = null;
+        if (!closed) {
+          reconnectTimer = setTimeout(connect, 3000);
         }
-      } catch {}
+      };
     };
 
-    es.onerror = () => {
-      es.close();
-      eventSourceRef.current = null;
-    };
+    connect();
 
     return () => {
-      es.close();
+      closed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      es?.close();
       eventSourceRef.current = null;
     };
   }, [token]);
@@ -173,7 +188,21 @@ export default function NotificationPanel({ token, onNavigate }: { token: string
                       "px-4 py-3 border-b border-zinc-50 last:border-b-0 cursor-pointer hover:bg-zinc-50 transition-all group",
                       !n.read ? "bg-red-50/30" : ""
                     )}
-                    onClick={() => { markRead(n._id); if (n.link) window.open(n.link, "_blank"); }}
+                    onClick={() => {
+                      markRead(n._id);
+                      if (n.link) {
+                        if (n.link.startsWith("/")) {
+                          const sectionMatch = n.link.match(/[?&]section=([^&]+)/);
+                          if (sectionMatch && onNavigate) {
+                            onNavigate(sectionMatch[1]);
+                          } else {
+                            window.open(n.link, "_blank");
+                          }
+                        } else {
+                          window.open(n.link, "_blank");
+                        }
+                      }
+                    }}
                   >
                     <div className="flex items-start gap-3">
                       <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5", getTypeBg(n.type))}>

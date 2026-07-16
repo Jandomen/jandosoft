@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ShoppingCart, Package, Check } from "lucide-react";
 import ProductDefaultImage from "./ProductDefaultImage";
 import { useCart } from "./public/CartProvider";
+import { getCurrencySymbol } from "@/lib/utils/currency";
 import { useState } from "react";
 
 interface Product {
@@ -18,12 +19,14 @@ interface Product {
 }
 
 export default function StoreProductFeed({
-  products, storeName, slug, storeId, paymentsEnabled
+  products, storeName, slug, storeId, paymentsEnabled, storeCurrency = "USD"
 }: {
-  products: Product[]; storeName: string; slug: string; storeId?: string; paymentsEnabled?: boolean;
+  products: Product[]; storeName: string; slug: string; storeId?: string; paymentsEnabled?: boolean; storeCurrency?: string;
 }) {
   const { addItem } = useCart();
   const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
+
+  const symbol = getCurrencySymbol(storeCurrency);
 
   const handleAddToCart = (p: Product) => {
     addItem({
@@ -88,7 +91,7 @@ export default function StoreProductFeed({
                     <p className="text-[11px] md:text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed line-clamp-2">{p.desc}</p>
                   )}
                 </div>
-                <span className="text-lg md:text-xl font-bold text-red-600 shrink-0 whitespace-nowrap">${(p.priceUSD || p.price)?.toFixed(2)}</span>
+                <span className="text-lg md:text-xl font-bold text-red-600 shrink-0 whitespace-nowrap">{symbol}{(p.priceUSD || p.price)?.toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between gap-3 pt-1">
                 <div className="flex items-center gap-3 text-[10px] font-medium text-zinc-400 dark:text-zinc-500">

@@ -882,7 +882,7 @@ export default function Page() {
       </AnimatePresence>
 
       <main className="flex-1 bg-zinc-50 relative flex flex-col overflow-hidden pb-20 md:pb-0">
-          <HeaderNav activeTab={activeTab} isLogged={isLogged} setActiveTab={setActiveTab} setShowLogin={setShowLogin} setMobileDrawerOpen={setMobileDrawerOpen} token={token} onRestartTour={() => setTourTrigger(n => n + 1)} />
+          <HeaderNav activeTab={activeTab} isLogged={isLogged} setActiveTab={setActiveTab} setShowLogin={setShowLogin} setMobileDrawerOpen={setMobileDrawerOpen} token={token} onRestartTour={() => setTourTrigger(n => n + 1)} onNavigateNotification={(section) => { if (activeStoreId) { setBusinessSection(section); setActiveTab("business"); } else showToast(t("status.select_store_first") || "Selecciona una empresa primero", "info"); }} />
 
           <div className="flex-1 overflow-y-auto p-4 max-[400px]:p-2.5 max-[340px]:p-1.5 md:p-8 relative">
              <AnimatePresence mode="wait">
@@ -1041,8 +1041,8 @@ function MobileDrawerItem({ icon, label, active, onClick, dataTour }: { icon: Re
 
 type TabType = "home" | "register" | "chat" | "dashboard" | "business" | "pricing" | "messages" | "profile";
 
-function HeaderNav({ activeTab, isLogged, setActiveTab, setShowLogin, setMobileDrawerOpen, token, onRestartTour }: {
-  activeTab: TabType; isLogged: boolean; setActiveTab: React.Dispatch<React.SetStateAction<TabType>>; setShowLogin: (v: boolean) => void; setMobileDrawerOpen: (v: boolean) => void; token: string | null; onRestartTour: () => void;
+function HeaderNav({ activeTab, isLogged, setActiveTab, setShowLogin, setMobileDrawerOpen, token, onRestartTour, onNavigateNotification }: {
+  activeTab: TabType; isLogged: boolean; setActiveTab: React.Dispatch<React.SetStateAction<TabType>>; setShowLogin: (v: boolean) => void; setMobileDrawerOpen: (v: boolean) => void; token: string | null; onRestartTour: () => void; onNavigateNotification?: (section: string) => void;
 }) {
   const { t } = useLanguage();
   const { theme, toggle: toggleTheme } = useTheme();
@@ -1081,7 +1081,7 @@ function HeaderNav({ activeTab, isLogged, setActiveTab, setShowLogin, setMobileD
             >
               <HelpCircle className="w-4 h-4 text-zinc-500" />
             </button>
-            <NotificationPanel token={token} />
+            <NotificationPanel token={token} onNavigate={onNavigateNotification} />
           </>
         )}
         {!isLogged && activeTab !== "register" && (

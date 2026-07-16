@@ -85,7 +85,7 @@ export default function PlansCarousel({ onSelectPlan }: { onSelectPlan?: (planId
             viewport={{ once: true }}
             transition={{ delay: i * 0.12, type: "spring", stiffness: 100 }}
             className={cn(
-              "snap-start shrink-0 w-[85vw] sm:w-[380px] lg:w-[400px] rounded-[2rem] p-7 md:p-8 flex flex-col transition-all duration-300 relative overflow-hidden",
+              "snap-start shrink-0 w-[85vw] sm:w-[400px] lg:w-[440px] rounded-[2rem] p-8 md:p-10 flex flex-col transition-all duration-300 relative overflow-hidden",
               plan.popular
                 ? "bg-white border-2 border-red-500 shadow-2xl shadow-red-500/10 scale-[1.02] z-10"
                 : "bg-white border border-zinc-200 shadow-lg hover:shadow-xl hover:border-zinc-300"
@@ -100,7 +100,7 @@ export default function PlansCarousel({ onSelectPlan }: { onSelectPlan?: (planId
               </div>
             )}
 
-            <div className="space-y-5 flex flex-col flex-1">
+            <div className="space-y-7 flex flex-col flex-1">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <div className={cn(
@@ -109,20 +109,20 @@ export default function PlansCarousel({ onSelectPlan }: { onSelectPlan?: (planId
                   )}>
                     {plan.popular ? <Zap className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
                   </div>
-                  <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">
+                  <h3 className="text-2xl md:text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">
                     {t(plan.nameKey || plan.name)}
                   </h3>
                 </div>
-                <p className="text-[11px] text-zinc-400 font-medium leading-relaxed ml-9">
+                <p className="text-xs text-zinc-400 font-medium leading-relaxed ml-9">
                   {t(plan.descKey || plan.desc)}
                 </p>
               </div>
 
               <div className="flex items-baseline gap-1.5">
-                <span className="text-4xl md:text-5xl font-black italic text-zinc-950 tracking-tighter">
+                <span className="text-5xl md:text-6xl font-black italic text-zinc-950 tracking-tighter">
                   {geo.formatPrice(plan.price)}
                 </span>
-                <span className="text-zinc-400 font-black text-xs italic uppercase">
+                <span className="text-zinc-400 font-black text-sm italic uppercase">
                   {t("plans.per_month")}
                 </span>
                 {geo.currencyCode !== "USD" && (
@@ -130,8 +130,8 @@ export default function PlansCarousel({ onSelectPlan }: { onSelectPlan?: (planId
                 )}
               </div>
 
-              <div className="space-y-2.5 flex-1">
-                {(plan.features || []).slice(0, 6).map((feat: string, fi: number) => (
+              <div className="space-y-3 flex-1">
+                {(plan.features || []).slice(0, 8).map((feat: string, fi: number) => (
                   <div key={fi} className="flex items-start gap-3">
                     <div className={cn(
                       "p-0.5 rounded-full mt-0.5",
@@ -139,12 +139,12 @@ export default function PlansCarousel({ onSelectPlan }: { onSelectPlan?: (planId
                     )}>
                       <Check className="w-3 h-3 text-white" />
                     </div>
-                    <span className="text-xs font-medium text-zinc-700">{feat}</span>
+                    <span className="text-sm font-medium text-zinc-700">{feat}</span>
                   </div>
                 ))}
-                {(plan.features || []).length > 6 && (
+                {(plan.features || []).length > 8 && (
                   <p className="text-[10px] font-bold text-zinc-400 italic pl-7">
-                    +{(plan.features || []).length - 6} más
+                    +{(plan.features || []).length - 8} más
                   </p>
                 )}
               </div>
@@ -153,7 +153,7 @@ export default function PlansCarousel({ onSelectPlan }: { onSelectPlan?: (planId
                 whileTap={{ scale: 0.97 }}
                 onClick={(e) => { e.stopPropagation(); onSelectPlan?.(plan.id); }}
                 className={cn(
-                  "w-full py-3.5 rounded-xl text-xs font-black italic transition-all flex items-center justify-center gap-2 uppercase tracking-wider shadow-lg",
+                  "w-full py-4 rounded-2xl text-sm font-black italic transition-all flex items-center justify-center gap-2 uppercase tracking-wider shadow-lg",
                   plan.popular
                     ? "bg-red-600 text-white hover:bg-red-700 shadow-red-200"
                     : "bg-zinc-950 text-white hover:bg-zinc-800"

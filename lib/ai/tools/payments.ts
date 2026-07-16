@@ -299,6 +299,7 @@ export async function executePaymentTool(name: string, args: any, store: any, us
         items: args.items || [], status: args.status || "pending",
         organizationId: store?.organizationId || undefined,
       });
+      try { const { notifyOwner } = await import("@/lib/notify"); await notifyOwner(String((store as any).ownerId || (store as any).userId), String(store?._id || store?.id), "invoice", "Nueva factura creada", `$${args.amount} para ${args.customerEmail}`); } catch {}
       return { success: true, message: `Factura creada por $${args.amount} para ${args.customerEmail}`, invoiceId: invoice._id };
     }
 

@@ -37,21 +37,30 @@ export async function GET(req: Request) {
         .lean(),
     ]);
 
-    const storesWithStats = (stores as any[]).map((s) => ({
-      _id: s._id,
-      ownerEmail: s.ownerEmail,
-      name: s.name,
-      slug: s.slug,
-      type: s.type,
-      typeLabel: s.typeLabel,
-      industry: s.industry,
-      createdAt: s.createdAt,
-      isSuspended: s.isSuspended || false,
-      suspensionReason: s.suspensionReason || "",
-      productCount: (s.products || []).length,
-      customerCount: (s.customers || []).length,
-      orderCount: (s.orders || []).length,
-    }));
+    const storesWithStats = (stores as any[]).map((s) => {
+      const stripeIntegration = (s.paymentIntegrations || []).find((i: any) => i.provider === "stripe");
+      const isStripeConnected = !!(s.stripeAccountId);
+      const isStripeChargesEnabled = stripeIntegration?.credentials?.charges_enabled === true;
+      
+      return {
+        _id: s._id,
+        ownerEmail: s.ownerEmail,
+        name: s.name,
+        slug: s.slug,
+        type: s.type,
+        typeLabel: s.typeLabel,
+        industry: s.industry,
+        createdAt: s.createdAt,
+        isSuspended: s.isSuspended || false,
+        suspensionReason: s.suspensionReason || "",
+        productCount: (s.products || []).length,
+        customerCount: (s.customers || []).length,
+        orderCount: (s.orders || []).length,
+        stripeConnectStatus: isStripeConnected ? (isStripeChargesEnabled ? "active" : "pending") : "none",
+        stripeAccountEmail: s.stripeConnectEmail || "",
+        platformFeePercent: s.platformFeePercent ?? 5,
+      };
+    });
 
     return Response.json({
       stores: storesWithStats,

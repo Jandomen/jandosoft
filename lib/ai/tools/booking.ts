@@ -1,11 +1,12 @@
 import type { ToolDefinition, ToolResult } from "./base";
+import { getStoreTimezone, isDateInPast, isTimeInPast, computeRelativeDate, getDateComponents } from "@/lib/ai/time";
 
 export const TOOLS: ToolDefinition[] = [
   {
     type: "function",
     function: {
       name: "create_appointment",
-      description: "Create a new appointment for a customer",
+      description: "Create a new appointment for a customer. The system automatically checks for scheduling conflicts.",
       parameters: {
         type: "object",
         properties: {
@@ -19,7 +20,7 @@ export const TOOLS: ToolDefinition[] = [
           duration: { type: "number", description: "Duration in minutes" },
           notes: { type: "string", description: "Additional notes" },
         },
-        required: ["customerName", "date", "time"],
+        required: ["customerName", "date", "time", "customerEmail"],
       },
     },
   },
@@ -27,7 +28,7 @@ export const TOOLS: ToolDefinition[] = [
     type: "function",
     function: {
       name: "update_appointment",
-      description: "Update an existing appointment's date, time, status, or notes",
+      description: "Update an existing appointment's date, time, status, or notes. The system checks for conflicts when rescheduling.",
       parameters: {
         type: "object",
         properties: {
@@ -70,6 +71,21 @@ export const TOOLS: ToolDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "check_available_slots",
+      description: "Check available time slots for a specific date. Use this before booking to show the customer available times.",
+      parameters: {
+        type: "object",
+        properties: {
+          date: { type: "string", description: "Date to check (YYYY-MM-DD)" },
+          slotDuration: { type: "number", description: "Slot duration in minutes (default 30)" },
+        },
+        required: ["date"],
+      },
+    },
+  },
 ];
 
 export async function executeBookingTool(name: string, args: any, store: any, userId: string): Promise<ToolResult> {
@@ -79,11 +95,122 @@ export async function executeBookingTool(name: string, args: any, store: any, us
   const { Appointment } = await import("@/lib/models/Appointment");
   await connectDB();
 
+  if (name === "check_available_slots") {
+    try {
+      // Resolve relative dates
+      const tz = getStoreTimezone(store);
+      const lowerDate = args.date.toLowerCase().trim();
+      let resolvedDate = args.date;
+      if (["hoy", "today"].includes(lowerDate)) {
+        resolvedDate = getDateComponents(tz).dateISO;
+      } else if (["mañana", "manana", "tomorrow"].includes(lowerDate)) {
+        resolvedDate = computeRelativeDate("tomorrow", tz);
+      } else if (["ayer", "yesterday"].includes(lowerDate)) {
+        resolvedDate = computeRelativeDate("yesterday", tz);
+      }
+
+      const { getAvailableSlots } = await import("@/lib/appointment-utils");
+      const slots = await getAvailableSlots(String(storeId), resolvedDate, args.slotDuration || 30);
+      const available = slots.filter(s => s.available);
+      const taken = slots.filter(s => !s.available);
+      return {
+        success: true,
+        message: available.length > 0
+          ? `${available.length} horarios disponibles el ${args.date}. Horarios ocupados: ${taken.map(s => s.time).join(", ") || "ninguno"}`
+          : `No hay horarios disponibles el ${args.date}`,
+        slots: slots.map(s => ({
+          time: s.time,
+          available: s.available,
+          conflictWith: s.conflictWith,
+        })),
+        availableCount: available.length,
+        takenCount: taken.length,
+      };
+    } catch (e) {
+      return { error: "Error al verificar disponibilidad" };
+    }
+  }
+
   if (name === "create_appointment") {
     const isCustomer = typeof userId === "string" && (userId === "guest" || userId.startsWith("guest:"));
     const servicePrice = args.servicePrice || 0;
+    const appointmentDuration = args.duration || 60;
+
+    // ── Resolve relative dates using server time ──
+    const tz = getStoreTimezone(store);
+    let resolvedDate = args.date;
+    if (resolvedDate) {
+      const lowerDate = resolvedDate.toLowerCase().trim();
+      if (["hoy", "today"].includes(lowerDate)) {
+        resolvedDate = getDateComponents(tz).dateISO;
+      } else if (["mañana", "manana", "tomorrow"].includes(lowerDate)) {
+        resolvedDate = computeRelativeDate("tomorrow", tz);
+      } else if (["ayer", "yesterday"].includes(lowerDate)) {
+        resolvedDate = computeRelativeDate("yesterday", tz);
+      } else if (lowerDate.includes("lunes") || lowerDate.includes("martes") || lowerDate.includes("miércoles") ||
+                 lowerDate.includes("jueves") || lowerDate.includes("viernes") || lowerDate.includes("sábado") ||
+                 lowerDate.includes("domingo") || lowerDate.includes("monday") || lowerDate.includes("tuesday") ||
+                 lowerDate.includes("wednesday") || lowerDate.includes("thursday") || lowerDate.includes("friday") ||
+                 lowerDate.includes("saturday") || lowerDate.includes("sunday")) {
+        resolvedDate = computeRelativeDate(lowerDate, tz);
+      }
+    }
+
+    // ── Validate date is not in the past ──
+    if (resolvedDate && isDateInPast(resolvedDate, tz)) {
+      return {
+        error: `La fecha ${resolvedDate} ya pasó. La fecha actual es ${getDateComponents(tz).dateISO}. Por favor elige una fecha futura.`,
+      };
+    }
+
+    // ── Validate time is not in the past (if same day) ──
+    if (resolvedDate && args.time && isTimeInPast(resolvedDate, args.time, tz)) {
+      return {
+        error: `La hora ${args.time} del ${resolvedDate} ya pasó. La hora actual es ${getDateComponents(tz).timeStr}. Por favor elige una hora futura.`,
+      };
+    }
+
+    try {
+      const { checkAppointmentConflict } = await import("@/lib/appointment-utils");
+      const conflict = await checkAppointmentConflict(String(storeId), resolvedDate, args.time, appointmentDuration);
+      if (conflict.hasConflict) {
+        const conflicting = conflict.conflictingAppointments[0];
+        return {
+          error: `Conflicto de horario: ${conflicting.customerName} tiene "${conflicting.serviceName}" de ${conflicting.time} a ${minutesToTime(timeToMinutes(conflicting.time) + conflicting.duration)}. Por favor elige otro horario.`,
+          conflict: true,
+          conflictingAppointments: conflict.conflictingAppointments,
+        };
+      }
+    } catch (e) {
+      console.error("Conflict check failed:", e);
+    }
+
+    let customerId = null;
+    if (args.customerEmail && storeId) {
+      try {
+        const { Customer } = await import("@/lib/models/Customer");
+        const existing = await Customer.findOne({ storeId, email: args.customerEmail }).lean();
+        if (existing) {
+          customerId = existing._id;
+        } else {
+          const newCustomer = await Customer.create({
+            storeId,
+            name: args.customerName || "Sin nombre",
+            email: args.customerEmail || "",
+            phone: args.customerPhone || "",
+            tags: ["chatbot"],
+            notes: "Auto-creado desde chat AI",
+          });
+          customerId = newCustomer._id;
+        }
+      } catch (e) {
+        console.error("Failed to auto-create customer:", e);
+      }
+    }
+
     const appointment = await Appointment.create({
       storeId,
+      customerId: customerId || undefined,
       customerInfo: {
         name: args.customerName,
         email: args.customerEmail || "",
@@ -95,7 +222,7 @@ export async function executeBookingTool(name: string, args: any, store: any, us
         price: servicePrice,
         duration: args.duration || 60,
       },
-      date: args.date,
+      date: resolvedDate,
       time: args.time,
       duration: args.duration || 60,
       notes: args.notes || "",
@@ -132,7 +259,7 @@ export async function executeBookingTool(name: string, args: any, store: any, us
 
     const result: ToolResult = {
       success: true,
-      message: `Cita creada: ${args.customerName} el ${args.date} a las ${args.time}`,
+      message: `Cita creada: ${args.customerName} el ${resolvedDate} a las ${args.time}`,
       appointmentId: appointment._id,
       paymentStatus: servicePrice > 0 ? "unpaid" : "paid",
     };
@@ -144,13 +271,36 @@ export async function executeBookingTool(name: string, args: any, store: any, us
   }
 
   if (name === "update_appointment") {
+    const existingApt = await Appointment.findById(args.appointmentId).lean();
+    if (!existingApt) return { error: `Cita con ID ${args.appointmentId} no encontrada` };
+
+    const newDate = args.date || (existingApt as any).date;
+    const newTime = args.time || (existingApt as any).time;
+    const newDuration = (existingApt as any).duration || (existingApt as any).service?.duration || 60;
+
+    if (args.date || args.time) {
+      try {
+        const { checkAppointmentConflict } = await import("@/lib/appointment-utils");
+        const conflict = await checkAppointmentConflict(String(storeId), newDate, newTime, newDuration, args.appointmentId);
+        if (conflict.hasConflict) {
+          const conflicting = conflict.conflictingAppointments[0];
+          return {
+            error: `Conflicto de horario: ${conflicting.customerName} tiene "${conflicting.serviceName}" de ${conflicting.time} a ${minutesToTime(timeToMinutes(conflicting.time) + conflicting.duration)}. Por favor elige otro horario.`,
+            conflict: true,
+            conflictingAppointments: conflict.conflictingAppointments,
+          };
+        }
+      } catch (e) {
+        console.error("Conflict check failed:", e);
+      }
+    }
+
     const update: any = {};
     if (args.date) update.date = args.date;
     if (args.time) update.time = args.time;
     if (args.status) update.status = args.status;
     if (args.notes !== undefined) update.notes = args.notes;
     const updated = await Appointment.findByIdAndUpdate(args.appointmentId, { $set: update }, { new: true }).lean();
-    if (!updated) return { error: `Cita con ID ${args.appointmentId} no encontrada` };
     return { success: true, message: `Cita actualizada correctamente` };
   }
 
@@ -162,7 +312,20 @@ export async function executeBookingTool(name: string, args: any, store: any, us
 
   if (name === "list_appointments") {
     const filter: any = { storeId };
-    if (args.date) filter.date = args.date;
+    if (args.date) {
+      // Resolve relative dates
+      const tz = getStoreTimezone(store);
+      const lowerDate = args.date.toLowerCase().trim();
+      let resolvedDate = args.date;
+      if (["hoy", "today"].includes(lowerDate)) {
+        resolvedDate = getDateComponents(tz).dateISO;
+      } else if (["mañana", "manana", "tomorrow"].includes(lowerDate)) {
+        resolvedDate = computeRelativeDate("tomorrow", tz);
+      } else if (["ayer", "yesterday"].includes(lowerDate)) {
+        resolvedDate = computeRelativeDate("yesterday", tz);
+      }
+      filter.date = resolvedDate;
+    }
     if (args.status) filter.status = args.status;
     const appointments = await Appointment.find(filter).sort({ date: 1, time: 1 }).limit(args.limit || 20).lean();
     return {
@@ -182,4 +345,15 @@ export async function executeBookingTool(name: string, args: any, store: any, us
   }
 
   return { error: `Unknown booking tool: ${name}` };
+}
+
+function timeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function minutesToTime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }

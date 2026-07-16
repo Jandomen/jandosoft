@@ -31,6 +31,7 @@ export const stripeProvider: PaymentProvider = {
       const stripe = new Stripe(credentials.secretKey, { apiVersion: "2025-05-27.basil" as any });
 
       const amountInCents = Math.round(req.amount * 100);
+      const baseUrl = process.env.NEXT_PUBLIC_URL || "https://jandosoft.vercel.app";
 
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "payment",
@@ -52,8 +53,8 @@ export const stripeProvider: PaymentProvider = {
               quantity: 1,
             }],
         customer_email: req.customerEmail,
-        success_url: `${process.env.NEXT_PUBLIC_URL || "https://jandosoft.vercel.app"}/s/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.NEXT_PUBLIC_URL || "https://jandosoft.vercel.app"}/s/payment-cancel`,
+        success_url: `${baseUrl}/s/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}/s/payment-cancel`,
         metadata: {
           storeId: req.storeId,
           storeName: req.storeName,
@@ -62,8 +63,19 @@ export const stripeProvider: PaymentProvider = {
           customerName: req.customerName || "",
           description: req.description,
           provider: "stripe",
+          from_checkout: "true",
         },
       };
+
+      if (req.stripeAccountId) {
+        const feePercent = req.platformFeePercent ?? 5;
+        const applicationFee = Math.round(amountInCents * (feePercent / 100));
+
+        (sessionParams as any).transfer_data = {
+          destination: req.stripeAccountId,
+        };
+        (sessionParams as any).application_fee_amount = applicationFee;
+      }
 
       const session = await stripe.checkout.sessions.create(sessionParams);
       return { url: session.url || undefined, id: session.id };

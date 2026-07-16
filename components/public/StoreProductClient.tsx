@@ -5,9 +5,9 @@ import CartSidebar from "./CartSidebar";
 import StoreProductFeed from "@/components/StoreProductFeed";
 
 export default function StoreProductClient({
-  products, storeName, slug, storeId, paymentsEnabled
+  products, storeName, slug, storeId, paymentsEnabled, storeCurrency = "USD"
 }: {
-  products: any[]; storeName: string; slug: string; storeId?: string; paymentsEnabled?: boolean;
+  products: any[]; storeName: string; slug: string; storeId?: string; paymentsEnabled?: boolean; storeCurrency?: string;
 }) {
   return (
     <CartProvider>
@@ -17,12 +17,14 @@ export default function StoreProductClient({
         slug={slug}
         storeId={storeId}
         paymentsEnabled={paymentsEnabled}
+        storeCurrency={storeCurrency}
       />
       <CartSidebar
         storeId={storeId}
         storeName={storeName}
         slug={slug}
         paymentsEnabled={paymentsEnabled}
+        storeCurrency={storeCurrency}
       />
     </CartProvider>
   );

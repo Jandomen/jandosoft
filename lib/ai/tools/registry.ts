@@ -7,6 +7,7 @@ import { TOOLS as EMAIL_TOOLS, executeEmailTool } from "./email";
 import { TOOLS as ANALYTICS_TOOLS, executeAnalyticsTool } from "./analytics";
 import { TOOLS as MARKETING_TOOLS, executeMarketingTool } from "./marketing";
 import { TOOLS as ADMIN_TOOLS, executeAdminTool } from "./admin";
+import { TOOLS as TIME_TOOLS, executeTimeTool } from "./time";
 import { registerToolExecutor } from "./index";
 
 export const ALL_TOOLS: ToolDefinition[] = [
@@ -18,6 +19,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   ...ANALYTICS_TOOLS,
   ...MARKETING_TOOLS,
   ...ADMIN_TOOLS,
+  ...TIME_TOOLS,
 ];
 
 type ToolExecutor = (name: string, args: any, store: any, userId: string) => Promise<ToolResult>;
@@ -31,6 +33,7 @@ const DOMAIN_EXECUTORS: { tools: string[]; executor: ToolExecutor }[] = [
   { tools: ["get_analytics"], executor: executeAnalyticsTool },
   { tools: ["create_kb_entry", "update_kb_entry", "delete_kb_entry", "list_kb_entries", "create_automation", "update_automation", "delete_automation", "list_automations", "toggle_automation", "create_campaign", "update_campaign", "delete_campaign", "list_campaigns", "send_campaign", "create_smart_form", "update_smart_form", "delete_smart_form", "list_smart_forms", "list_form_submissions", "schedule_task"], executor: executeMarketingTool },
   { tools: ["create_store", "delete_store", "update_store", "send_telegram_message", "send_discord_message", "send_slack_message", "send_sms", "send_whatsapp", "send_whatsapp_business", "post_to_facebook", "post_to_instagram", "post_to_twitter", "post_to_threads", "post_to_tiktok", "get_youtube_stats", "configure_integration", "toggle_integration", "delete_integration", "test_integration", "list_integrations", "list_scheduled_tasks", "delete_scheduled_task", "get_widget_embed", "get_agent_config", "update_agent_config"], executor: executeAdminTool },
+  { tools: ["getCurrentDateTime"], executor: executeTimeTool },
 ];
 
 export function registerAllTools(): void {

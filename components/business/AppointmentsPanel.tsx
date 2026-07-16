@@ -187,9 +187,14 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
     setShowForm(true);
   };
 
+  const canSave = !!formData.date && !!formData.time && (!!formData.customerEmail || !!formData.customerPhone);
+  const [conflictError, setConflictError] = useState<string | null>(null);
+
   const handleSave = async () => {
     if (!formData.date || !formData.time) return;
+    if (!formData.customerEmail && !formData.customerPhone) return;
     setSaving(true);
+    setConflictError(null);
     try {
       const payload = {
         storeId,
@@ -213,21 +218,53 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
       };
 
       if (editingId) {
-        await fetch(`/api/appointments/${editingId}`, {
+        const res = await fetch(`/api/appointments/${editingId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
+        const data = await res.json();
+        if (!res.ok && data.error === "conflict") {
+          setConflictError(data.message || "Conflicto de horario detectado");
+          setSaving(false);
+          return;
+        }
       } else {
-        await fetch("/api/appointments", {
+        const res = await fetch("/api/appointments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
+        const data = await res.json();
+        if (!res.ok && data.error === "conflict") {
+          setConflictError(data.message || "Conflicto de horario detectado");
+          setSaving(false);
+          return;
+        }
+        if (data.appointment?._id && formData.customerEmail && !formData.customerId) {
+          try {
+            const existing = customers.find(c => c.email === formData.customerEmail);
+            if (!existing) {
+              await fetch("/api/customers", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  storeId,
+                  name: formData.customerName || "Sin nombre",
+                  email: formData.customerEmail,
+                  phone: formData.customerPhone || "",
+                  tags: ["appointment"],
+                  notes: `Auto-creado desde cita del ${formData.date}`,
+                }),
+              });
+            }
+          } catch {}
+        }
       }
       setShowForm(false);
       loadAppointments();
       loadStats();
+      loadCustomers();
     } catch {}
     setSaving(false);
   };
@@ -409,6 +446,13 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
                 </motion.button>
               </div>
 
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-start gap-2">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
+                <p className="text-[10px] font-medium text-amber-700">
+                  {t("appointments.form_required_contact")}
+                </p>
+              </div>
+
               <div className="space-y-4">
                 {/* Customer selector */}
                 <div className="space-y-1.5">
@@ -435,9 +479,23 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
 
                 <div className="grid grid-cols-2 gap-3">
                   <InputField label={t("appointments.form_name")} value={formData.customerName} onChange={v => setFormData(prev => ({...prev, customerName: v}))} />
-                  <InputField label={t("appointments.form_email")} type="email" value={formData.customerEmail} onChange={v => setFormData(prev => ({...prev, customerEmail: v}))} />
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest flex items-center gap-1">
+                      {t("appointments.form_email")} <span className="text-red-500">*</span>
+                    </label>
+                    <input type="email" value={formData.customerEmail}
+                      onChange={e => setFormData(prev => ({...prev, customerEmail: e.target.value}))}
+                      className="w-full h-10 bg-zinc-50 border border-zinc-100 rounded-xl px-3 text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all" />
+                  </div>
                 </div>
-                <InputField label={t("appointments.form_phone")} value={formData.customerPhone} onChange={v => setFormData(prev => ({...prev, customerPhone: v}))} />
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest flex items-center gap-1">
+                    {t("appointments.form_phone")} <span className="text-red-500">*</span>
+                  </label>
+                  <input type="text" value={formData.customerPhone}
+                    onChange={e => setFormData(prev => ({...prev, customerPhone: e.target.value}))}
+                    className="w-full h-10 bg-zinc-50 border border-zinc-100 rounded-xl px-3 text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all" />
+                </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <InputField label={t("appointments.form_service")} value={formData.serviceName} onChange={v => setFormData(prev => ({...prev, serviceName: v}))} />
@@ -481,11 +539,23 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
                 </div>
               </div>
 
-              <motion.button whileTap={{ scale: 0.95 }} onClick={handleSave} disabled={saving || !formData.date || !formData.time}
+              {conflictError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2 flex items-start gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 shrink-0" />
+                  <p className="text-[10px] font-medium text-red-700">{conflictError}</p>
+                </div>
+              )}
+
+              <motion.button whileTap={{ scale: 0.95 }} onClick={handleSave} disabled={saving || !canSave}
                 className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 text-white rounded-xl text-xs font-black italic hover:bg-red-700 transition-all shadow-lg shadow-red-100 disabled:opacity-50">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {saving ? t("appointments.form_saving") : editingId ? t("appointments.form_save") : t("appointments.form_create")}
               </motion.button>
+              {!canSave && !saving && (
+                <p className="text-[10px] text-red-500 text-center font-medium italic">
+                  {t("appointments.form_required_hint")}
+                </p>
+              )}
             </motion.div>
           </motion.div>
         )}

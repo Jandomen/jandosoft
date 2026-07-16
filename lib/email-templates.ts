@@ -1,3 +1,5 @@
+import { getCurrencySymbol } from "@/lib/utils/currency";
+
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
 
 const BRAND = `
@@ -107,7 +109,7 @@ export function invoiceEmailHtml(params: {
         </table>
         <div style="margin-top:16px;padding-top:16px;border-top:1px solid #222;display:flex;justify-content:space-between;">
           <span style="font-size:14px;color:#fff;font-weight:900;">Total</span>
-          <span style="font-size:16px;color:#ef4444;font-weight:900;">${params.currency === "MXN" ? "$" : "$"}${params.amount.toFixed(2)} ${params.currency}</span>
+          <span style="font-size:16px;color:#ef4444;font-weight:900;">${getCurrencySymbol(params.currency)}${params.amount.toFixed(2)} ${params.currency}</span>
         </div>
       </div>
     `
@@ -179,7 +181,7 @@ export function paymentConfirmationEmailHtml(params: {
         </div>
         <div style="display:flex;justify-content:space-between;padding-top:16px;border-top:1px solid #222;">
           <span style="font-size:14px;color:#fff;font-weight:900;">Total pagado</span>
-          <span style="font-size:18px;color:#ef4444;font-weight:900;">${params.currency === "MXN" ? "$" : "$"}${params.amount.toFixed(2)} ${params.currency}</span>
+          <span style="font-size:18px;color:#ef4444;font-weight:900;">${getCurrencySymbol(params.currency)}${params.amount.toFixed(2)} ${params.currency}</span>
         </div>
       </div>
       <p style="font-size:13px;color:#888;line-height:1.5;margin:16px 0;">Gracias por tu preferencia. Si tienes alguna duda, no dudes en contactarnos.</p>
@@ -198,7 +200,7 @@ export function orderConfirmationEmailHtml(params: {
   const itemsList = params.items.map((item) =>
     `<tr>
       <td style="padding:8px 0;border-bottom:1px solid #222;color:#ccc;font-size:13px;">${item.name} x${item.quantity}</td>
-      <td style="padding:8px 0;border-bottom:1px solid #222;color:#ccc;font-size:13px;text-align:right;">${params.currency === "MXN" ? "$" : "$"}${(item.price * item.quantity).toFixed(2)}</td>
+      <td style="padding:8px 0;border-bottom:1px solid #222;color:#ccc;font-size:13px;text-align:right;">${getCurrencySymbol(params.currency)}${(item.price * item.quantity).toFixed(2)}</td>
     </tr>`
   ).join("");
 
@@ -215,7 +217,7 @@ export function orderConfirmationEmailHtml(params: {
         </table>
         <div style="margin-top:16px;padding-top:16px;border-top:1px solid #222;display:flex;justify-content:space-between;">
           <span style="font-size:14px;color:#fff;font-weight:900;">Total</span>
-          <span style="font-size:16px;color:#ef4444;font-weight:900;">${params.currency === "MXN" ? "$" : "$"}${params.total.toFixed(2)} ${params.currency}</span>
+          <span style="font-size:16px;color:#ef4444;font-weight:900;">${getCurrencySymbol(params.currency)}${params.total.toFixed(2)} ${params.currency}</span>
         </div>
       </div>
     `
@@ -272,7 +274,7 @@ export function paymentReceivedNotificationEmailHtml(params: {
         </div>
         <div style="display:flex;justify-content:space-between;padding-top:16px;border-top:1px solid #222;">
           <span style="font-size:14px;color:#fff;font-weight:900;">Monto recibido</span>
-          <span style="font-size:18px;color:#ef4444;font-weight:900;">${params.currency === "MXN" ? "$" : "$"}${params.amount.toFixed(2)} ${params.currency}</span>
+          <span style="font-size:18px;color:#ef4444;font-weight:900;">${getCurrencySymbol(params.currency)}${params.amount.toFixed(2)} ${params.currency}</span>
         </div>
       </div>
     `

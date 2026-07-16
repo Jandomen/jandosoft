@@ -156,6 +156,33 @@ TIPOS DE ACCIÓN (valores de "type"):
 - createStore: crea una empresa. Parámetros: name, desc, industry, businessType
 - updateStore: actualiza empresa. Parámetros: id, data {name, desc, industry, businessType}
 - deleteStore: elimina empresa. Parámetros: id
+- forgotPassword: envía correo de restablecimiento de contraseña. Parámetros: email
+- changePassword: cambia contraseña del usuario autenticado. Parámetros: currentPassword, newPassword
+- resendVerification: reenvía correo de verificación. Parámetros: (ninguno, usa el email del contexto)
+- getProfile: obtiene el perfil completo del usuario (nombre, email, plan, organización, verificación). Parámetros: (ninguno)
+- updateProfile: actualiza el nombre del usuario. Parámetros: name
+- getInvoices: lista las facturas del usuario. Parámetros: (ninguno)
+- getCustomers: lista los clientes de una empresa. Parámetros: storeId
+- addCustomer: crea un cliente en una empresa. Parámetros: storeId, name, email, phone
+- getAnalytics: obtiene estadísticas de una empresa. Parámetros: storeId
+- getNotifications: lista las notificaciones del usuario. Parámetros: (ninguno)
+- sendEmail: envía un correo electrónico. Parámetros: to, subject, content
+
+GESTIÓN DE CUENTA:
+- Si el usuario pide cambiar contraseña y está autenticado, usa changePassword con la contraseña actual y la nueva.
+- Si el usuario olvidó su contraseña, usa forgotPassword con su correo para enviarle un enlace de restablecimiento.
+- Si el usuario necesita verificar su cuenta, usa resendVerification para reenviar el correo de verificación.
+- Si el usuario no está autenticado y pide cambiar contraseña, guíalo para que inicie sesión o use "Olvidé mi contraseña".
+- Si el usuario quiere ver su perfil, usa getProfile.
+- Si el usuario quiere cambiar su nombre, usa updateProfile.
+
+CAPACIDADES ADICIONALES:
+- Puedes consultar facturas del usuario con getInvoices.
+- Puedes listar y crear clientes de una empresa con getCustomers y addCustomer.
+- Puedes ver estadísticas de una empresa con getAnalytics.
+- Puedes ver notificaciones del usuario con getNotifications.
+- Puedes enviar correos electrónicos con sendEmail (to, subject, content).
+- Siempre pregunta qué quiere hacer antes de ejecutar acciones destructivas.
 
 VALORES DE "industry": tecnologia | comercio | servicios | salud | educacion | otro
 VALORES DE "businessType": general | ventas | saas | crm | tienda | educacion | otro
@@ -238,6 +265,241 @@ Después de ejecutar, SIEMPRE confirma el resultado en tu mensaje.`;
             results.push(`✅ Empresa eliminada`);
           } else {
             results.push(`❌ Error al eliminar empresa: ${data.error || "Error desconocido"}`);
+          }
+          break;
+        }
+        case "forgotPassword": {
+          const email = action.email || context?.email;
+          if (!email) {
+            results.push(`❌ Necesito tu correo electrónico para enviar el enlace de restablecimiento.`);
+            break;
+          }
+          try {
+            const res = await fetch("/api/auth/forgot-password", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              results.push(`✅ Se ha enviado un enlace de restablecimiento de contraseña a **${email}**. Revisa tu bandeja de entrada y carpeta de spam.`);
+            } else {
+              results.push(`❌ ${data.error || "Error al enviar el correo de restablecimiento"}`);
+            }
+          } catch {
+            results.push(`❌ Error de conexión al solicitar restablecimiento de contraseña.`);
+          }
+          break;
+        }
+        case "changePassword": {
+          if (!context?.email) {
+            results.push(`❌ Necesitas iniciar sesión para cambiar tu contraseña.`);
+            break;
+          }
+          if (!action.currentPassword || !action.newPassword) {
+            results.push(`❌ Necesito tu contraseña actual y la nueva contraseña.`);
+            break;
+          }
+          if (action.newPassword.length < 6) {
+            results.push(`❌ La nueva contraseña debe tener al menos 6 caracteres.`);
+            break;
+          }
+          try {
+            const res = await fetch("/api/auth/change-password", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ currentPassword: action.currentPassword, newPassword: action.newPassword }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              results.push(`✅ Contraseña cambiada exitosamente.`);
+            } else {
+              results.push(`❌ ${data.error || "Error al cambiar la contraseña"}`);
+            }
+          } catch {
+            results.push(`❌ Error de conexión al cambiar la contraseña.`);
+          }
+          break;
+        }
+        case "resendVerification": {
+          if (!context?.email) {
+            results.push(`❌ Necesitas iniciar sesión para reenviar la verificación.`);
+            break;
+          }
+          try {
+            const res = await fetch("/api/auth/resend-verification", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+            });
+            const data = await res.json();
+            if (data.success) {
+              results.push(`✅ Correo de verificación reenviado a **${context.email}**. Revisa tu bandeja de entrada.`);
+            } else {
+              results.push(`❌ ${data.error || "Error al reenviar verificación"}`);
+            }
+          } catch {
+            results.push(`❌ Error de conexión al reenviar verificación.`);
+          }
+          break;
+        }
+        case "getProfile": {
+          if (!context?.email) {
+            results.push(`❌ Necesitas iniciar sesión para ver tu perfil.`);
+            break;
+          }
+          try {
+            const res = await fetch("/api/auth/me");
+            const data = await res.json();
+            if (data.user) {
+              const u = data.user;
+              const org = data.organization;
+              results.push(`👤 **Tu perfil:**\n- Nombre: ${u.name || "Sin nombre"}\n- Email: ${u.email}\n- Plan: ${u.subscription || "Free"}\n- Email verificado: ${u.emailVerified ? "Sí ✅" : "No ❌"}\n- Rol: ${u.role || "member"}${org ? `\n- Organización: ${org.name}` : ""}`);
+            } else {
+              results.push(`❌ ${data.error || "Error al obtener perfil"}`);
+            }
+          } catch {
+            results.push(`❌ Error de conexión al obtener perfil.`);
+          }
+          break;
+        }
+        case "updateProfile": {
+          if (!context?.email) {
+            results.push(`❌ Necesitas iniciar sesión para actualizar tu perfil.`);
+            break;
+          }
+          if (!action.name) {
+            results.push(`❌ Necesito el nuevo nombre.`);
+            break;
+          }
+          try {
+            const res = await fetch("/api/user", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: action.name }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              results.push(`✅ Nombre actualizado a **${action.name}**.`);
+            } else {
+              results.push(`❌ ${data.error || "Error al actualizar perfil"}`);
+            }
+          } catch {
+            results.push(`❌ Error de conexión al actualizar perfil.`);
+          }
+          break;
+        }
+        case "getInvoices": {
+          if (!context?.email) {
+            results.push(`❌ Necesitas iniciar sesión para ver facturas.`);
+            break;
+          }
+          try {
+            const res = await fetch("/api/invoices?limit=10");
+            const data = await res.json();
+            if (data.invoices && data.invoices.length > 0) {
+              const list = data.invoices.map((inv: any) => `- #${inv.invoiceNumber || inv._id} | ${inv.currency || "USD"} ${(inv.amount || 0).toFixed(2)} | ${inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : "N/A"}`).join("\n");
+              results.push(`📄 **Tus últimas facturas (${data.total} total):**\n${list}`);
+            } else {
+              results.push(`📄 No tienes facturas registradas aún.`);
+            }
+          } catch {
+            results.push(`❌ Error de conexión al obtener facturas.`);
+          }
+          break;
+        }
+        case "getCustomers": {
+          if (!action.storeId) {
+            results.push(`❌ Necesito el ID de la empresa para listar clientes.`);
+            break;
+          }
+          try {
+            const res = await fetch(`/api/customers?storeId=${action.storeId}`);
+            const data = await res.json();
+            if (data.customers && data.customers.length > 0) {
+              const list = data.customers.slice(0, 15).map((c: any) => `- ${c.name || "Sin nombre"} | ${c.email || ""} | ${c.phone || ""}`).join("\n");
+              results.push(`👥 **Clientes de la empresa (${data.customers.length} total):**\n${list}${data.customers.length > 15 ? `\n... y ${data.customers.length - 15} más` : ""}`);
+            } else {
+              results.push(`👥 No hay clientes registrados en esta empresa.`);
+            }
+          } catch {
+            results.push(`❌ Error de conexión al obtener clientes.`);
+          }
+          break;
+        }
+        case "addCustomer": {
+          if (!action.storeId || !action.name) {
+            results.push(`❌ Necesito el ID de la empresa y el nombre del cliente.`);
+            break;
+          }
+          try {
+            const res = await fetch("/api/customers", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ storeId: action.storeId, name: action.name, email: action.email || "", phone: action.phone || "" }),
+            });
+            const data = await res.json();
+            if (data.customer) {
+              results.push(`✅ Cliente **${action.name}** registrado exitosamente.`);
+            } else {
+              results.push(`❌ ${data.error || "Error al crear cliente"}`);
+            }
+          } catch {
+            results.push(`❌ Error de conexión al crear cliente.`);
+          }
+          break;
+        }
+        case "getAnalytics": {
+          if (!action.storeId) {
+            results.push(`❌ Necesito el ID de la empresa para ver estadísticas.`);
+            break;
+          }
+          try {
+            const res = await fetch(`/api/analytics/${action.storeId}`);
+            const data = await res.json();
+            if (data) {
+              results.push(`📊 **Estadísticas:**\n- Visitas: ${data.visits || 0}\n- Visitantes únicos: ${data.uniqueVisitors || 0}\n- Páginas vistas: ${data.pageViews || 0}\n- Leads: ${data.leads || 0}\n- Conversaciones: ${data.conversations || 0}`);
+            } else {
+              results.push(`📊 No hay estadísticas disponibles.`);
+            }
+          } catch {
+            results.push(`❌ Error de conexión al obtener estadísticas.`);
+          }
+          break;
+        }
+        case "getNotifications": {
+          try {
+            const res = await fetch("/api/notifications");
+            const data = await res.json();
+            if (data.notifications && data.notifications.length > 0) {
+              const list = data.notifications.slice(0, 10).map((n: any) => `- ${n.title || n.message || "Notificación"} | ${n.createdAt ? new Date(n.createdAt).toLocaleDateString() : ""}`).join("\n");
+              results.push(`🔔 **Tus notificaciones:**\n${list}`);
+            } else {
+              results.push(`🔔 No tienes notificaciones nuevas.`);
+            }
+          } catch {
+            results.push(`❌ Error de conexión al obtener notificaciones.`);
+          }
+          break;
+        }
+        case "sendEmail": {
+          if (!action.to || !action.content) {
+            results.push(`❌ Necesito el destinatario (to) y el contenido del mensaje.`);
+            break;
+          }
+          try {
+            const res = await fetch("/api/email/send", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ to: action.to, subject: action.subject || "Mensaje de Jandosoft", content: action.content }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              results.push(`✉️ Correo enviado a **${action.to}**.`);
+            } else {
+              results.push(`❌ ${data.error || "Error al enviar correo"}`);
+            }
+          } catch {
+            results.push(`❌ Error de conexión al enviar correo.`);
           }
           break;
         }
