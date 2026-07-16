@@ -23,6 +23,7 @@ export interface IPlan {
   id: string;
   name: string;
   price: number;
+  currency?: string;
   desc: string;
   popular: boolean;
   features: string[];
@@ -57,6 +58,7 @@ const PlanSchema = new Schema<IPlan>({
   id: { type: String, required: true },
   name: { type: String, required: true },
   price: { type: Number, required: true },
+  currency: { type: String, default: "usd" },
   desc: { type: String, default: "" },
   popular: { type: Boolean, default: false },
   features: [String],

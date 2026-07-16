@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
           payment_method_types: ["card"],
           line_items: [{
             price_data: {
-              currency: "usd",
+              currency: (plan.currency || "usd").toLowerCase(),
               product_data: { name: `Plan ${plan.name} - Jandosoft` },
               unit_amount: amountInCents,
             },
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
         headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
         body: JSON.stringify({
           price_amount: plan.price,
-          price_currency: "usd",
+          price_currency: (plan.currency || "usd").toLowerCase(),
           order_id: orderId,
           order_description: `Plan ${plan.name} - Jandosoft`,
           ipn_callback_url: `${baseUrl}/api/nowpayments/webhook`,

@@ -55,7 +55,7 @@ async function syncPlanToStripe(plan: any): Promise<{ productId?: string; priceI
   const monthlyPrice = await stripe.prices.create({
     product: productId,
     unit_amount: plan.price * 100,
-    currency: "usd",
+    currency: (plan.currency || "usd").toLowerCase(),
     recurring: { interval: "month" },
     metadata: { plan_id: plan.id },
   });

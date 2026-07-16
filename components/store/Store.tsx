@@ -184,7 +184,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
         body.priceId = plan.stripePriceId;
       } else {
         body.amount = plan.price;
-        body.currency = "usd";
+        body.currency = plan.currency || "usd";
       }
 
       const res = await fetch("/api/stripe/checkout", {
