@@ -30,7 +30,7 @@ export default function PlansCarousel({ onSelectPlan }: { onSelectPlan?: (planId
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
-    fetch("/api/admin/plans")
+    fetch("/api/plans")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.plans?.length > 0) {

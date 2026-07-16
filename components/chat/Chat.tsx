@@ -933,7 +933,7 @@ function BotMessage({ content, context }: { content: string; context?: { email?:
   const [buyingId, setBuyingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/plans").then(r => r.ok ? r.json() : null).then(d => { if (d?.plans) setPlans(d.plans); }).catch(() => {});
+    fetch("/api/plans").then(r => r.ok ? r.json() : null).then(d => { if (d?.plans) setPlans(d.plans); }).catch(() => {});
   }, []);
 
   const planIds: string[] = [];

@@ -106,7 +106,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
   };
 
   useEffect(() => {
-    fetch("/api/admin/plans")
+    fetch("/api/plans")
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (data?.plans?.length > 0) {
