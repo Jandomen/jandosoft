@@ -10,6 +10,17 @@
 const DEFAULT_TIMEZONE = "UTC";
 const DEFAULT_LOCALE = "es-MX";
 
+// ── Timezone Validation ──
+
+function isValidTimezone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ── Timezone Resolution ──
 
 /**
@@ -18,10 +29,10 @@ const DEFAULT_LOCALE = "es-MX";
  */
 export function getStoreTimezone(store?: any): string {
   if (store?.timezone && typeof store.timezone === "string" && store.timezone.length > 3) {
-    return store.timezone;
+    if (isValidTimezone(store.timezone)) return store.timezone;
   }
   if (process.env.TZ && process.env.TZ.length > 3) {
-    return process.env.TZ;
+    if (isValidTimezone(process.env.TZ)) return process.env.TZ;
   }
   return DEFAULT_TIMEZONE;
 }
@@ -73,18 +84,19 @@ export function getDateComponents(timezone: string): {
   seconds: number;
   weekday: string;
   weekdayShort: string;
-  dateStr: string;      // e.g. "martes, 15 de julio de 2025"
-  timeStr: string;      // e.g. "12:30"
-  datetimeStr: string;  // e.g. "martes, 15 de julio de 2025 12:30"
-  dateISO: string;      // e.g. "2025-07-15"
-  timeFull: string;     // e.g. "12:30:00"
-  tzAbbrev: string;     // e.g. "CDT", "CST"
-  tzOffset: string;     // e.g. "-05:00"
+  dateStr: string;
+  timeStr: string;
+  datetimeStr: string;
+  dateISO: string;
+  timeFull: string;
+  tzAbbrev: string;
+  tzOffset: string;
 } {
+  const safeTz = isValidTimezone(timezone) ? timezone : DEFAULT_TIMEZONE;
   const now = getServerNow();
 
   const formatter = new Intl.DateTimeFormat(DEFAULT_LOCALE, {
-    timeZone: timezone,
+    timeZone: safeTz,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -111,7 +123,7 @@ export function getDateComponents(timezone: string): {
 
   // Build date string in Spanish
   const dateStr = now.toLocaleDateString(DEFAULT_LOCALE, {
-    timeZone: timezone,
+    timeZone: safeTz,
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -119,14 +131,14 @@ export function getDateComponents(timezone: string): {
   });
 
   const timeStr = now.toLocaleTimeString(DEFAULT_LOCALE, {
-    timeZone: timezone,
+    timeZone: safeTz,
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
 
   const timeFull = now.toLocaleTimeString(DEFAULT_LOCALE, {
-    timeZone: timezone,
+    timeZone: safeTz,
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -138,7 +150,7 @@ export function getDateComponents(timezone: string): {
 
   // Timezone offset
   const offsetFormatter = new Intl.DateTimeFormat("en", {
-    timeZone: timezone,
+    timeZone: safeTz,
     timeZoneName: "shortOffset",
   });
   const offsetParts = offsetFormatter.formatToParts(now);
@@ -163,8 +175,9 @@ export function formatDateInTimezone(
   options?: Intl.DateTimeFormatOptions
 ): string {
   const d = typeof date === "string" ? new Date(date) : typeof date === "number" ? new Date(date) : date;
+  const safeTz = isValidTimezone(timezone) ? timezone : DEFAULT_TIMEZONE;
   const defaultOptions: Intl.DateTimeFormatOptions = {
-    timeZone: timezone,
+    timeZone: safeTz,
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -183,8 +196,9 @@ export function formatTimeInTimezone(
   hour12: boolean = false
 ): string {
   const d = typeof date === "string" ? new Date(date) : typeof date === "number" ? new Date(date) : date;
+  const safeTz = isValidTimezone(timezone) ? timezone : DEFAULT_TIMEZONE;
   return d.toLocaleTimeString(DEFAULT_LOCALE, {
-    timeZone: timezone,
+    timeZone: safeTz,
     hour: "2-digit",
     minute: "2-digit",
     hour12,
