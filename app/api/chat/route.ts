@@ -122,8 +122,12 @@ export async function POST(req: Request) {
         const { User } = await import("@/lib/models/User");
         const user = await User.findOne({ email }).lean();
         if (user?.subscription && user.subscription !== "free") {
-          const { getPlanLimits } = await import("@/lib/plans");
-          const limits = getPlanLimits(user.subscription);
+          const { getPlanConfig, getPlanLimitsFromConfig } = await import("@/lib/plan-config");
+          const config = await getPlanConfig();
+          const isExpired = user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date();
+          const isCanceled = user.subscriptionStatus === "canceled";
+          const effectiveSubscription = (isExpired || isCanceled) ? null : user.subscription;
+          const limits = getPlanLimitsFromConfig(config, effectiveSubscription);
           planMaxMessages = limits.maxMessages;
           maxMessages = planMaxMessages;
         }

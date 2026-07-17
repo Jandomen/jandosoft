@@ -50,7 +50,12 @@ export async function POST(req: NextRequest) {
 
     const storeUser = await User.findOne({ email: (store as any).ownerEmail }).lean();
     const config = await getPlanConfig();
-    const limits = getPlanLimitsFromConfig(config, storeUser?.subscription || "free");
+
+    const isExpired = storeUser?.subscriptionExpiry && new Date(storeUser.subscriptionExpiry) < new Date();
+    const isCanceled = storeUser?.subscriptionStatus === "canceled";
+    const effectiveSubscription = (isExpired || isCanceled) ? null : storeUser?.subscription;
+    const limits = getPlanLimitsFromConfig(config, effectiveSubscription || "free");
+
     const appointmentCount = await Appointment.countDocuments({ storeId: String(store._id) });
     if (appointmentCount >= limits.maxAppointments && limits.maxAppointments < 999) {
       return NextResponse.json({

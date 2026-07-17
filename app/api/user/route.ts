@@ -4,6 +4,7 @@ import { User } from "@/lib/models/User";
 import { Store } from "@/lib/models/Store";
 import bcrypt from "bcryptjs";
 import { getAuthFromCookies, getAuthFromHeaders } from "@/lib/auth";
+import { getPlanConfig, getPlanLimitsFromConfig } from "@/lib/plan-config";
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,16 +19,21 @@ export async function GET(req: NextRequest) {
         user.suspendedUntil = null;
         await user.save();
       }
+      const config = await getPlanConfig();
+      const planLimits = getPlanLimitsFromConfig(config, user.subscription);
+      const isExpired = !!user.subscriptionExpiry && new Date(user.subscriptionExpiry) < now;
       return NextResponse.json({
         user: {
           email: user.email,
           name: user.name,
-          subscription: user.subscription,
+          subscription: isExpired ? null : user.subscription,
           subscriptionExpiry: user.subscriptionExpiry,
-        isSuspended: user.isSuspended,
+          subscriptionStatus: user.subscriptionStatus,
+          isSuspended: user.isSuspended,
           emailVerified: user.emailVerified ?? false,
           organizationId: user.organizationId,
           role: user.role,
+          planLimits,
         }
       });
     }
@@ -39,16 +45,21 @@ export async function GET(req: NextRequest) {
     await connectDB();
     const user = await User.findOne({ email }).lean();
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    const config = await getPlanConfig();
+    const planLimits = getPlanLimitsFromConfig(config, user.subscription);
+    const isExpired = !!user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date();
     return NextResponse.json({
       user: {
         email: user.email,
         name: user.name,
-        subscription: user.subscription,
+        subscription: isExpired ? null : user.subscription,
         subscriptionExpiry: user.subscriptionExpiry,
+        subscriptionStatus: user.subscriptionStatus,
         isSuspended: user.isSuspended,
         emailVerified: user.emailVerified ?? false,
         organizationId: user.organizationId,
         role: user.role,
+        planLimits,
       }
     });
   } catch (error) {
@@ -73,6 +84,9 @@ export async function PATCH(req: NextRequest) {
     ).lean();
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
+    const config = await getPlanConfig();
+    const planLimits = getPlanLimitsFromConfig(config, user.subscription);
+
     return NextResponse.json({
       success: true,
       user: {
@@ -80,9 +94,11 @@ export async function PATCH(req: NextRequest) {
         name: user.name,
         subscription: user.subscription,
         subscriptionExpiry: user.subscriptionExpiry,
+        subscriptionStatus: user.subscriptionStatus,
         isSuspended: user.isSuspended,
         organizationId: user.organizationId,
         role: user.role,
+        planLimits,
       }
     });
   } catch (error) {

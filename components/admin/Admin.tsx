@@ -398,6 +398,11 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
   useEffect(() => {
     fetchDashboard();
     fetchPlans();
+    const interval = setInterval(() => {
+      fetchDashboard();
+      fetchPlans();
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const [imageUrlInput, setImageUrlInput] = useState("");
@@ -1946,7 +1951,11 @@ function AdminRevenuePanel() {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (loading) {
     return (

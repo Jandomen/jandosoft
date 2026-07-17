@@ -100,7 +100,7 @@ function WebsitesContent({ userStores, user, onSelectStore, onCreateStore, onNav
   const plan = user?.subscription;
   const planExpiry = user?.subscriptionExpiry ? new Date(user.subscriptionExpiry) : null;
   const isExpired = planExpiry && planExpiry < new Date();
-  const limits = getPlanLimits(plan);
+  const limits = user?.planLimits || getPlanLimits(plan);
   const planLabel = getPlanLabel(plan);
   const canCreateStore = storeCount < limits.maxStores && !isExpired;
 
@@ -322,6 +322,8 @@ export default function Page() {
     email: "",
     subscription: null as string | null,
     subscriptionExpiry: null as Date | null,
+    subscriptionStatus: null as string | null,
+    planLimits: null as any,
     isSuspended: false,
     emailVerified: true as boolean,
     organizationId: "",
@@ -374,12 +376,24 @@ export default function Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subscription: subType, subscriptionExpiry: expiry.toISOString() }),
       });
-      if (!userRes.ok) {
-        console.error("Failed to update subscription on server:", await userRes.text());
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        if (userData.user) {
+          setUser(prev => ({ ...prev, ...userData.user }));
+        }
       }
     } catch (e) {
       console.error("Network error updating subscription:", e);
     }
+    try {
+      const getRes = await apiFetch("/api/user");
+      if (getRes.ok) {
+        const getData = await getRes.json();
+        if (getData.user) {
+          setUser(prev => ({ ...prev, ...getData.user }));
+        }
+      }
+    } catch {}
     setActiveTab("dashboard");
     showToast(`Plan ${subType.toUpperCase()} activado correctamente`, "success");
   };
@@ -589,6 +603,8 @@ export default function Page() {
               isSuspended: data.user.isSuspended,
               subscription: data.user.subscription ?? prev.subscription,
               subscriptionExpiry: data.user.subscriptionExpiry ?? prev.subscriptionExpiry,
+              subscriptionStatus: data.user.subscriptionStatus ?? prev.subscriptionStatus,
+              planLimits: data.user.planLimits ?? prev.planLimits,
             }));
           }
         }
@@ -625,7 +641,7 @@ export default function Page() {
     syncToken(null);
     setOrg(null);
     setUserStores([]);
-    setUser({ email: "", subscription: null, subscriptionExpiry: null, isSuspended: false, emailVerified: true, organizationId: "", role: "member" });
+    setUser({ email: "", subscription: null, subscriptionExpiry: null, subscriptionStatus: null, planLimits: null, isSuspended: false, emailVerified: true, organizationId: "", role: "member" });
     setActiveTab("home");
     localStorage.removeItem(SESSION_KEY);
     fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
@@ -944,12 +960,12 @@ export default function Page() {
                       onLogout={handleLogout}
                     />
                   )}
-{activeTab === "chat" && <motion.div key="chat" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="max-[400px]:py-2 py-4 md:py-10">{isLogged ? <ChatView maxMessages={getPlanLimits(user.subscription).maxMessages} context={{ email: user.email, plan: user.subscription ?? undefined, storeName: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].name : undefined, industry: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].industry : undefined, storeType: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].type : undefined, description: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].description : undefined }} userStores={userStores} onStoresChange={(stores) => setUserStores(stores)} /> : <ChatView />}</motion.div>}
+{activeTab === "chat" && <motion.div key="chat" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="max-[400px]:py-2 py-4 md:py-10">{isLogged ? <ChatView maxMessages={(user.planLimits || getPlanLimits(user.subscription)).maxMessages} context={{ email: user.email, plan: user.subscription ?? undefined, storeName: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].name : undefined, industry: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].industry : undefined, storeType: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].type : undefined, description: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].description : undefined }} userStores={userStores} onStoresChange={(stores) => setUserStores(stores)} /> : <ChatView />}</motion.div>}
                   {activeTab === "messages" && isLogged && <motion.div key="messages" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="max-w-4xl mx-auto py-4 md:py-10"><MessagesPanel /></motion.div>}
                   {activeTab === "pricing" && <motion.div key="pricing" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="py-10"><PlansView currency={currency} isPremium={isPremium} isLogged={isLogged} userEmail={user.email} onPaymentSuccess={handlePaymentSuccess} onLoginRequest={() => setShowLogin(true)} /></motion.div>}
                  {activeTab === "business" && isLogged && activeStore && (
                     <motion.div key="business" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="py-10">
-                         <BusinessDashboard userStore={activeStore} userEmail={user.email} storeId={activeStoreId as string | number} planLimits={getPlanLimits(user.subscription)} planExpired={!!(user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date())} onNavigateToPricing={() => setActiveTab("pricing")} initialSection={businessSection}
+                         <BusinessDashboard userStore={activeStore} userEmail={user.email} storeId={activeStoreId as string | number} planLimits={user.planLimits || getPlanLimits(user.subscription)} planExpired={!!(user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date())} onNavigateToPricing={() => setActiveTab("pricing")} initialSection={businessSection}
                          onBack={() => { setActiveStoreId(null); setActiveTab("dashboard"); }}
                           onEditStore={async (storeId, data) => {
                             const res = await apiFetch(`/api/stores/${storeId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });

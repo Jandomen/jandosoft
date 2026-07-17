@@ -25,9 +25,12 @@ async function checkPlanLimit(organizationId: string, userEmail: string): Promis
   if (!user) return "Usuario no encontrado";
 
   const config = await getPlanConfig();
-  const limits = getPlanLimitsFromConfig(config, user.subscription);
-  const expiry = user.subscriptionExpiry ? new Date(user.subscriptionExpiry) : null;
-  if (expiry && expiry < new Date()) return "Plan vencido. Renueva para crear más empresas.";
+  const isExpired = user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date();
+  const isCanceled = user.subscriptionStatus === "canceled";
+  const effectiveSubscription = (isExpired || isCanceled) ? null : user.subscription;
+  const limits = getPlanLimitsFromConfig(config, effectiveSubscription);
+  if (isExpired) return "Plan vencido. Renueva para crear más empresas.";
+  if (isCanceled) return "Plan cancelado. Obtén un nuevo plan para crear más empresas.";
 
   const storeCount = await Store.countDocuments({ organizationId });
   if (storeCount >= limits.maxStores) {

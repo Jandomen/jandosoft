@@ -89,6 +89,9 @@ export default function UserDashboard({
     : 0;
 
   const [showCreateStore, setShowCreateStore] = useState(false);
+  const [showChangePlan, setShowChangePlan] = useState(false);
+  const [changePlanLoading, setChangePlanLoading] = useState(false);
+  const [changePlanError, setChangePlanError] = useState("");
 
   const [editingStoreId, setEditingStoreId] =
     useState<string | number | null>(null);
@@ -603,14 +606,34 @@ export default function UserDashboard({
           </motion.button>
 
           {user.subscription && !isExpired && (
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => onNavigate("pricing")}
-              className="w-full sm:w-auto px-5 py-3 bg-white/20 backdrop-blur-xl text-white border border-white/20 rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs uppercase tracking-wide sm:tracking-widest hover:bg-white hover:text-zinc-950 transition-all italic shadow-2xl flex items-center justify-center gap-2"
-            >
-              <Zap className="w-3 h-3" />
-              {t("user.update_plan") || "ACTUALIZAR PLAN"}
-            </motion.button>
+            <>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowChangePlan(true)}
+                className="w-full sm:w-auto px-5 py-3 bg-white/20 backdrop-blur-xl text-white border border-white/20 rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs uppercase tracking-wide sm:tracking-widest hover:bg-white hover:text-zinc-950 transition-all italic shadow-2xl flex items-center justify-center gap-2"
+              >
+                <Zap className="w-3 h-3" />
+                {t("user.update_plan") || "ACTUALIZAR PLAN"}
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={async () => {
+                  if (!confirm("¿Seguro que quieres cancelar tu plan? Se cancelará al final del periodo de facturación.")) return;
+                  try {
+                    const res = await fetch("/api/stripe/cancel-subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ immediately: false }) });
+                    const data = await res.json();
+                    if (data.error) { alert(data.error); return; }
+                    alert(data.message || "Plan cancelado correctamente");
+                  } catch { alert("Error al cancelar"); }
+                }}
+                className="w-full sm:w-auto px-5 py-3 bg-white/10 backdrop-blur-xl text-white/70 border border-white/10 rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs uppercase tracking-wide sm:tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 transition-all italic shadow-2xl flex items-center justify-center gap-2"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                {t("user.cancel_plan") || "CANCELAR PLAN"}
+              </motion.button>
+            </>
           )}
 
           {!user.subscription && (
@@ -1313,6 +1336,120 @@ export default function UserDashboard({
                   {editingApptId ? t("appointments.form_save") : t("appointments.form_create")}
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Change Plan Modal */}
+      <AnimatePresence>
+        {showChangePlan && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => { setShowChangePlan(false); setChangePlanError(""); }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="w-full max-w-lg bg-white rounded-[2.5rem] p-8 shadow-4xl relative max-h-[85vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => { setShowChangePlan(false); setChangePlanError(""); }}
+                className="absolute top-4 right-4 p-2 hover:bg-zinc-100 rounded-xl transition-colors"
+              >
+                <X className="w-5 h-5 text-zinc-400" />
+              </button>
+
+              <div className="text-center mb-8">
+                <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Zap className="w-7 h-7 text-red-600" />
+                </div>
+                <h3 className="text-xl font-black italic text-zinc-950 uppercase tracking-tighter">
+                  {t("user.update_plan") || "Actualizar Plan"}
+                </h3>
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1 italic">
+                  Plan actual: <span className="text-red-600">{user.subscription?.toUpperCase()}</span>
+                </p>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                {[
+                  { id: "starter", name: "Starter", priceUsd: 29, desc: "Perfecto para emprender" },
+                  { id: "business", name: "Business", priceUsd: 79, desc: "La más completa", popular: true },
+                  { id: "enterprise", name: "Enterprise", priceUsd: 199, desc: "Potencia y control total" },
+                ].filter(p => p.id !== user.subscription).map((plan) => (
+                  <motion.button
+                    key={plan.id}
+                    whileTap={{ scale: 0.97 }}
+                    disabled={changePlanLoading}
+                    onClick={async () => {
+                      setChangePlanLoading(true);
+                      setChangePlanError("");
+                      try {
+                        const res = await fetch("/api/stripe/change-plan", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ newPlanId: plan.id }),
+                        });
+                        const data = await res.json();
+                        if (data.url) {
+                          window.location.href = data.url;
+                        } else {
+                          setChangePlanError(data.error || "Error al cambiar plan");
+                          setChangePlanLoading(false);
+                        }
+                      } catch {
+                        setChangePlanError("Error de conexión");
+                        setChangePlanLoading(false);
+                      }
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left",
+                      plan.popular
+                        ? "border-red-200 bg-red-50 hover:border-red-300"
+                        : "border-zinc-100 hover:border-zinc-200 hover:shadow-md"
+                    )}
+                  >
+                    <div className={cn(
+                      "p-2.5 rounded-xl",
+                      plan.popular ? "bg-red-100" : "bg-zinc-100"
+                    )}>
+                      <Zap className={cn("w-5 h-5", plan.popular ? "text-red-600" : "text-zinc-500")} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-black italic text-zinc-950">{plan.name}</p>
+                      <p className="text-[10px] text-zinc-400 font-bold">{plan.desc}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-black italic text-zinc-950">${plan.priceUsd}</p>
+                      <p className="text-[9px] text-zinc-400 font-bold">USD/mes</p>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+
+              {changePlanError && (
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4">
+                  <p className="text-xs font-bold text-red-700 italic">{changePlanError}</p>
+                </div>
+              )}
+
+              {changePlanLoading && (
+                <div className="flex items-center justify-center gap-3 py-4">
+                  <Loader2 className="w-5 h-5 text-red-600 animate-spin" />
+                  <p className="text-xs font-bold italic text-zinc-400">Redirigiendo a Stripe...</p>
+                </div>
+              )}
+
+              <p className="text-[9px] text-zinc-300 font-bold text-center mt-4 italic">
+                Se cancelará tu plan actual y se creará uno nuevo. Puedes cambiar cuando quieras.
+              </p>
             </motion.div>
           </motion.div>
         )}

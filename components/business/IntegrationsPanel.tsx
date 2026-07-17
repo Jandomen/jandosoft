@@ -658,7 +658,12 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
                         )}
                       </div>
                       <h5 className="text-sm font-black italic text-zinc-950 mb-1">Stripe Connect</h5>
-                      <p className="text-[10px] font-medium text-zinc-400 mb-3">Conecta tu cuenta Stripe para recibir pagos directamente</p>
+                      <p className="text-[10px] font-medium text-zinc-400 mb-2">Conecta tu cuenta Stripe para recibir pagos directamente</p>
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 mb-3">
+                        <p className="text-[9px] font-bold text-amber-700 italic">
+                          Los pagos se procesan en Pesos Mexicanos (MXN). Asegúrate de que tu cuenta Stripe esté configurada para recibir MXN.
+                        </p>
+                      </div>
                       {isConnected && stripeConnectStatus?.email && (
                         <p className="text-[9px] text-zinc-300 mb-2 truncate">{stripeConnectStatus.email}</p>
                       )}

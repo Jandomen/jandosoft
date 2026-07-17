@@ -248,6 +248,12 @@ export default function CartSidebar({
                     <p className="text-[10px] font-bold text-rose-600 italic">{checkoutError}</p>
                   )}
 
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                    <p className="text-[9px] font-bold text-amber-700 italic text-center">
+                      El pago se realizará en Pesos Mexicanos (MXN). El monto se convierte automáticamente según tu moneda local.
+                    </p>
+                  </div>
+
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={handleStartCheckout}

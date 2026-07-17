@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     const mxnAmount = Math.round(usdPrice * USD_TO_MXN);
     if (mxnAmount < 10) {
-      return NextResponse.json({ error: `El precio mínimo en MXN es $10. Precio actual: $${mxnAmount} MXN ($${usdPrice} USD). Sube el precio.` }, { status: 400 });
+      return NextResponse.json({ error: "El monto mínimo de pago es $10 pesos mexicanos." }, { status: 400 });
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";

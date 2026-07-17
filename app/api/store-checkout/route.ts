@@ -12,6 +12,10 @@ export async function POST(req: NextRequest) {
     if (!amount || amount <= 0) return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
     if (!customerEmail) return NextResponse.json({ error: "customerEmail required" }, { status: 400 });
 
+    if (parseFloat(amount) < 10) {
+      return NextResponse.json({ error: "El monto mínimo de pago es $10 pesos mexicanos." }, { status: 400 });
+    }
+
     await connectDB();
     const store = await Store.findById(storeId).lean() as any;
     if (!store) return NextResponse.json({ error: "Store not found" }, { status: 404 });
@@ -30,7 +34,7 @@ export async function POST(req: NextRequest) {
       storeName: store.name || "Tienda",
       ownerEmail: store.ownerEmail || "",
       amount: parseFloat(amount),
-      currency: currency || store.currency || "USD",
+      currency: "mxn",
       description: description || "Pago",
       customerEmail,
       customerName,

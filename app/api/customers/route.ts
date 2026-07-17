@@ -62,7 +62,12 @@ export async function POST(req: NextRequest) {
     if (!store) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
     const storeUser = await User.findOne({ email: store.ownerEmail }).lean();
     const config = await getPlanConfig();
-    const limits = getPlanLimitsFromConfig(config, storeUser?.subscription || "free");
+
+    const isExpired = storeUser?.subscriptionExpiry && new Date(storeUser.subscriptionExpiry) < new Date();
+    const isCanceled = storeUser?.subscriptionStatus === "canceled";
+    const effectiveSubscription = (isExpired || isCanceled) ? null : storeUser?.subscription;
+    const limits = getPlanLimitsFromConfig(config, effectiveSubscription || "free");
+
     const customerCount = await Customer.countDocuments({ storeId });
     if (customerCount >= limits.maxCustomers && limits.maxCustomers < 999) {
       return NextResponse.json({

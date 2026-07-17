@@ -98,6 +98,9 @@ export const stripeProvider: PaymentProvider = {
       if (msg.includes("currency") || msg.includes("divisa")) {
         return { error: "Tu tarjeta no soporta esta moneda. Intenta con otra tarjeta." };
       }
+      if (msg.includes("amount_too_small") || msg.includes("amount")) {
+        return { error: "El monto mínimo de pago es $10 pesos mexicanos." };
+      }
       return { error: msg };
     }
   },

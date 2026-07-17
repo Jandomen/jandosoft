@@ -16,9 +16,12 @@ async function checkProductLimit(storeId: string, organizationId: string, newPro
   const user = await User.findOne({ email: store.ownerEmail }).lean();
   if (!user) return "Usuario no encontrado";
   const config = await getPlanConfig();
-  const limits = getPlanLimitsFromConfig(config, user.subscription);
-  const expiry = user.subscriptionExpiry ? new Date(user.subscriptionExpiry) : null;
-  if (expiry && expiry < new Date()) return "Plan vencido. No puedes modificar productos.";
+  const isExpired = user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date();
+  const isCanceled = user.subscriptionStatus === "canceled";
+  const effectiveSubscription = (isExpired || isCanceled) ? null : user.subscription;
+  const limits = getPlanLimitsFromConfig(config, effectiveSubscription);
+  if (isExpired) return "Plan vencido. No puedes modificar productos.";
+  if (isCanceled) return "Plan cancelado. No puedes modificar productos.";
   if (newProductCount > limits.maxProductsPerStore) {
     return `Límite de ${limits.maxProductsPerStore} productos por empresa alcanzado en tu plan actual.`;
   }
@@ -67,7 +70,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ stor
     if (body.campaigns && Array.isArray(body.campaigns)) {
       const storeUser = await User.findOne({ email: (storeCheck as any)?.ownerEmail }).lean();
       const config = await getPlanConfig();
-      const limits = getPlanLimitsFromConfig(config, storeUser?.subscription || "free");
+      const isExpired = storeUser?.subscriptionExpiry && new Date(storeUser.subscriptionExpiry) < new Date();
+      const isCanceled = storeUser?.subscriptionStatus === "canceled";
+      const effectiveSubscription = (isExpired || isCanceled) ? null : storeUser?.subscription;
+      const limits = getPlanLimitsFromConfig(config, effectiveSubscription || "free");
       if (body.campaigns.length > limits.maxCampaigns && limits.maxCampaigns < 999) {
         return NextResponse.json({
           error: `Límite de ${limits.maxCampaigns} campañas alcanzado en tu plan actual. ¡Upgrada para crear más!`,
