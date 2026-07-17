@@ -74,6 +74,11 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
   const [suspendDuration, setSuspendDuration] = useState("permanent");
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [confirmingType, setConfirmingType] = useState<'user' | 'store'>('user');
+  const [viewingUser, setViewingUser] = useState<any>(null);
+  const [viewingStore, setViewingStore] = useState<any>(null);
+  const [filterPlan, setFilterPlan] = useState("");
+  const [revenueData, setRevenueData] = useState<any>(null);
+  const [paymentToast, setPaymentToast] = useState<{ message: string; amount: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [usersPage, setUsersPage] = useState(1);
@@ -83,6 +88,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
   const [totalStoresPages, setTotalStoresPages] = useState(1);
   const [totalInvoicesPages, setTotalInvoicesPages] = useState(1);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevPaymentCount = useRef(0);
 
   const [planConfig, setPlanConfig] = useState<{ plans: any[]; freePlan: any } | null>(null);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
@@ -120,12 +126,12 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
       const iPage = overrides?.invoicesPage ?? invoicesPage;
 
       const [dashRes, usersRes, storesRes, invRes, commRes, payRes] = await Promise.all([
-        fetch("/api/admin/dashboard"),
-        fetch(`/api/admin/users?search=${encodeURIComponent(uSearch)}&page=${uPage}&limit=20`),
-        fetch(`/api/admin/stores?search=${encodeURIComponent(sSearch)}&page=${sPage}&limit=20`),
-        fetch(`/api/invoices?page=${iPage}&limit=20`),
-        fetch("/api/admin/commercials"),
-        fetch(`/api/stripe/payments?limit=100`),
+        fetch("/api/admin/dashboard", { credentials: "include" }),
+        fetch(`/api/admin/users?search=${encodeURIComponent(uSearch)}&page=${uPage}&limit=20`, { credentials: "include" }),
+        fetch(`/api/admin/stores?search=${encodeURIComponent(sSearch)}&page=${sPage}&limit=20`, { credentials: "include" }),
+        fetch(`/api/invoices?page=${iPage}&limit=20`, { credentials: "include" }),
+        fetch("/api/admin/commercials", { credentials: "include" }),
+        fetch("/api/stripe/payments?limit=100", { credentials: "include" }),
       ]);
       if (dashRes.ok) {
         const data = await dashRes.json();
@@ -153,7 +159,17 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
       }
       if (payRes.ok) {
         const data = await payRes.json();
-        setAllPayments(data.payments || []);
+        const newPayments = data.payments || [];
+        if (prevPaymentCount.current > 0 && newPayments.length > prevPaymentCount.current) {
+          const newest = newPayments[0];
+          setPaymentToast({
+            message: `${newest.customerName || newest.customerEmail || "Cliente"} pagó $${newest.amount} ${newest.displayCurrency || "MXN"}`,
+            amount: newest.amount,
+          });
+          setTimeout(() => setPaymentToast(null), 5000);
+        }
+        prevPaymentCount.current = newPayments.length;
+        setAllPayments(newPayments);
       }
     } catch (e) {
       console.error("Error fetching admin data:", e);
@@ -164,7 +180,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
 
   const fetchPlans = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/plans");
+      const res = await fetch("/api/admin/plans", { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setPlanConfig({ plans: data.plans, freePlan: data.freePlan });
@@ -180,6 +196,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(planConfig),
+        credentials: "include",
       });
       const data = await res.json();
       if (res.ok) {
@@ -205,7 +222,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
   const handleSyncStripe = async () => {
     setSyncingStripe(true);
     try {
-      const res = await fetch("/api/stripe/sync-prices", { method: "POST" });
+      const res = await fetch("/api/stripe/sync-prices", { method: "POST", credentials: "include" });
       const data = await res.json();
       if (res.ok && data.success) {
         const synced = (data.results || []).map((r: any) => {
@@ -229,21 +246,36 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
     }
   };
 
-  const handleDeletePlan = (planId: string) => {
+  const handleDeletePlan = async (planId: string) => {
     if (!planConfig) return;
-    setPlanConfig({ ...planConfig, plans: planConfig.plans.filter((p: any) => p.id !== planId) });
+    try {
+      const res = await fetch("/api/admin/plans", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ planId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPlanConfig({ ...planConfig, plans: planConfig.plans.filter((p: any) => p.id !== planId) });
+        setPlanToast(`Plan eliminado. ${data.migratedUsers} usuario(s) movido(s) a ${data.fallbackPlan}.`);
+      } else {
+        setPlanToast("Error al eliminar plan");
+      }
+    } catch {
+      setPlanToast("Error de red al eliminar plan");
+    }
     setDeletingPlanId(null);
     setEditingPlanId(null);
     setEditForm(null);
-    setPlanToast("Plan eliminado. No olvides guardar los cambios.");
-    setTimeout(() => setPlanToast(""), 3000);
+    setTimeout(() => setPlanToast(""), 4000);
   };
 
   const fetchStoreProducts = async (storeId: string) => {
     if (!storeId) return;
     setLoadingProducts(true);
     try {
-      const res = await fetch(`/api/admin/stores/${storeId}/products`);
+      const res = await fetch(`/api/admin/stores/${storeId}/products`, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setStoreProducts(data.products || []);
@@ -270,6 +302,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ products: updatedProducts }),
+        credentials: "include",
       });
       if (res.ok) {
         setStoreProducts(updatedProducts);
@@ -291,6 +324,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ products: updatedProducts }),
+        credentials: "include",
       });
       if (res.ok) {
         setStoreProducts(updatedProducts);
@@ -308,6 +342,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subscription: plan, subscriptionExpiry: expiry.toISOString() }),
+        credentials: "include",
       });
       if (res.ok) {
         fetchDashboard();
@@ -323,6 +358,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason: reason || "", duration: duration || suspendDuration }),
+        credentials: "include",
       });
       if (res.ok) {
         fetchDashboard();
@@ -338,6 +374,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ duration: duration || suspendDuration }),
+        credentials: "include",
       });
       if (res.ok) {
         fetchDashboard();
@@ -354,6 +391,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newCommercial),
+        credentials: "include",
       });
       if (res.ok) {
         setNewCommercial({ title: "", imageUrl: "", linkUrl: "" });
@@ -370,6 +408,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
+        credentials: "include",
       });
       if (res.ok) fetchDashboard();
     } catch (e) {
@@ -395,11 +434,41 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
     }, 300);
   };
 
+  const fetchRevenue = async () => {
+    try {
+      const res = await fetch("/api/stripe/platform-revenue", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setRevenueData(data);
+      }
+    } catch {}
+  };
+
+  const exportCSV = (data: any[], filename: string) => {
+    if (!data.length) return;
+    const headers = Object.keys(data[0]);
+    const csv = [
+      headers.join(","),
+      ...data.map(row => headers.map(h => `"${String(row[h] || "").replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${filename}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const filteredUsers = filterPlan ? allUsers.filter((u: any) => (u.subscription || "free") === filterPlan || u.originalPlan === filterPlan) : allUsers;
+
   useEffect(() => {
     fetchDashboard();
     fetchPlans();
+    fetchRevenue();
     const interval = setInterval(() => {
       fetchDashboard();
+      fetchRevenue();
       fetchPlans();
     }, 30000);
     return () => clearInterval(interval);
@@ -483,6 +552,23 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
           </div>
       </header>
 
+      <AnimatePresence>
+        {paymentToast && (
+          <motion.div
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -100, opacity: 0 }}
+            className="fixed top-4 right-4 z-[200] bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 max-w-sm"
+          >
+            <DollarSign className="w-5 h-5 shrink-0" />
+            <div>
+              <p className="text-xs font-black italic">Nuevo pago recibido</p>
+              <p className="text-[10px] font-bold opacity-80">{paymentToast.message}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="md:hidden flex overflow-x-auto gap-1 px-2 py-2 bg-zinc-50 border-b border-zinc-100 sticky top-0 z-10">
         {[
           { id: "dashboard", icon: <BarChart3 className="w-3.5 h-3.5" />, label: t("nav.dashboard") },
@@ -549,9 +635,72 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                           <StatCard icon={<ShoppingBag className="text-amber-500" />} label={t("nav.orders")} value={dashboardStats.totalOrders.toString()} change={`$${dashboardStats.totalRevenue}`} />
                           <StatCard icon={<TrendingUp className="text-blue-500" />} label={t("admin.today")} value={dashboardStats.activeUsersToday.toString()} change={t("admin.new_today")} />
                           <StatCard icon={<DollarSign className="text-purple-500" />} label="Stripe Connect" value={allStores.filter((s: any) => s.stripeConnectStatus === "active").length.toString()} change={`${allStores.filter((s: any) => s.stripeConnectStatus === "pending").length} pendientes`} />
-                       </div>
+                        </div>
+
+                        {revenueData && (
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
+                            <div className="bg-zinc-50/50 max-[400px]:p-5 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 space-y-4 md:space-y-6 shadow-sm">
+                              <h3 className="max-[400px]:text-lg text-xl font-black italic text-zinc-950">Top Tiendas por Ingresos</h3>
+                              <div className="space-y-3">
+                                {Object.entries(revenueData.byStore || {}).sort(([,a]: any, [,b]: any) => b.revenue - a.revenue).slice(0, 5).map(([name, data]: any, i: number) => (
+                                  <div key={name} className="flex items-center justify-between p-3 bg-white rounded-xl border border-zinc-100">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-[9px] font-black text-zinc-400">#{i + 1}</span>
+                                      <span className="text-[10px] font-black italic text-zinc-950 truncate max-w-[150px]">{name}</span>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-[10px] font-black text-emerald-600">${data.revenue.toLocaleString()}</p>
+                                      <p className="text-[8px] text-zinc-400">{data.count} pagos</p>
+                                    </div>
+                                  </div>
+                                ))}
+                                {Object.keys(revenueData.byStore || {}).length === 0 && (
+                                  <p className="text-center text-zinc-300 italic text-xs py-4">Sin datos de ingresos aún</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="bg-zinc-50/50 max-[400px]:p-5 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 space-y-4 md:space-y-6 shadow-sm">
+                              <h3 className="max-[400px]:text-lg text-xl font-black italic text-zinc-950">Resumen de Ingresos</h3>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-white rounded-xl p-4 border border-zinc-100">
+                                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Total Procesado</p>
+                                  <p className="text-lg font-black italic text-zinc-950">${(revenueData.totalProcessed || 0).toLocaleString()}</p>
+                                </div>
+                                <div className="bg-white rounded-xl p-4 border border-zinc-100">
+                                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Comisión Plataforma</p>
+                                  <p className="text-lg font-black italic text-emerald-600">${(revenueData.totalPlatformRevenue || 0).toLocaleString()}</p>
+                                </div>
+                                <div className="bg-white rounded-xl p-4 border border-zinc-100">
+                                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Total Pagos</p>
+                                  <p className="text-lg font-black italic text-zinc-950">{revenueData.totalPayments || 0}</p>
+                                </div>
+                                <div className="bg-white rounded-xl p-4 border border-zinc-100">
+                                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Tiendas Activas</p>
+                                  <p className="text-lg font-black italic text-zinc-950">{Object.keys(revenueData.byStore || {}).length}</p>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <p className="text-[9px] font-black text-zinc-400 uppercase italic">Distribución por Tienda</p>
+                                {Object.entries(revenueData.byStore || {}).sort(([,a]: any, [,b]: any) => b.fees - a.fees).slice(0, 5).map(([name, data]: any) => {
+                                  const pct = revenueData.totalProcessed > 0 ? ((data.revenue / revenueData.totalProcessed) * 100) : 0;
+                                  return (
+                                    <div key={name} className="space-y-1">
+                                      <div className="flex justify-between">
+                                        <span className="text-[9px] font-bold text-zinc-600 truncate max-w-[120px]">{name}</span>
+                                        <span className="text-[9px] font-black text-zinc-400">{pct.toFixed(1)}%</span>
+                                      </div>
+                                      <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                                        <div className="h-full bg-red-500 rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%` }} />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        )}
  
-                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
                           <div className="bg-zinc-50/50 max-[400px]:p-5 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 space-y-4 md:space-y-6 shadow-sm">
                              <h3 className="max-[400px]:text-lg text-xl font-black italic text-zinc-950">{t("admin.recent_activity")}</h3>
                              <div className="space-y-3 md:space-y-4">
@@ -583,6 +732,9 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                              </div>
                               <motion.button whileTap={{ scale: 0.95 }} onClick={() => setActiveTab("settings")} className="relative z-10 px-6 md:px-8 py-3 md:py-4 bg-white text-red-600 rounded-2xl font-black italic shadow-xl hover:scale-105 transition-all text-[10px] md:text-sm">{t("admin.manage_cluster")}</motion.button>
                           </div>
+                          <motion.button whileTap={{ scale: 0.95 }} onClick={() => exportCSV(allStores.map((s: any) => ({ nombre: s.name, email: s.ownerEmail, tipo: s.typeLabel || s.type, stripe: s.stripeConnectStatus || "no", productos: s.productCount || 0, clientes: s.customerCount || 0, estado: s.isSuspended ? "Suspendida" : "Activa" })), "tiendas")} className="px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-xl text-[8px] md:text-[9px] font-black italic text-zinc-600 hover:bg-zinc-100 transition-all">
+                            CSV ↓
+                          </motion.button>
                        </div>
                       </>
                      )}
@@ -592,8 +744,18 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                 {activeTab === "users" && (
                   <motion.div key="users" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 md:space-y-8">
                      <div className="flex items-center justify-between flex-wrap gap-3">
-                        <h3 className="max-[340px]:text-xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">{t("admin.users_title")} <span className="text-red-600">({allUsers.length})</span></h3>
+                        <h3 className="max-[340px]:text-xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase">{t("admin.users_title")} <span className="text-red-600">({filterPlan ? filteredUsers.length : allUsers.length})</span></h3>
                        <div className="flex items-center gap-2 flex-wrap">
+                         <select value={filterPlan} onChange={(e) => setFilterPlan(e.target.value)} className="px-2 py-1.5 bg-zinc-50 border border-zinc-100 rounded-xl text-[8px] md:text-[9px] font-black italic text-zinc-600 outline-none cursor-pointer">
+                            <option value="">Todos los planes</option>
+                            <option value="free">Free</option>
+                            {planConfig?.plans.map((p: any) => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </select>
+                                                   <motion.button whileTap={{ scale: 0.95 }} onClick={() => exportCSV(filteredUsers.map((u: any) => ({ nombre: u.name, email: u.email, plan: u.subscription || "free", planOriginal: u.originalPlanName || "", precioOriginal: u.originalPlanPrice || "", estado: u.isSuspended ? "Suspendido" : "Activo", tiendas: u.storeCount || 0 })), "usuarios")} className="px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-xl text-[8px] md:text-[9px] font-black italic text-zinc-600 hover:bg-zinc-100 transition-all">
+                           CSV ↓
+                         </motion.button>
                          <div className="flex items-center gap-1 px-2 py-1.5 bg-zinc-50 border border-zinc-100 rounded-xl">
                            <span className="text-[7px] md:text-[8px] font-black text-zinc-400 uppercase italic hidden sm:inline">{t("admin.duration")}</span>
                            <select
@@ -620,8 +782,8 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                        </div>
                      </div>
                     <div className="space-y-2 md:space-y-3">
-                       {allUsers.map((u: any) => (
-                        <div key={u._id} className={cn("flex items-center justify-between max-[340px]:p-2.5 max-[400px]:p-3.5 p-5 rounded-2xl border transition-all", u.isSuspended ? "bg-rose-50 border-rose-200" : "bg-zinc-50 border-zinc-100 hover:border-red-200")}>
+                       {filteredUsers.map((u: any) => (
+                        <div key={u._id} onClick={() => setViewingUser(u)} className={cn("flex items-center justify-between max-[340px]:p-2.5 max-[400px]:p-3.5 p-5 rounded-2xl border transition-all cursor-pointer", u.isSuspended ? "bg-rose-50 border-rose-200" : "bg-zinc-50 border-zinc-100 hover:border-red-200")}>
                           <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
                             <div className={cn("w-7 h-7 md:w-12 md:h-12 rounded-lg md:rounded-2xl flex items-center justify-center shadow-sm font-black italic text-[9px] md:text-base shrink-0", u.isSuspended ? "bg-rose-100 text-rose-600" : "bg-white text-red-600")}>
                               {u.name?.[0]?.toUpperCase() || "?"}
@@ -641,21 +803,22 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                               <p className="text-[9px] md:text-[10px] font-black italic text-zinc-950">                              {t("biz.total_stores").replace("{n}", String(u.storeCount || 0))}</p>
                               {changingPlanUserId === u._id ? (
                                 <div className="flex items-center gap-1 mt-1">
-                                  <select
-                                    value={changingPlanValue || u.subscription || "free"}
-                                    onChange={(e) => setChangingPlanValue(e.target.value)}
-                                    className="text-[8px] font-black italic bg-white border border-zinc-200 rounded-lg px-1.5 py-1 outline-none focus:ring-1 focus:ring-red-600"
-                                  >
-                                    <option value="free">Free</option>
-                                    <option value="starter">Starter</option>
-                                    <option value="business">Business</option>
-                                    <option value="enterprise">Enterprise</option>
-                                  </select>
+                                   <select
+                                     value={changingPlanValue || u.subscription || "free"}
+                                     onChange={(e) => setChangingPlanValue(e.target.value)}
+                                     className="text-[8px] font-black italic bg-white border border-zinc-200 rounded-lg px-1.5 py-1 outline-none focus:ring-1 focus:ring-red-600"
+                                   >
+                                     <option value="free">Free</option>
+                                     {planConfig?.plans.map((p: any) => (
+                                       <option key={p.id} value={p.id}>{p.name}</option>
+                                     ))}
+                                   </select>
                                   <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleChangeUserPlan(u._id, changingPlanValue)} className="p-1 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition-all"><Check className="w-3 h-3" /></motion.button>
                                 </div>
                               ) : (
                                 <button onClick={() => { setChangingPlanUserId(u._id); setChangingPlanValue(u.subscription || "free"); }} className={cn("text-[8px] md:text-[9px] font-bold uppercase italic hover:text-red-600 transition-colors", u.subscription ? "text-emerald-600" : "text-zinc-400")}>
                                   {u.subscription || "Free"} <Edit3 className="w-2.5 h-2.5 inline ml-0.5 opacity-40" />
+                                  {u.originalPlan && <span className="text-[7px] bg-amber-100 text-amber-600 px-1 py-0.5 rounded-full font-black ml-1">↑{u.originalPlanName || u.originalPlan}</span>}
                                 </button>
                               )}
                             </div>
@@ -731,7 +894,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                      </div>
                     <div className="space-y-2 md:space-y-3">
                        {allStores.map((s: any) => (
-                        <div key={s._id} className={cn("flex items-center justify-between max-[340px]:p-2.5 max-[400px]:p-3.5 p-5 rounded-2xl border transition-all", s.isSuspended ? "bg-rose-50 border-rose-200" : "bg-zinc-50 border-zinc-100 hover:border-red-200")}>
+                        <div key={s._id} onClick={() => setViewingStore(s)} className={cn("flex items-center justify-between max-[340px]:p-2.5 max-[400px]:p-3.5 p-5 rounded-2xl border transition-all cursor-pointer", s.isSuspended ? "bg-rose-50 border-rose-200" : "bg-zinc-50 border-zinc-100 hover:border-red-200")}>
                           <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
                             <div className={cn("w-7 h-7 md:w-12 md:h-12 rounded-lg md:rounded-2xl flex items-center justify-center shadow-sm shrink-0", s.isSuspended ? "bg-rose-100 text-rose-600" : "bg-white text-red-600")}>
                               <Store className="w-3.5 h-3.5 md:w-6 md:h-6" />
@@ -973,9 +1136,14 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
 
                 {activeTab === "payments" && (
                    <motion.div key="payments" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4 md:space-y-8">
-                      <div className="flex items-center justify-between flex-wrap gap-3">
-                         <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">Pagos Recibidos</h3>
-                         <div className="px-3 md:px-4 py-1.5 md:py-2 bg-zinc-950 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase italic">{allPayments.length} Pagos</div>
+                       <div className="flex items-center justify-between flex-wrap gap-3">
+                          <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">Pagos Recibidos</h3>
+                          <div className="flex items-center gap-2">
+                            <motion.button whileTap={{ scale: 0.95 }} onClick={() => exportCSV(allPayments.map((p: any) => ({ cliente: p.customerName || p.customerEmail, monto: p.amount, moneda: p.displayCurrency, estado: p.status || p.paymentStatus, fecha: p.createdAt, tienda: p.storeName })), "pagos")} className="px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-xl text-[9px] font-black italic text-zinc-600 hover:bg-zinc-100 transition-all">
+                              CSV ↓
+                            </motion.button>
+                            <div className="px-3 md:px-4 py-1.5 md:py-2 bg-zinc-950 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase italic">{allPayments.length} Pagos</div>
+                          </div>
                       </div>
 
                       <div className="relative">
@@ -1596,9 +1764,10 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                                 if (!widgetStoreId || !widgetConfig) return;
                                 setSavingWidget(true);
                                 try {
-                                  const res = await fetch("/api/admin/widget", {
-                                    method: "PUT",
-                                    headers: { "Content-Type": "application/json" },
+                                   const res = await fetch("/api/admin/widget", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
                                     body: JSON.stringify({ storeId: widgetStoreId, ...widgetConfig }),
                                   });
                                   if (res.ok) {
@@ -1893,6 +2062,221 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* User Detail Modal */}
+      <AnimatePresence>
+        {viewingUser && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setViewingUser(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[2rem] p-6 md:p-8 max-w-lg w-full shadow-2xl border border-zinc-100 space-y-5 max-h-[80vh] overflow-y-auto"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center font-black italic text-base", viewingUser.isSuspended ? "bg-rose-100 text-rose-600" : "bg-red-100 text-red-600")}>
+                    {viewingUser.name?.[0]?.toUpperCase() || "?"}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black italic text-zinc-950 uppercase">{viewingUser.name}</h3>
+                    <p className="text-[10px] font-bold text-zinc-400 italic">{viewingUser.email}</p>
+                  </div>
+                </div>
+                <button onClick={() => setViewingUser(null)} className="p-2 hover:bg-zinc-100 rounded-xl transition-all">
+                  <svg className="w-5 h-5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-zinc-50 rounded-xl p-3">
+                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Plan Actual</p>
+                  <p className={cn("text-sm font-black italic", viewingUser.subscription ? "text-emerald-600" : "text-zinc-500")}>{viewingUser.subscription || "Free"}</p>
+                </div>
+                <div className="bg-zinc-50 rounded-xl p-3">
+                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Estado</p>
+                  <p className={cn("text-sm font-black italic", viewingUser.isSuspended ? "text-rose-600" : "text-emerald-600")}>{viewingUser.isSuspended ? "Suspendido" : "Activo"}</p>
+                </div>
+                <div className="bg-zinc-50 rounded-xl p-3">
+                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Empresas</p>
+                  <p className="text-sm font-black italic text-zinc-950">{viewingUser.storeCount || 0}</p>
+                </div>
+                <div className="bg-zinc-50 rounded-xl p-3">
+                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Rol</p>
+                  <p className="text-sm font-black italic text-zinc-950 uppercase">{viewingUser.role || "member"}</p>
+                </div>
+                <div className="bg-zinc-50 rounded-xl p-3">
+                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Email Verificado</p>
+                  <p className={cn("text-sm font-black italic", viewingUser.emailVerified ? "text-emerald-600" : "text-amber-600")}>{viewingUser.emailVerified ? "Sí" : "No"}</p>
+                </div>
+                <div className="bg-zinc-50 rounded-xl p-3">
+                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">ID</p>
+                  <p className="text-[9px] font-mono text-zinc-500 truncate">{viewingUser._id}</p>
+                </div>
+              </div>
+
+              {viewingUser.originalPlan && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
+                  <p className="text-[9px] font-black text-amber-600 uppercase italic">Plan Original (eliminado)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <p className="text-[8px] font-bold text-zinc-400 italic">Plan</p>
+                      <p className="text-sm font-black italic text-zinc-950">{viewingUser.originalPlanName || viewingUser.originalPlan}</p>
+                    </div>
+                    <div>
+                      <p className="text-[8px] font-bold text-zinc-400 italic">Precio</p>
+                      <p className="text-sm font-black italic text-zinc-950">${viewingUser.originalPlanPrice || "?"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[8px] font-bold text-zinc-400 italic">Migrado a</p>
+                      <p className="text-sm font-black italic text-emerald-600">{viewingUser.subscription || "Free"}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    if (viewingUser.isSuspended) {
+                      handleToggleUserSuspend(viewingUser._id);
+                      setViewingUser(null);
+                    } else {
+                      setConfirmingId(viewingUser._id);
+                      setConfirmingType('user');
+                      setViewingUser(null);
+                    }
+                  }}
+                  className={cn("flex-1 py-3 rounded-xl font-black italic text-xs transition-all", viewingUser.isSuspended ? "bg-emerald-100 text-emerald-600 hover:bg-emerald-200" : "bg-rose-100 text-rose-600 hover:bg-rose-200")}
+                >
+                  {viewingUser.isSuspended ? "ACTIVAR" : "SUSPENDER"}
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setViewingUser(null)}
+                  className="flex-1 py-3 bg-zinc-50 text-zinc-500 rounded-xl font-black italic text-xs hover:bg-zinc-100 transition-all"
+                >
+                  CERRAR
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Store Detail Modal */}
+      <AnimatePresence>
+        {viewingStore && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setViewingStore(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[2rem] p-6 md:p-8 max-w-lg w-full shadow-2xl border border-zinc-100 space-y-5 max-h-[80vh] overflow-y-auto"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", viewingStore.isSuspended ? "bg-rose-100 text-rose-600" : "bg-red-100 text-red-600")}>
+                    <Store className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black italic text-zinc-950 uppercase">{viewingStore.name}</h3>
+                    <p className="text-[10px] font-bold text-zinc-400 italic">{viewingStore.ownerEmail}</p>
+                  </div>
+                </div>
+                <button onClick={() => setViewingStore(null)} className="p-2 hover:bg-zinc-100 rounded-xl transition-all">
+                  <svg className="w-5 h-5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-zinc-50 rounded-xl p-3">
+                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Tipo</p>
+                  <p className="text-sm font-black italic text-zinc-950">{viewingStore.typeLabel || viewingStore.type}</p>
+                </div>
+                <div className="bg-zinc-50 rounded-xl p-3">
+                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Estado</p>
+                  <p className={cn("text-sm font-black italic", viewingStore.isSuspended ? "text-rose-600" : "text-emerald-600")}>{viewingStore.isSuspended ? "Suspendida" : "Activa"}</p>
+                </div>
+                <div className="bg-zinc-50 rounded-xl p-3">
+                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Productos</p>
+                  <p className="text-sm font-black italic text-zinc-950">{viewingStore.productCount || 0}</p>
+                </div>
+                <div className="bg-zinc-50 rounded-xl p-3">
+                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Clientes</p>
+                  <p className="text-sm font-black italic text-zinc-950">{viewingStore.customerCount || 0}</p>
+                </div>
+                <div className="bg-zinc-50 rounded-xl p-3">
+                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Pedidos</p>
+                  <p className="text-sm font-black italic text-zinc-950">{viewingStore.orderCount || 0}</p>
+                </div>
+                <div className="bg-zinc-50 rounded-xl p-3">
+                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Stripe Connect</p>
+                  <p className={cn("text-sm font-black italic", viewingStore.stripeConnectStatus === "active" ? "text-emerald-600" : viewingStore.stripeConnectStatus === "pending" ? "text-amber-600" : "text-zinc-400")}>{viewingStore.stripeConnectStatus === "active" ? "Conectado ✓" : viewingStore.stripeConnectStatus === "pending" ? "Pendiente" : "No conectado"}</p>
+                </div>
+                {viewingStore.stripeAccountEmail && (
+                  <div className="bg-zinc-50 rounded-xl p-3">
+                    <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Email Stripe</p>
+                    <p className="text-[9px] font-bold text-zinc-600 italic truncate">{viewingStore.stripeAccountEmail}</p>
+                  </div>
+                )}
+                <div className="bg-zinc-50 rounded-xl p-3">
+                  <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">ID</p>
+                  <p className="text-[9px] font-mono text-zinc-500 truncate">{viewingStore._id}</p>
+                </div>
+              </div>
+
+              {viewingStore.isSuspended && (
+                <div className="bg-rose-50 border border-rose-200 rounded-xl p-3">
+                  <p className="text-[8px] font-black text-rose-600 uppercase italic mb-1">Razón de suspensión</p>
+                  <p className="text-xs font-bold text-rose-700 italic">{viewingStore.suspensionReason || "Sin razón especificada"}</p>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    if (viewingStore.isSuspended) {
+                      handleToggleSuspend(viewingStore._id);
+                      setViewingStore(null);
+                    } else {
+                      setConfirmingId(viewingStore._id);
+                      setConfirmingType('store');
+                      setViewingStore(null);
+                    }
+                  }}
+                  className={cn("flex-1 py-3 rounded-xl font-black italic text-xs transition-all", viewingStore.isSuspended ? "bg-emerald-100 text-emerald-600 hover:bg-emerald-200" : "bg-rose-100 text-rose-600 hover:bg-rose-200")}
+                >
+                  {viewingStore.isSuspended ? "ACTIVAR" : "SUSPENDER"}
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setViewingStore(null)}
+                  className="flex-1 py-3 bg-zinc-50 text-zinc-500 rounded-xl font-black italic text-xs hover:bg-zinc-100 transition-all"
+                >
+                  CERRAR
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1943,7 +2327,7 @@ function AdminRevenuePanel() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/stripe/platform-revenue");
+      const res = await fetch("/api/stripe/platform-revenue", { credentials: "include" });
       const d = await res.json();
       setData(d);
     } catch {} finally {

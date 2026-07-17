@@ -102,13 +102,26 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeMessage, setUpgradeMessage] = useState("");
 
-  const isFreePlan = !planLimits || planLimits.maxStores <= 1;
+  const isFreePlan = !planLimits || planLimits.maxCustomers === 0;
 
   const handleSectionChange = (newSection: string) => {
-    if (isFreePlan && (newSection === "analytics" || newSection === "campaigns")) {
-      setUpgradeMessage(newSection === "analytics" ? "Analytics está disponible desde el plan Starter ($29/mes)" : "Las campañas están disponibles desde el plan Starter ($29/mes)");
-      setShowUpgradeModal(true);
-      return;
+    if (isFreePlan) {
+      const freeGated = ["analytics", "campaigns", "customers", "agentconfig", "gallery", "team", "smartforms", "knowledgebase"];
+      if (freeGated.includes(newSection)) {
+        const messages: Record<string, string> = {
+          analytics: "Analytics está disponible desde el plan Starter ($29/mes)",
+          campaigns: "Las campañas están disponibles desde el plan Starter ($29/mes)",
+          customers: "Los clientes están disponibles desde el plan Starter ($29/mes)",
+          agentconfig: "La configuración del agente IA está disponible desde el plan Starter ($29/mes)",
+          gallery: "La galería está disponible desde el plan Starter ($29/mes)",
+          team: "El equipo está disponible desde el plan Business ($79/mes)",
+          smartforms: "Los formularios inteligentes están disponibles desde el plan Business ($79/mes)",
+          knowledgebase: "La base de conocimiento está disponible desde el plan Starter ($29/mes)",
+        };
+        setUpgradeMessage(messages[newSection] || "Esta función está disponible desde un plan superior");
+        setShowUpgradeModal(true);
+        return;
+      }
     }
     setSection(newSection);
   };
@@ -704,7 +717,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
               >
                 <span className="w-3.5 h-3.5">{MODULE_ICONS[mod.icon]}</span>
                 {t(mod.nameKey)}
-                {isFreePlan && (mod.sectionKey === "analytics" || mod.sectionKey === "campaigns") && (
+                {isFreePlan && ["analytics", "campaigns", "customers", "agentconfig", "gallery", "team", "smartforms", "knowledgebase"].includes(mod.sectionKey) && (
                   <span className="text-[7px] bg-amber-100 text-amber-600 px-1 py-0.5 rounded-full font-black">PRO</span>
                 )}
               </motion.button>
@@ -725,6 +738,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       label={t(mod.nameKey)}
                       active={section === mod.sectionKey}
                       onClick={() => handleSectionChange(mod.sectionKey)}
+                      badge={isFreePlan && ["analytics", "campaigns", "customers", "agentconfig", "gallery", "team", "smartforms", "knowledgebase"].includes(mod.sectionKey) ? "PRO" : undefined}
                     />
                   ))}
                 </div>
@@ -2951,10 +2965,11 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
 
 
-function SideBtn({ icon, label, active, onClick }: { icon: any; label: string; active: boolean; onClick: () => void }) {
+function SideBtn({ icon, label, active, onClick, badge }: { icon: any; label: string; active: boolean; onClick: () => void; badge?: string }) {
   return (
     <motion.button whileTap={{ scale: 0.95 }} onClick={onClick} className={cn("w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl font-black text-xs italic transition-all", active ? "bg-red-600 text-white shadow-lg shadow-red-100" : "text-zinc-500 hover:bg-zinc-100")}>
       {icon ? React.cloneElement(icon, { className: "w-4 h-4" }) : null} {label}
+      {badge && <span className="text-[7px] bg-amber-100 text-amber-600 px-1 py-0.5 rounded-full font-black ml-auto">{badge}</span>}
     </motion.button>
   );
 }

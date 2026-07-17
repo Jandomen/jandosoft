@@ -4,6 +4,7 @@ import { PlanConfig, DEFAULT_PLANS, DEFAULT_FREE_PLAN } from "@/lib/models/PlanC
 import { invalidatePlanCache } from "@/lib/plan-config";
 import { verifyAdminAuth } from "@/lib/admin-middleware";
 import { stripe } from "@/lib/stripe";
+import { User } from "@/lib/models/User";
 
 export const dynamic = "force-dynamic";
 
@@ -126,5 +127,57 @@ export async function PUT(req: NextRequest) {
   } catch (error) {
     console.error("PUT plans error:", error);
     return NextResponse.json({ error: "Error updating plans" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const authResult = await verifyAdminAuth(req);
+  if ("error" in authResult) return authResult.error;
+
+  try {
+    const { planId } = await req.json();
+    if (!planId) return NextResponse.json({ error: "planId required" }, { status: 400 });
+
+    await connectDB();
+    const config = await PlanConfig.findOne();
+    if (!config) return NextResponse.json({ error: "No plan config found" }, { status: 404 });
+
+    const planIndex = config.plans.findIndex((p: any) => p.id === planId);
+    if (planIndex === -1) return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+
+    const plan = config.plans[planIndex];
+
+    // Save original plan info on users before migrating
+    await User.updateMany(
+      { subscription: planId, originalPlan: { $exists: false } },
+      { $set: { originalPlan: planId, originalPlanName: plan.name, originalPlanPrice: plan.priceUsd || plan.price } }
+    );
+
+    // Deactivate Stripe price if exists
+    if (plan.stripePriceId) {
+      try { await stripe.prices.update(plan.stripePriceId, { active: false }); } catch {}
+    }
+
+    // Migrate users on this plan to "starter" (or free if starter doesn't exist)
+    const fallbackPlan = config.plans.find((p: any) => p.id === "starter") ? "starter" : null;
+    const migrateResult = await User.updateMany(
+      { subscription: planId },
+      { $set: { subscription: fallbackPlan } }
+    );
+
+    // Remove plan from config
+    config.plans.splice(planIndex, 1);
+    await config.save();
+    invalidatePlanCache();
+
+    return NextResponse.json({
+      success: true,
+      deletedPlan: planId,
+      migratedUsers: migrateResult.modifiedCount,
+      fallbackPlan: fallbackPlan || "free",
+    });
+  } catch (error) {
+    console.error("DELETE plan error:", error);
+    return NextResponse.json({ error: "Error deleting plan" }, { status: 500 });
   }
 }

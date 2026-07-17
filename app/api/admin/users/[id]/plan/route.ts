@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { verifyAdminAuth } from "@/lib/admin-middleware";
+import { getPlanConfig } from "@/lib/plan-config";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const authResult = await verifyAdminAuth(req);
@@ -19,7 +20,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await connectDB();
 
     const update: Record<string, any> = {};
-    if (subscription) update.subscription = subscription;
+    if (subscription) {
+      update.subscription = subscription;
+      // Save original plan info if user doesn't have one yet
+      const existingUser = await User.findById(id).lean();
+      if (existingUser && !(existingUser as any).originalPlan && subscription !== "free") {
+        const config = await getPlanConfig();
+        const plan = config.plans.find((p) => p.id === subscription);
+        if (plan) {
+          update.originalPlan = plan.id;
+          update.originalPlanName = plan.name;
+          update.originalPlanPrice = plan.priceUsd || plan.price;
+        }
+      }
+    }
     if (subscriptionExpiry) update.subscriptionExpiry = new Date(subscriptionExpiry);
 
     const user = await User.findByIdAndUpdate(id, { $set: update }, { new: true }).lean();
