@@ -169,10 +169,11 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
         id: Math.random().toString(36).slice(2, 10).toUpperCase(),
         date: new Date().toLocaleString(),
         userEmail: userEmail,
-        amount: plan.price,
+        amount: plan.priceUsd || plan.price,
         currency: "USD",
         items: [`Plan ${plan.name}`],
         paymentMethod: "stripe",
+        planId: plan.id,
       };
       onPaymentSuccess(transaction);
     }
@@ -187,7 +188,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
         <p className="text-zinc-500 mb-10 max-[400px]:text-sm text-lg font-medium leading-relaxed max-w-sm font-black italic">
           {t("plans.success_desc").replace("{plan}", selectedPlan?.toUpperCase() ?? "")}
         </p>
-        <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setIsBought(false); setSelectedPlan(null); }} className="max-[400px]:px-8 max-[400px]:py-4 max-[400px]:text-base px-12 py-5 bg-red-600 text-white rounded-2xl font-black text-xl hover:bg-red-700 transition-all shadow-2xl shadow-red-200 uppercase tracking-widest italic">
+        <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setIsBought(false); setSelectedPlan(null); onLoginRequest?.(); }} className="max-[400px]:px-8 max-[400px]:py-4 max-[400px]:text-base px-12 py-5 bg-red-600 text-white rounded-2xl font-black text-xl hover:bg-red-700 transition-all shadow-2xl shadow-red-200 uppercase tracking-widest italic">
           {t("plans.continue")}
         </motion.button>
       </div>
@@ -212,20 +213,9 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
           {t("plans.subtitle")}
         </p>
 
-        <div className="flex items-center justify-center gap-2 mt-4">
-          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Moneda:</span>
-          <select
-            value={geo.currencyCode}
-            onChange={(e) => geo.setCurrency(e.target.value)}
-            className="text-xs font-bold text-zinc-700 bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-red-600/10 focus:border-red-300 cursor-pointer"
-          >
-            {geo.CURRENCY_OPTIONS.map((opt) => (
-              <option key={opt.code} value={opt.code}>
-                {opt.flag} {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider mt-2">
+          {geo.currencyCode === "MXN" ? "Se cobra en Pesos Mexicanos (MXN)" : "Se cobra en la moneda de tu país"}
+        </p>
       </div>
 
       {/* Carousel */}
@@ -283,7 +273,12 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
                   </div>
 
                   <div className="flex items-baseline justify-center gap-1">
-                    {plan.currency && plan.currency !== "usd" ? (
+                    {geo.currencyCode === "MXN" ? (
+                      <>
+                        <span className="text-5xl md:text-6xl font-black italic text-zinc-950 tracking-tighter">MX${Math.round((plan.priceUsd || plan.price) * 20.5).toLocaleString()}</span>
+                        <span className="text-[10px] text-zinc-400 font-medium ml-1">MXN</span>
+                      </>
+                    ) : plan.currency && plan.currency !== "usd" ? (
                       <>
                         <span className="text-5xl md:text-6xl font-black italic text-zinc-950 tracking-tighter">{getCurrency(plan.currency).symbol}{plan.price.toLocaleString()}</span>
                         {plan.priceUsd && plan.priceUsd > 0 && (
@@ -489,6 +484,10 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
                   Plan {plans.find(p => p.id === pendingPlanId)?.name || ""} — {(() => {
                     const plan = plans.find(p => p.id === pendingPlanId);
                     if (!plan) return "";
+                    const usdPrice = plan.priceUsd || plan.price || 0;
+                    if (geo.currencyCode === "MXN") {
+                      return `MX$${Math.round(usdPrice * 20.5).toLocaleString()} MXN/mes`;
+                    }
                     if (plan.priceUsd && plan.priceUsd > 0) return `$${plan.priceUsd} USD/mes`;
                     return `$${plan.price} USD/mes`;
                   })()}

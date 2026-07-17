@@ -62,6 +62,8 @@ async function sendReceiptForPayment(payment: any) {
   }
 }
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.text();
@@ -77,6 +79,8 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
+    console.log(`[Webhook] Received event: ${event.type}`);
+
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
@@ -88,6 +92,8 @@ export async function POST(req: NextRequest) {
           const planId = metadata.planId;
           const subscriptionId = session.subscription as string;
 
+          console.log(`[Webhook] checkout.session.completed: email=${email} planId=${planId} sub=${subscriptionId}`);
+
           if (email && subscriptionId) {
             const sub = await stripe.subscriptions.retrieve(subscriptionId) as any;
             const expiry = new Date(sub.current_period_end * 1000);
@@ -96,7 +102,7 @@ export async function POST(req: NextRequest) {
             const plan = config.plans.find((p) => p.id === planId);
             const subType = plan?.id || "starter";
 
-            await User.findOneAndUpdate(
+            const result = await User.findOneAndUpdate(
               { email },
               {
                 subscription: subType,
@@ -106,6 +112,8 @@ export async function POST(req: NextRequest) {
                 stripeCustomerId: session.customer as string,
               }
             );
+
+            console.log(`[Webhook] User updated: ${result ? "OK" : "NOT FOUND"} email=${email} plan=${subType}`);
           }
         } else if (metadata.type === "appointment_payment" && metadata.appointmentId) {
           if (piId) {

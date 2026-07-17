@@ -363,10 +363,8 @@ export default function Page() {
 
   const handlePaymentSuccess = async (transaction: any) => {
     setTransactions(prev => [transaction, ...prev]);
-    const planName = transaction.items[0] || "";
-    let subType = "starter";
-    if (planName.toLowerCase().includes("business")) subType = "business";
-    else if (planName.toLowerCase().includes("enterprise")) subType = "enterprise";
+    const planId = transaction.planId || "";
+    const subType = planId || "starter";
     const expiry = new Date();
     expiry.setDate(expiry.getDate() + 30);
     setUser(prev => ({ ...prev, subscription: subType, subscriptionExpiry: expiry }));
@@ -382,6 +380,8 @@ export default function Page() {
     } catch (e) {
       console.error("Network error updating subscription:", e);
     }
+    setActiveTab("dashboard");
+    showToast(`Plan ${subType.toUpperCase()} activado correctamente`, "success");
   };
   const { showToast, ToastComponent } = useToast();
 
@@ -713,7 +713,7 @@ export default function Page() {
                   <SideNavItem2 icon={<Megaphone className="w-4 h-4" />} label={t("nav.campaigns")} active={activeTab === "business" && businessSection === "campaigns"} onClick={() => { if (activeStoreId) { setBusinessSection("campaigns"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
                 </div>
                 <div>
-                  <SideNavItem2 icon={<Package className="w-4 h-4" />} label={t("nav.plans")} active={activeTab === "pricing"} onClick={() => setActiveTab("pricing")} dataTour="explore" />
+                  <SideNavItem2 icon={<Package className="w-4 h-4" />} label={user.subscription ? (t("nav.update_plan") || "Actualizar Plan") : t("nav.plans")} active={activeTab === "pricing"} onClick={() => setActiveTab("pricing")} dataTour="explore" />
                 </div>
 
                 <div>
@@ -751,7 +751,7 @@ export default function Page() {
               <MobileNavItem icon={<LayoutDashboard className="w-5 h-5" />} label={t("nav.mystores")} active={activeTab === "dashboard"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("dashboard"); }} dataTour="create_store" />
               <MobileNavItem icon={<Package className="w-5 h-5" />} label={t("nav.products")} active={activeTab === "business" && businessSection === "products"} onClick={() => { setMobileDrawerOpen(false); if (activeStoreId) { setBusinessSection("products"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
               <MobileNavItem icon={<Bot className="w-5 h-5" />} label={t("nav.chat")} active={activeTab === "chat"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("chat"); }} dataTour="chat" />
-              <MobileNavItem icon={<CreditCard className="w-5 h-5" />} label={t("nav.plans")} active={activeTab === "pricing"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("pricing"); }} />
+              <MobileNavItem icon={<CreditCard className="w-5 h-5" />} label={user.subscription ? (t("nav.update_plan") || "Actualizar") : t("nav.plans")} active={activeTab === "pricing"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("pricing"); }} />
               <MobileNavItem icon={<Menu className="w-5 h-5" />} label={t("nav.menu")} active={mobileDrawerOpen} onClick={() => setMobileDrawerOpen(true)} />
             </>
           ) : (
@@ -856,7 +856,7 @@ export default function Page() {
                       <MobileDrawerItem icon={<Settings className="w-4 h-4" />} label={t("nav.config")} active={activeTab === "business" && businessSection === "orgsettings"} onClick={() => { setMobileDrawerOpen(false); if (activeStoreId) { setBusinessSection("orgsettings"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
                       <MobileDrawerItem icon={<User className="w-4 h-4" />} label={t("nav.profile")} active={activeTab === "profile"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("profile"); }} />
                     </MobileDrawerGroup>
-                    <MobileDrawerItem icon={<Package className="w-4 h-4" />} label={t("nav.plans")} active={activeTab === "pricing"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("pricing"); }} dataTour="explore" />
+                    <MobileDrawerItem icon={<Package className="w-4 h-4" />} label={user.subscription ? (t("nav.update_plan") || "Actualizar Plan") : t("nav.plans")} active={activeTab === "pricing"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("pricing"); }} dataTour="explore" />
                   </>
                 ) : (
                   <>

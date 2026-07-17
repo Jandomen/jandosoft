@@ -12,6 +12,7 @@ export interface PlanConfig {
   id: string;
   name: string;
   price: number;
+  priceUsd?: number;
   desc: string;
   descKey?: string;
   nameKey?: string;
@@ -48,6 +49,7 @@ export const PLANS: PlanConfig[] = [
     desc: "Perfecto para emprender tu negocio digital",
     descKey: "plans.starter_desc",
     popular: false,
+    priceUsd: 29,
     features: ["plans.feature.products", "plans.feature.customers", "plans.feature.orders", "plans.feature.invoicing", "plans.feature.basic_ai", "plans.feature.auto_emails"],
     limits: { maxStores: 3, maxProductsPerStore: 50, maxMessages: 50, maxAutomations: 10, maxAppointments: 50, maxCampaigns: 20, maxCustomers: 200 },
   },
@@ -60,6 +62,7 @@ export const PLANS: PlanConfig[] = [
     descKey: "plans.business_desc",
     popular: true,
     inherits: "starter",
+    priceUsd: 79,
     features: ["plans.feature.campaigns", "plans.feature.automations", "plans.feature.analytics", "plans.feature.knowledge_base", "plans.feature.appointments", "plans.feature.integrations", "plans.feature.whatsapp", "plans.feature.communications", "plans.feature.social_media"],
     limits: { maxStores: 20, maxProductsPerStore: 500, maxMessages: 200, maxAutomations: 50, maxAppointments: 500, maxCampaigns: 100, maxCustomers: 5000 },
   },
@@ -72,6 +75,7 @@ export const PLANS: PlanConfig[] = [
     descKey: "plans.enterprise_desc",
     popular: false,
     inherits: "business",
+    priceUsd: 199,
     features: ["plans.feature.api", "plans.feature.smart_forms", "plans.feature.advanced_integrations", "plans.feature.advanced_ai", "plans.feature.priority_support", "plans.feature.multi_user"],
     limits: { maxStores: 999, maxProductsPerStore: 9999, maxMessages: 999, maxAutomations: 999, maxAppointments: 9999, maxCampaigns: 9999, maxCustomers: 99999 },
   },

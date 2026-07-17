@@ -601,6 +601,28 @@ export default function UserDashboard({
           >
             {t("user.ai_support")}
           </motion.button>
+
+          {user.subscription && !isExpired && (
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onNavigate("pricing")}
+              className="w-full sm:w-auto px-5 py-3 bg-white/20 backdrop-blur-xl text-white border border-white/20 rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs uppercase tracking-wide sm:tracking-widest hover:bg-white hover:text-zinc-950 transition-all italic shadow-2xl flex items-center justify-center gap-2"
+            >
+              <Zap className="w-3 h-3" />
+              {t("user.update_plan") || "ACTUALIZAR PLAN"}
+            </motion.button>
+          )}
+
+          {!user.subscription && (
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onNavigate("pricing")}
+              className="w-full sm:w-auto px-5 py-3 bg-red-600 text-white rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs uppercase tracking-wide sm:tracking-widest hover:bg-red-700 transition-all italic shadow-2xl flex items-center justify-center gap-2"
+            >
+              <Zap className="w-3 h-3" />
+              {t("user.get_plan") || "OBTENER PLAN"}
+            </motion.button>
+          )}
         </div>
       </header>
 
