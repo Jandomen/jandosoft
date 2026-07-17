@@ -1330,32 +1330,13 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Precio (USD)</label>
-                                  <input type="number" step="0.01" value={(editForm.priceUsd || editForm.price || 0).toString()} onChange={(e) => {
-                                    const priceUsd = parseFloat(e.target.value) || 0;
-                                    setEditForm({...editForm, price: priceUsd, priceUsd});
-                                  }} className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic" />
-                                  <p className="text-[8px] text-zinc-400 font-medium italic ml-1">El usuario siempre paga en USD. El display muestra el equivalente local.</p>
-                                </div>
-                                <div className="space-y-1.5">
-                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Moneda display</label>
-                                  <select value={editForm.currency || "usd"} onChange={(e) => {
-                                    setEditForm({...editForm, currency: e.target.value});
-                                  }} className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic">
-                                    <option value="usd">USD ($ Dólares)</option>
-                                    <option value="mxn">MXN ($ Pesos Mexicanos)</option>
-                                    <option value="eur">EUR (€ Euros)</option>
-                                    <option value="cop">COL ($ Pesos Colombianos)</option>
-                                    <option value="ars">ARS ($ Pesos Argentinos)</option>
-                                    <option value="brl">BRL (R$ Reales)</option>
-                                    <option value="pen">PEN (S/ Soles)</option>
-                                    <option value="clp">CLP ($ Pesos Chilenos)</option>
-                                    <option value="uyu">UYU ($ Pesos Uruguayos)</option>
-                                    <option value="gbp">GBP (£ Libras)</option>
-                                  </select>
-                                </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Precio (USD/mes)</label>
+                                <input type="number" step="0.01" value={(editForm.price || 0).toString()} onChange={(e) => {
+                                  const price = parseFloat(e.target.value) || 0;
+                                  setEditForm({...editForm, price, priceUsd: price});
+                                }} className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic" />
+                                <p className="text-[8px] text-zinc-400 font-medium italic ml-1">El display muestra el equivalente en la moneda del usuario automáticamente.</p>
                               </div>
 
                               <div className="space-y-2">
