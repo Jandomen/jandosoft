@@ -29,19 +29,16 @@ export async function GET(req: Request) {
   }
 }
 
-async function syncPlanToStripe(plan: any): Promise<{ productId?: string; priceId?: string; priceIdUsd?: string }> {
-  if (plan.price === 0) return {};
+async function syncPlanToStripe(plan: any): Promise<{ productId?: string; priceId?: string }> {
+  const usdPrice = plan.priceUsd || plan.price;
+  if (!usdPrice || usdPrice <= 0) return {};
 
   let productId = plan.stripeProductId;
-  let priceId = plan.stripePriceId;
-  let priceIdUsd = plan.stripePriceIdUsd;
 
   if (productId) {
     try {
       await stripe.products.update(productId, { name: plan.name, description: plan.desc || "" });
-    } catch {
-      productId = undefined;
-    }
+    } catch { productId = undefined; }
   }
 
   if (!productId) {
@@ -53,12 +50,10 @@ async function syncPlanToStripe(plan: any): Promise<{ productId?: string; priceI
     productId = product.id;
   }
 
-  const planCurrency = (plan.currency || "usd").toLowerCase();
-
   const monthlyPrice = await stripe.prices.create({
     product: productId,
-    unit_amount: plan.price * 100,
-    currency: planCurrency,
+    unit_amount: Math.round(usdPrice * 100),
+    currency: "usd",
     recurring: { interval: "month" },
     metadata: { plan_id: plan.id },
   });
@@ -66,23 +61,8 @@ async function syncPlanToStripe(plan: any): Promise<{ productId?: string; priceI
   if (plan.stripePriceId && plan.stripePriceId !== monthlyPrice.id) {
     try { await stripe.prices.update(plan.stripePriceId, { active: false }); } catch {}
   }
-  priceId = monthlyPrice.id;
 
-  if (planCurrency !== "usd" && plan.priceUsd && plan.priceUsd > 0) {
-    const usdPrice = await stripe.prices.create({
-      product: productId,
-      unit_amount: plan.priceUsd * 100,
-      currency: "usd",
-      recurring: { interval: "month" },
-      metadata: { plan_id: plan.id, currency: "usd" },
-    });
-    if (plan.stripePriceIdUsd && plan.stripePriceIdUsd !== usdPrice.id) {
-      try { await stripe.prices.update(plan.stripePriceIdUsd, { active: false }); } catch {}
-    }
-    priceIdUsd = usdPrice.id;
-  }
-
-  return { productId, priceId, priceIdUsd };
+  return { productId, priceId: monthlyPrice.id };
 }
 
 export async function PUT(req: NextRequest) {
@@ -107,15 +87,23 @@ export async function PUT(req: NextRequest) {
     await config.save();
     invalidatePlanCache();
 
+    const results: any[] = [];
     const syncErrors: string[] = [];
+
     for (let i = 0; i < config.plans.length; i++) {
       const plan = config.plans[i];
-      if (plan.price > 0) {
+      const usdPrice = plan.priceUsd || plan.price;
+
+      if (usdPrice > 0 && usdPrice < 0.50) {
+        syncErrors.push(`${plan.name}: precio USD $${usdPrice} menor al mínimo ($0.50). Sube el precio.`);
+        continue;
+      }
+      if (usdPrice > 0) {
         try {
-          const { productId, priceId, priceIdUsd } = await syncPlanToStripe(plan);
+          const { productId, priceId } = await syncPlanToStripe(plan);
           if (productId) config.plans[i].stripeProductId = productId;
           if (priceId) config.plans[i].stripePriceId = priceId;
-          if (priceIdUsd) config.plans[i].stripePriceIdUsd = priceIdUsd;
+          if (priceId) config.plans[i].stripePriceIdUsd = priceId;
         } catch (err: any) {
           syncErrors.push(`${plan.name}: ${err.message}`);
         }

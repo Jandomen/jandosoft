@@ -21,6 +21,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useGeoCurrency } from "@/lib/hooks/useGeoCurrency";
 import { PLANS, FREE_PLAN, buildComparisonFeatures, inheritFeatures } from "@/lib/plans";
+import { getCurrency } from "@/components/business/currency";
 
 interface PlansProps {
   currency: string;
@@ -60,7 +61,6 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
   const [freePlan] = useState<any>(FREE_PLAN);
   const [comparisonFeatures, setComparisonFeatures] = useState<any[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [payCurrency, setPayCurrency] = useState<"local" | "usd">("local");
   const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
 
   const PLAN_PAYMENT_METHODS = [
@@ -71,8 +71,6 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
   const handlePlanClick = (planId: string) => {
     if (!isLogged) { onLoginRequest?.(); return; }
     if (!userEmail) { showToast(t("plans.not_logged"), "info"); return; }
-    const plan = plans.find((p) => p.id === planId);
-    setPayCurrency(plan?.currency && plan.currency !== "usd" ? "local" : "usd");
     setPendingPlanId(planId);
     setShowPaymentModal(true);
   };
@@ -85,6 +83,9 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
     setIsProcessing(true);
 
     try {
+      const plan = plans.find(p => p.id === pendingPlanId);
+      const usdPrice = plan?.priceUsd || plan?.price || 0;
+
       const res = await fetch("/api/plan-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -93,7 +94,8 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
           name: userEmail?.split("@")[0] || "Customer",
           planId: pendingPlanId,
           paymentMethod,
-          payCurrency,
+          amount: usdPrice,
+          currency: "usd",
         }),
       });
       const data = await res.json();
@@ -158,66 +160,6 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
-
-  const handleSelectPlan = async (planId: string, payCurrency?: "local" | "usd") => {
-    const plan = plans.find((p) => p.id === planId);
-    if (!plan) return;
-
-    if (!isLogged) {
-      onLoginRequest?.();
-      return;
-    }
-
-    if (!userEmail) {
-      showToast(t("plans.not_logged"), "info");
-      return;
-    }
-
-    setSelectedPlan(planId);
-    setStripeError(null);
-    setIsProcessing(true);
-
-    try {
-      const body: any = {
-        customerEmail: userEmail,
-        customerName: userEmail?.split("@")[0] || "Customer",
-        description: `Plan ${plan.name} - Jandosoft`,
-        planId: plan.id,
-      };
-
-      const useUsd = payCurrency === "usd" || (!payCurrency && (!plan.currency || plan.currency === "usd"));
-
-      if (useUsd && plan.stripePriceIdUsd) {
-        body.priceId = plan.stripePriceIdUsd;
-      } else if (!useUsd && plan.stripePriceId) {
-        body.priceId = plan.stripePriceId;
-      } else if (plan.stripePriceId) {
-        body.priceId = plan.stripePriceId;
-      } else if (plan.stripePriceIdUsd) {
-        body.priceId = plan.stripePriceIdUsd;
-      } else {
-        body.amount = useUsd && plan.priceUsd ? plan.priceUsd : plan.price;
-        body.currency = useUsd ? "usd" : (plan.currency || "usd");
-      }
-
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        setStripeError(data.error || t("plans.payment_error"));
-        setIsProcessing(false);
-      }
-    } catch {
-      setStripeError(t("plans.connection_error"));
-      setIsProcessing(false);
-    }
-  };
 
   useEffect(() => {
     if (isBought && selectedPlan) {
@@ -341,11 +283,17 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
                   </div>
 
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-5xl md:text-6xl font-black italic text-zinc-950 tracking-tighter">{geo.formatPrice(plan.price)}</span>
-                    <span className="text-zinc-400 font-black text-sm italic uppercase">{t("plans.per_month")}</span>
-                    {plan.currency && plan.currency !== "usd" && plan.priceUsd && (
-                      <span className="text-[10px] text-zinc-400 font-medium ml-1">(${plan.priceUsd} USD)</span>
+                    {plan.currency && plan.currency !== "usd" ? (
+                      <>
+                        <span className="text-5xl md:text-6xl font-black italic text-zinc-950 tracking-tighter">{getCurrency(plan.currency).symbol}{plan.price.toLocaleString()}</span>
+                        {plan.priceUsd && plan.priceUsd > 0 && (
+                          <span className="text-[10px] text-zinc-400 font-medium ml-1">(${plan.priceUsd} USD)</span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-5xl md:text-6xl font-black italic text-zinc-950 tracking-tighter">{geo.formatPrice(plan.price)}</span>
                     )}
+                    <span className="text-zinc-400 font-black text-sm italic uppercase">{t("plans.per_month")}</span>
                   </div>
 
                   <div className="space-y-3 flex-1">
@@ -538,26 +486,14 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
               <div className="text-center mb-6">
                 <h3 className="text-xl font-black italic text-zinc-950 uppercase tracking-tighter">Elige método de pago</h3>
                 <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1 italic">
-                  Plan {plans.find(p => p.id === pendingPlanId)?.name || ""}
+                  Plan {plans.find(p => p.id === pendingPlanId)?.name || ""} — {(() => {
+                    const plan = plans.find(p => p.id === pendingPlanId);
+                    if (!plan) return "";
+                    if (plan.priceUsd && plan.priceUsd > 0) return `$${plan.priceUsd} USD/mes`;
+                    return `$${plan.price} USD/mes`;
+                  })()}
                 </p>
               </div>
-
-              {(() => {
-                const plan = plans.find(p => p.id === pendingPlanId);
-                const hasBothCurrencies = plan?.currency && plan.currency !== "usd" && plan.stripePriceIdUsd;
-                if (!hasBothCurrencies) return null;
-                const localSymbol = plan.currency === "mxn" ? "MXN" : plan.currency === "eur" ? "EUR" : plan.currency === "cop" ? "COP" : plan.currency?.toUpperCase() || "LOCAL";
-                return (
-                  <div className="flex gap-2 mb-4 p-1 bg-zinc-100 rounded-xl">
-                    <button onClick={() => setPayCurrency("local")} className={cn("flex-1 py-2.5 rounded-lg text-[10px] font-black italic uppercase transition-all", payCurrency === "local" ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-zinc-600")}>
-                      {localSymbol} ${plan.price}
-                    </button>
-                    <button onClick={() => setPayCurrency("usd")} className={cn("flex-1 py-2.5 rounded-lg text-[10px] font-black italic uppercase transition-all", payCurrency === "usd" ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-zinc-600")}>
-                      USD ${plan.priceUsd}
-                    </button>
-                  </div>
-                );
-              })()}
 
               <div className="space-y-2">
                 {PLAN_PAYMENT_METHODS.map((method) => {

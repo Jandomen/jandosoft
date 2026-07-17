@@ -19,19 +19,20 @@ export async function POST() {
 
     for (let i = 0; i < config.plans.length; i++) {
       const plan = config.plans[i];
-      if (!plan.price || plan.price <= 0) continue;
+      const usdPrice = plan.priceUsd || plan.price;
+      if (!usdPrice || usdPrice <= 0) continue;
+      if (usdPrice < 0.50) {
+        errors.push({ plan: plan.id, name: plan.name, error: `USD $${usdPrice} menor al mínimo ($0.50). Sube el precio.` });
+        continue;
+      }
 
       try {
         let productId = plan.stripeProductId;
-
         if (productId) {
           try {
             await stripe.products.update(productId, { name: plan.name, description: plan.desc || "" });
-          } catch {
-            productId = undefined;
-          }
+          } catch { productId = undefined; }
         }
-
         if (!productId) {
           const product = await stripe.products.create({
             name: plan.name,
@@ -41,46 +42,27 @@ export async function POST() {
           productId = product.id;
         }
 
-        const planCurrency = (plan.currency || "usd").toLowerCase();
-
-        const monthlyPrice = await stripe.prices.create({
+        const usdPriceStripe = await stripe.prices.create({
           product: productId,
-          unit_amount: plan.price * 100,
-          currency: planCurrency,
+          unit_amount: Math.round(usdPrice * 100),
+          currency: "usd",
           recurring: { interval: "month" },
           metadata: { plan_id: plan.id },
         });
 
-        if (plan.stripePriceId && plan.stripePriceId !== monthlyPrice.id) {
+        if (plan.stripePriceId && plan.stripePriceId !== usdPriceStripe.id) {
           try { await stripe.prices.update(plan.stripePriceId, { active: false }); } catch {}
         }
 
         config.plans[i].stripeProductId = productId;
-        config.plans[i].stripePriceId = monthlyPrice.id;
-
-        let priceIdUsd = plan.stripePriceIdUsd;
-
-        if (planCurrency !== "usd" && plan.priceUsd && plan.priceUsd > 0) {
-          const usdPrice = await stripe.prices.create({
-            product: productId,
-            unit_amount: plan.priceUsd * 100,
-            currency: "usd",
-            recurring: { interval: "month" },
-            metadata: { plan_id: plan.id, currency: "usd" },
-          });
-          if (plan.stripePriceIdUsd && plan.stripePriceIdUsd !== usdPrice.id) {
-            try { await stripe.prices.update(plan.stripePriceIdUsd, { active: false }); } catch {}
-          }
-          priceIdUsd = usdPrice.id;
-          config.plans[i].stripePriceIdUsd = priceIdUsd;
-        }
+        config.plans[i].stripePriceId = usdPriceStripe.id;
+        config.plans[i].stripePriceIdUsd = usdPriceStripe.id;
 
         results.push({
           plan: plan.id,
           name: plan.name,
-          currency: planCurrency,
-          priceId: monthlyPrice.id,
-          priceIdUsd: priceIdUsd || null,
+          usdPrice,
+          priceId: usdPriceStripe.id,
         });
       } catch (err: any) {
         errors.push({ plan: plan.id, name: plan.name, error: err.message });

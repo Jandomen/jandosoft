@@ -181,18 +181,24 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(planConfig),
       });
+      const data = await res.json();
       if (res.ok) {
-        setPlanToast("Planes guardados correctamente");
+        if (data.syncErrors && data.syncErrors.length > 0) {
+          setPlanToast(`Guardado. ⚠️ ${data.syncErrors.join(" | ")}`);
+        } else {
+          setPlanToast("Planes guardados y sincronizados con Stripe ✓");
+        }
         setEditingPlanId(null);
         setEditForm(null);
+        fetchPlans();
       } else {
-        setPlanToast("Error al guardar planes");
+        setPlanToast(data.error || "Error al guardar planes");
       }
     } catch {
       setPlanToast("Error de conexión");
     } finally {
       setSavingPlans(false);
-      setTimeout(() => setPlanToast(""), 3000);
+      setTimeout(() => setPlanToast(""), 6000);
     }
   };
 
@@ -1324,27 +1330,19 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Precio</label>
-                                  <input type="number" value={editForm.price?.toString() || "0"} onChange={(e) => {
-                                    const price = parseInt(e.target.value) || 0;
-                                    const cur = editForm.currency || "usd";
-                                    const rates: Record<string, number> = { mxn: 20, eur: 0.92, gbp: 0.79, cop: 4200, ars: 900, brl: 5, pen: 3.7, clp: 950, uyu: 43 };
-                                    const autoUsd = cur !== "usd" && rates[cur] ? Math.round(price / rates[cur]) : price;
-                                    setEditForm({...editForm, price, priceUsd: autoUsd});
+                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Precio (USD)</label>
+                                  <input type="number" step="0.01" value={(editForm.priceUsd || editForm.price || 0).toString()} onChange={(e) => {
+                                    const priceUsd = parseFloat(e.target.value) || 0;
+                                    setEditForm({...editForm, price: priceUsd, priceUsd});
                                   }} className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic" />
-                                  {editForm.currency && editForm.currency !== "usd" && (
-                                    <p className="text-[8px] text-zinc-400 font-medium italic ml-1">≈ ${editForm.priceUsd || 0} USD (auto)</p>
-                                  )}
+                                  <p className="text-[8px] text-zinc-400 font-medium italic ml-1">El usuario siempre paga en USD. El display muestra el equivalente local.</p>
                                 </div>
                                 <div className="space-y-1.5">
-                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Moneda</label>
+                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Moneda display</label>
                                   <select value={editForm.currency || "usd"} onChange={(e) => {
-                                    const cur = e.target.value;
-                                    const rates: Record<string, number> = { mxn: 20, eur: 0.92, gbp: 0.79, cop: 4200, ars: 900, brl: 5, pen: 3.7, clp: 950, uyu: 43 };
-                                    const autoUsd = cur !== "usd" && rates[cur] ? Math.round((editForm.price || 0) / rates[cur]) : (editForm.price || 0);
-                                    setEditForm({...editForm, currency: cur, priceUsd: autoUsd});
+                                    setEditForm({...editForm, currency: e.target.value});
                                   }} className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic">
                                     <option value="usd">USD ($ Dólares)</option>
                                     <option value="mxn">MXN ($ Pesos Mexicanos)</option>
@@ -1356,16 +1354,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                                     <option value="clp">CLP ($ Pesos Chilenos)</option>
                                     <option value="uyu">UYU ($ Pesos Uruguayos)</option>
                                     <option value="gbp">GBP (£ Libras)</option>
-                                    <option value="cad">CAD ($ Dólares Canadienses)</option>
-                                    <option value="aud">AUD ($ Dólares Australianos)</option>
                                   </select>
-                                </div>
-                                <div className="space-y-1.5">
-                                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Precio USD</label>
-                                  <input type="number" value={editForm.priceUsd?.toString() || ""} onChange={(e) => setEditForm({...editForm, priceUsd: parseInt(e.target.value) || 0})} placeholder="Se calcula automáticamente" className="w-full h-12 bg-white border border-zinc-100 rounded-xl px-4 text-xs font-medium outline-none focus:ring-2 focus:ring-red-600/50 italic" />
-                                  {editForm.currency && editForm.currency !== "usd" && (
-                                    <p className="text-[8px] text-zinc-400 font-medium italic ml-1">Se puede editar manualmente</p>
-                                  )}
                                 </div>
                               </div>
 
