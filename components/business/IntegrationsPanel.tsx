@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import {
-  Plug, Search, Brain, Zap, CreditCard, MessageSquare, Mail, MapPin, Share2, Cloud,
+  Plug, Search, Brain, Zap, CreditCard, MessageSquare, Mail, MapPin, Share2, Cloud, AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
@@ -297,6 +297,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
   const { showToast } = useToast();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentIntegrations, setPaymentIntegrations] = useState<PaymentIntegration[]>([]);
   const [aiProvider, setAiProvider] = useState<any>(null);
@@ -352,7 +353,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
   };
 
   const handleStripeDisconnect = async () => {
-    if (!confirm("¿Desconectar Stripe? Se eliminará la conexión con tu cuenta.")) return;
+    setShowDisconnectConfirm(false);
     try {
       await fetch("/api/stripe/disconnect", {
         method: "POST",
@@ -684,7 +685,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
                                 Completar registro
                               </button>
                             )}
-                            <button onClick={(e) => { e.stopPropagation(); handleStripeDisconnect(); }} className="px-3 py-2 bg-red-50 text-red-500 text-[10px] font-black italic rounded-xl hover:bg-red-100 transition-all">
+                            <button onClick={(e) => { e.stopPropagation(); setShowDisconnectConfirm(true); }} className="px-3 py-2 bg-red-50 text-red-500 text-[10px] font-black italic rounded-xl hover:bg-red-100 transition-all">
                               Desconectar
                             </button>
                           </>
@@ -774,6 +775,26 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
         saving={drawerSaving}
         testing={drawerTesting}
       />
+
+      {showDisconnectConfirm && (
+        <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowDisconnectConfirm(false)}>
+          <div className="bg-white rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl border border-zinc-100 space-y-5" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-center">
+              <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center">
+                <AlertCircle className="w-7 h-7 text-red-600" />
+              </div>
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-black italic text-zinc-950 uppercase">Desconectar Stripe</h3>
+              <p className="text-xs font-bold text-zinc-400 italic">Se eliminará la conexión con tu cuenta de Stripe.</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleStripeDisconnect} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black italic text-xs hover:bg-red-700 transition-all">Sí, desconectar</button>
+              <button onClick={() => setShowDisconnectConfirm(false)} className="flex-1 py-3 bg-zinc-50 text-zinc-500 rounded-xl font-black italic text-xs hover:bg-zinc-100 transition-all">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

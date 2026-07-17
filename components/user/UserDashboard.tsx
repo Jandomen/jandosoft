@@ -39,6 +39,7 @@ import { generateInvoicePDF } from "@/lib/pdf-utils";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { LanguageCarousel } from "@/components/ui/LanguageCarousel";
 import { useTheme } from "@/components/public/ThemeProvider";
+import { useToast } from "@/components/ui/Toast";
 import { FREE_PLAN } from "@/lib/plans";
 
 interface UserDashboardProps {
@@ -73,6 +74,8 @@ export default function UserDashboard({
 }: UserDashboardProps) {
   const { t } = useLanguage();
   const { theme, toggle } = useTheme();
+  const { showToast, ToastComponent } = useToast();
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const expiryDate = user.subscriptionExpiry
     ? new Date(user.subscriptionExpiry)
     : null;
@@ -617,15 +620,7 @@ export default function UserDashboard({
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={async () => {
-                  if (!confirm("¿Seguro que quieres cancelar tu plan? Se cancelará al final del periodo de facturación.")) return;
-                  try {
-                    const res = await fetch("/api/stripe/cancel-subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ immediately: false }) });
-                    const data = await res.json();
-                    if (data.error) { alert(data.error); return; }
-                    alert(data.message || "Plan cancelado correctamente");
-                  } catch { alert("Error al cancelar"); }
-                }}
+                onClick={() => setShowCancelConfirm(true)}
                 className="w-full sm:w-auto px-5 py-3 bg-white/10 backdrop-blur-xl text-white/70 border border-white/10 rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs uppercase tracking-wide sm:tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 transition-all italic shadow-2xl flex items-center justify-center gap-2"
               >
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -1454,6 +1449,62 @@ export default function UserDashboard({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showCancelConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setShowCancelConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl border border-zinc-100 space-y-5"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-center">
+                <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center">
+                  <AlertCircle className="w-7 h-7 text-red-600" />
+                </div>
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-black italic text-zinc-950 uppercase">{t("user.cancel_plan") || "Cancelar Plan"}</h3>
+                <p className="text-xs font-bold text-zinc-400 italic">{t("user.cancel_plan_confirm") || "Se cancelará al final del periodo de facturación. No se realiza reembolso."}</p>
+              </div>
+              <div className="flex gap-2">
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={async () => {
+                    setShowCancelConfirm(false);
+                    try {
+                      const res = await fetch("/api/stripe/cancel-subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ immediately: false }) });
+                      const data = await res.json();
+                      if (data.error) { showToast(data.error, "error"); return; }
+                      showToast(data.message || "Plan cancelado correctamente", "success");
+                    } catch { showToast("Error al cancelar", "error"); }
+                  }}
+                  className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black italic text-xs hover:bg-red-700 transition-all"
+                >
+                  {t("user.cancel_plan_confirm_yes") || "Sí, cancelar"}
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="flex-1 py-3 bg-zinc-50 text-zinc-500 rounded-xl font-black italic text-xs hover:bg-zinc-100 transition-all"
+                >
+                  {t("user.cancel_plan_confirm_no") || "No, mantener"}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {ToastComponent}
 
     </div>
   );

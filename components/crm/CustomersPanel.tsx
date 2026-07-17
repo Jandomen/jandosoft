@@ -12,6 +12,7 @@ import {
   Globe, Filter, Compass, Send, Settings,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { useToast } from "@/components/ui/Toast";
 
 interface CustomerData {
   _id: string;
@@ -32,6 +33,7 @@ interface CustomerData {
 
 export default function CustomersPanel({ storeId }: { storeId: string }) {
   const { t } = useLanguage();
+  const { showToast, ToastComponent } = useToast();
 
   const STATUS_OPTIONS = [
     { value: "lead", color: "text-blue-600 bg-blue-50" },
@@ -226,7 +228,7 @@ export default function CustomersPanel({ storeId }: { storeId: string }) {
       try {
         const text = await file.text();
         const lines = text.split("\n").filter(Boolean);
-        if (lines.length < 2) { alert(t("customers.csv_empty")); return; }
+        if (lines.length < 2) { showToast(t("customers.csv_empty"), "error"); return; }
         const headers = lines[0].split(",").map((h: string) => h.trim().toLowerCase());
         const rows = lines.slice(1).map((line: string) => {
           const vals = line.split(",").map((v: string) => v.trim().replace(/^"|"$/g, ""));
@@ -251,9 +253,9 @@ export default function CustomersPanel({ storeId }: { storeId: string }) {
         });
         const data = await res.json();
         load();
-        alert(t("customers.import_success").replace("{created}", String(data.created || 0)).replace("{skipped}", String(data.skipped || 0)));
+        showToast(t("customers.import_success").replace("{created}", String(data.created || 0)).replace("{skipped}", String(data.skipped || 0)), "success");
       } catch (err) {
-        alert(t("customers.import_error"));
+        showToast(t("customers.import_error"), "error");
       } finally {
         setCsvImporting(false);
       }
@@ -814,11 +816,10 @@ export default function CustomersPanel({ storeId }: { storeId: string }) {
           </motion.div>
         )}
       </AnimatePresence>
+      {ToastComponent}
     </div>
   );
 }
-
-// Inline StoreMap to avoid circular imports
 import { loadGoogleMaps } from "@/lib/maps/loader";
 import { DARK_MAP_STYLES, isDarkMode } from "@/lib/maps/dark-mode";
 
