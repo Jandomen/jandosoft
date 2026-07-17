@@ -8,7 +8,7 @@ const USD_TO_MXN = 20.5;
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, name, planId, paymentMethod, amount, currency } = await req.json();
+    const { email, name, planId, paymentMethod, amount } = await req.json();
     if (!email || !planId) {
       return NextResponse.json({ error: "email and planId required" }, { status: 400 });
     }
@@ -24,7 +24,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Plan sin precio configurado" }, { status: 400 });
     }
 
-    const chargeCurrency = "mxn";
     const mxnAmount = Math.round(usdPrice * USD_TO_MXN);
     if (mxnAmount < 10) {
       return NextResponse.json({ error: `El precio mínimo en MXN es $10. Precio actual: $${mxnAmount} MXN ($${usdPrice} USD). Sube el precio.` }, { status: 400 });
@@ -34,20 +33,6 @@ export async function POST(req: NextRequest) {
     const amountInCents = mxnAmount * 100;
 
     if (paymentMethod === "stripe" || !paymentMethod) {
-      await connectDB();
-      let user = await User.findOne({ email });
-      let stripeCustomerId = user?.stripeCustomerId;
-
-      if (!stripeCustomerId) {
-        const customer = await stripe.customers.create({
-          email,
-          name: name || undefined,
-          metadata: { userId: user?._id?.toString() || "" },
-        });
-        stripeCustomerId = customer.id;
-        if (user) await User.findByIdAndUpdate(user._id, { stripeCustomerId });
-      }
-
       console.log(`[PlanCheckout] plan=${planId} usdPrice=${usdPrice} mxnAmount=${mxnAmount} currency=mxn`);
 
       const session = await stripe.checkout.sessions.create({
@@ -55,14 +40,14 @@ export async function POST(req: NextRequest) {
         payment_method_types: ["card"],
         line_items: [{
           price_data: {
-            currency: chargeCurrency,
+            currency: "mxn",
             product_data: { name: `Plan ${plan.name} - Jandosoft` },
             unit_amount: amountInCents,
             recurring: { interval: "month" },
           },
           quantity: 1,
         }],
-        customer: stripeCustomerId,
+        customer_email: email,
         success_url: `${baseUrl}/?stripe_success={CHECKOUT_SESSION_ID}&plan=${planId}`,
         cancel_url: `${baseUrl}/?stripe_cancel=1`,
         metadata: { customerEmail: email, planId, planName: `Plan ${plan.name}` },
@@ -104,6 +89,9 @@ export async function POST(req: NextRequest) {
     console.error("[PlanCheckout] Error:", error?.message || error, error?.type, error?.code);
     if (error?.message?.includes("amount_too_small")) {
       return NextResponse.json({ error: "El monto es menor al mínimo de Stripe ($10 MXN)." }, { status: 400 });
+    }
+    if (error?.message?.includes("cannot combine currencies")) {
+      return NextResponse.json({ error: "Error de moneda. Intenta con otro email o espera unos minutos." }, { status: 400 });
     }
     return NextResponse.json({ error: error.message || "Error al crear sesión de pago" }, { status: 500 });
   }
