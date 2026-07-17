@@ -406,7 +406,7 @@ export default function Editor({ isPremium, onTogglePremium }: { isPremium: bool
 
           <AnimatePresence>
              {isProVideoEditorOpen && (
-                <motion.div initial={{ y: 200 }} animate={{ y: 0 }} exit={{ y: 200 }} className="h-44 bg-zinc-950/95 backdrop-blur-3xl border-t border-white/5 flex flex-col z-[100] px-12 py-6 relative">
+                <motion.div initial={{ y: 200 }} animate={{ y: 0 }} exit={{ y: 200 }} className="h-44 bg-zinc-950/95 backdrop-blur-3xl border-t border-white/5 flex flex-col z-[100] max-[400px]:px-4 px-12 max-[400px]:py-3 py-6 relative">
                    <div className="flex items-center gap-8 mb-4">
                       <button onClick={() => setIsPlaying(!isPlaying)} className="p-4 bg-red-600 text-white rounded-full"><Pause className="w-6 h-6" /></button>
                       <div className="flex-1 space-y-3">
@@ -433,12 +433,12 @@ export default function Editor({ isPremium, onTogglePremium }: { isPremium: bool
 
       <AnimatePresence>
          {isDeploying && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[600] bg-zinc-950 flex flex-col p-12">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[600] bg-zinc-950 flex flex-col max-[400px]:p-4 p-12">
                 <div className="flex justify-between items-center mb-8">
                    <div className="flex gap-4 items-center"><div className="p-4 bg-red-600 rounded-3xl animate-bounce"><CheckCircle2 className="w-8 h-8 text-white" /></div><h2 className="text-xl font-black italic text-white uppercase tracking-tighter">Desplegando Aplicación...</h2></div>
                    {deployProgress === 100 && <button onClick={() => setIsDeploying(false)} className="px-8 py-3 bg-white text-zinc-950 rounded-2xl text-[10px] font-black uppercase italic">Finalizar</button>}
                 </div>
-                <div className="flex-1 bg-zinc-900/50 rounded-[3rem] p-12 font-mono text-emerald-400 no-scrollbar overflow-y-auto flex flex-col gap-4 border border-white/5 shadow-2xl">
+                <div className="flex-1 bg-zinc-900/50 rounded-[3rem] max-[400px]:p-5 p-12 font-mono text-emerald-400 no-scrollbar overflow-y-auto flex flex-col gap-4 border border-white/5 shadow-2xl">
                     {deployLogs.map((log, i) => <motion.p initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} key={i}>{log}</motion.p>)}
                     {deployProgress < 100 && <div className="flex items-center gap-3"><Loader2 className="w-4 h-4 animate-spin text-zinc-500" /><span className="animate-pulse">Active build...</span></div>}
                 </div>

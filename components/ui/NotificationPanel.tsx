@@ -157,7 +157,7 @@ export default function NotificationPanel({ token, onNavigate }: { token: string
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
             transition={{ type: "spring", stiffness: 350, damping: 30 }}
-            className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-zinc-100 shadow-2xl z-[200] overflow-hidden"
+            className="absolute right-0 top-full mt-2 w-[calc(100vw-24px)] max-w-80 sm:w-96 bg-white rounded-2xl border border-zinc-100 shadow-2xl z-[200] overflow-hidden"
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100">
               <div className="flex items-center gap-2">

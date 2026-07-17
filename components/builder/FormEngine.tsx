@@ -106,7 +106,7 @@ export const FormContainer = ({ config, children, onSuccess, isPreview }: any) =
 
   if (status === "success") {
     return (
-      <div className="w-full h-full min-h-[300px] flex flex-col items-center justify-center p-10 bg-emerald-50 border border-emerald-100 rounded-[3rem] text-center space-y-6 shadow-inner italic">
+      <div className="w-full h-full min-h-[300px] flex flex-col items-center justify-center max-[400px]:p-5 p-10 bg-emerald-50 border border-emerald-100 rounded-[3rem] text-center space-y-4 md:space-y-6 shadow-inner italic">
         <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-emerald-500 shadow-2xl shadow-emerald-900/10"><CheckCircle2 className="w-10 h-10" /></div>
         <h4 className="text-xl font-black text-emerald-950 uppercase italic leading-none">¡Envío Completado!</h4>
         <button onClick={() => setStatus("idle")} className="px-8 py-3 bg-white text-emerald-600 rounded-xl text-[10px] font-black italic uppercase shadow-sm">NUEVO FORMULARIO</button>

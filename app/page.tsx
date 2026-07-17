@@ -763,7 +763,7 @@ export default function Page() {
       </aside>
 
       {/* Mobile bottom navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-zinc-200/80 safe-area-bottom">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 safe-area-bottom">
         <div className="flex items-center justify-around h-16 px-2">
           {isLogged ? (
             <>
@@ -783,6 +783,17 @@ export default function Page() {
           )}
         </div>
       </nav>
+
+      {/* Mobile floating help button */}
+      {isLogged && (
+        <button
+          onClick={() => setTourTrigger(n => n + 1)}
+          className="md:hidden fixed bottom-20 right-3 z-40 w-9 h-9 rounded-full bg-zinc-800/90 backdrop-blur text-zinc-400 hover:text-white hover:bg-zinc-700 flex items-center justify-center shadow-lg transition-all"
+          title="Tutorial"
+        >
+          <HelpCircle className="w-4 h-4" />
+        </button>
+      )}
 
       {/* Mobile fullscreen drawer */}
       <AnimatePresence>
@@ -1029,11 +1040,11 @@ function SideNavItem2({ icon, label, active, onClick, badge, dataTour }: { icon:
 
 function MobileNavItem({ icon, label, active, onClick, dataTour }: { icon: React.ReactNode; label?: string; active: boolean; onClick: () => void; dataTour?: string }) {
    return (
-      <button onClick={onClick} data-tour={dataTour} className={cn("flex flex-col items-center justify-center gap-0.5 px-1 max-[340px]:px-0.5 py-1 rounded-lg transition-all min-w-0 flex-1", active ? "text-red-600" : "text-zinc-400 hover:text-zinc-600")}>
-         <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center transition-all", active ? "bg-red-50 text-red-600" : "text-current")}>
+      <button onClick={onClick} data-tour={dataTour} className={cn("flex flex-col items-center justify-center gap-0.5 px-1 max-[340px]:px-0.5 py-1 rounded-lg transition-all min-w-0 flex-1", active ? "text-red-500" : "text-zinc-500 hover:text-zinc-300")}>
+         <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center transition-all", active ? "bg-red-500/10 text-red-500" : "text-current")}>
             {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: "w-5 h-5" })}
          </div>
-         {label && <span className={cn("text-[8px] font-semibold tracking-wide truncate w-full text-center", active ? "text-red-600" : "text-zinc-400")}>{label}</span>}
+         {label && <span className={cn("text-[8px] font-semibold tracking-wide truncate w-full text-center", active ? "text-red-500" : "text-zinc-500")}>{label}</span>}
       </button>
    );
 }
@@ -1277,7 +1288,7 @@ function HomeTabContent({ setActiveTab, isLogged, setShowLogin }: {
 
       <section className="max-w-6xl mx-auto px-6">
         <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-red-600 via-red-700 to-zinc-900 p-8 md:p-20 text-center"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-red-600 via-red-700 to-zinc-900 max-[400px]:p-5 p-8 md:p-20 text-center"
         >
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.08),transparent_60%)]" />
           <div className="absolute bottom-0 right-0 w-[300px] h-[300px] bg-white/5 rounded-full blur-[80px]" />
@@ -1401,7 +1412,7 @@ function LoginPanelContent({ loginForm, setLoginForm, handleUserLogin, setShowLo
           <motion.button type="submit" whileTap={{ scale: 0.98 }} className="w-full py-3 bg-red-600 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 hover:bg-red-700 transition-all shadow-sm">
             {t("action.login")} <ArrowRight className="w-4 h-4" />
           </motion.button>
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0 text-[10px] sm:text-xs">
             <p className="text-zinc-400">{t("login.no_account")} <span className="text-red-600 cursor-pointer hover:underline font-medium" onClick={() => { setShowLogin(false); setActiveTab("register"); }}>{t("action.register")}</span></p>
             <span className="text-red-600 cursor-pointer hover:underline font-medium" onClick={() => { setShowForgotPassword(true); setForgotEmail(loginForm.email); }}>{t("login.forgot_password")}</span>
           </div>

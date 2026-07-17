@@ -31,10 +31,10 @@ export const Toast = ({ message, type, onClose }: ToastProps) => {
       initial={{ opacity: 0, y: 20, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={cn("fixed bottom-10 right-10 z-[200] flex items-center gap-4 px-6 py-4 rounded-2xl border shadow-2xl", bg, border)}
+      className={cn("fixed bottom-24 md:bottom-10 right-3 md:right-10 left-3 md:left-auto z-[200] flex items-center gap-3 md:gap-4 px-4 md:px-6 py-3 md:py-4 rounded-2xl border shadow-2xl", bg, border)}
     >
       <div className={text}>{icon}</div>
-      <p className={cn("text-sm font-black italic", text)}>{message}</p>
+      <p className={cn("text-xs md:text-sm font-black italic flex-1 min-w-0", text)}>{message}</p>
       <button onClick={onClose} className="ml-2 hover:opacity-50 transition-opacity"><X className="w-4 h-4" /></button>
     </motion.div>
   );

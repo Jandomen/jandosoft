@@ -843,7 +843,7 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0, opacity: 0 }}
           onClick={handleResume}
-          className="fixed bottom-6 right-6 z-[250] flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-2xl shadow-2xl shadow-red-600/30 hover:from-red-700 hover:to-red-600 transition-all font-bold text-xs"
+          className="fixed bottom-24 md:bottom-6 right-3 md:right-6 z-[250] flex items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-2xl shadow-2xl shadow-red-600/30 hover:from-red-700 hover:to-red-600 transition-all font-bold text-[10px] md:text-xs"
         >
           <Play className="w-4 h-4 fill-white" />
           {t("tour.btn_resume")}

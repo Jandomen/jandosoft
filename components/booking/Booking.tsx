@@ -32,7 +32,7 @@ export default function Booking() {
 
   if (isSuccess) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-zinc-200 shadow-xl text-center max-w-lg mx-auto overflow-hidden relative">
+      <div className="flex flex-col items-center justify-center max-[400px]:p-5 p-12 bg-white rounded-3xl border border-zinc-200 shadow-xl text-center max-w-lg mx-auto overflow-hidden relative">
         <motion.div 
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}

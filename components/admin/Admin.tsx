@@ -77,6 +77,10 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
   const [confirmingType, setConfirmingType] = useState<'user' | 'store'>('user');
   const [viewingUser, setViewingUser] = useState<any>(null);
   const [viewingStore, setViewingStore] = useState<any>(null);
+  const [showResetDb, setShowResetDb] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<any>(null);
   const [filterPlan, setFilterPlan] = useState("");
   const [revenueData, setRevenueData] = useState<any>(null);
   const [paymentToast, setPaymentToast] = useState<{ message: string; amount: number } | null>(null);
@@ -270,6 +274,34 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
     setEditingPlanId(null);
     setEditForm(null);
     setTimeout(() => setPlanToast(""), 4000);
+  };
+
+  const handleResetDatabase = async () => {
+    if (resetConfirmText !== "ELIMINAR") return;
+    setResetting(true);
+    setResetResult(null);
+    try {
+      const res = await fetch("/api/admin/reset-database", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ confirmation: "ELIMINAR" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setResetResult(data);
+        setAllUsers([]);
+        setAllStores([]);
+        setAllPayments([]);
+        setAllInvoices([]);
+        fetchDashboard();
+      } else {
+        setResetResult({ error: data.error });
+      }
+    } catch {
+      setResetResult({ error: "Error de red" });
+    }
+    setResetting(false);
   };
 
   const fetchStoreProducts = async (storeId: string) => {
@@ -1066,8 +1098,111 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                             <LogOut className="w-4 h-4" /> CERRAR SESIÓN
                           </motion.button>
                         </div>
+
+                        <div className="bg-rose-50 p-6 md:p-8 rounded-[2rem] border border-rose-100 space-y-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white rounded-xl shadow-sm"><Trash2 className="w-5 h-5 text-rose-600" /></div>
+                            <div>
+                              <p className="text-xs font-wallpoet italic text-zinc-950 uppercase">Zona de Peligro</p>
+                              <p className="text-[9px] font-bold text-zinc-400">Acciones irreversibles</p>
+                            </div>
+                          </div>
+                          <div className="w-full h-px bg-rose-200" />
+                          <button
+                            onClick={() => { setShowResetDb(true); setResetConfirmText(""); setResetResult(null); }}
+                            className="w-full py-3 md:py-4 bg-white border-2 border-rose-200 text-rose-600 rounded-2xl font-black italic text-[10px] md:text-xs hover:bg-rose-50 transition-all flex items-center justify-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" /> RESETEAR BASE DE DATOS
+                          </button>
+                          <p className="text-[9px] text-rose-400 text-center">Elimina todos los datos excepto este administrador</p>
+                        </div>
                       </div>
                    </motion.div>
+                )}
+
+                {showResetDb && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowResetDb(false)}>
+                    <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white rounded-[2rem] p-6 md:p-8 max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+                      {!resetResult ? (
+                        <>
+                          <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-rose-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                              <Trash2 className="w-8 h-8 text-rose-600" />
+                            </div>
+                            <h3 className="text-lg font-black italic text-zinc-950 uppercase">Reseteo de Base de Datos</h3>
+                            <p className="text-xs text-zinc-500 mt-2">Esta acción eliminará TODOS los datos de la plataforma. No se puede deshacer.</p>
+                          </div>
+                          <div className="space-y-2 mb-6">
+                            <p className="text-[10px] font-bold text-zinc-500">Se eliminarán:</p>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {["Tiendas", "Productos", "Clientes", "Citas", "Pagos", "Facturas", "Mensajes", "Conversaciones", "Notificaciones", "Integraciones", "Widget Config", "Email Logs"].map(item => (
+                                <div key={item} className="flex items-center gap-1.5 text-[10px] text-rose-600">
+                                  <span className="w-1 h-1 bg-rose-400 rounded-full" />
+                                  {item}
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-[10px] font-bold text-emerald-600 mt-2">Se conservará: Administrador</p>
+                          </div>
+                          <div className="space-y-3">
+                            <p className="text-[10px] font-bold text-zinc-500 text-center">Escribe <span className="font-black text-rose-600">ELIMINAR</span> para confirmar:</p>
+                            <input
+                              type="text"
+                              value={resetConfirmText}
+                              onChange={e => setResetConfirmText(e.target.value)}
+                              placeholder="ELIMINAR"
+                              className="w-full p-3 bg-zinc-50 border-2 border-zinc-200 rounded-xl text-center font-mono text-sm font-bold focus:border-rose-400 outline-none transition-colors"
+                            />
+                            <div className="flex gap-2">
+                              <button onClick={() => setShowResetDb(false)} className="flex-1 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-black italic text-[10px] hover:bg-zinc-200 transition-all">
+                                Cancelar
+                              </button>
+                              <button
+                                onClick={handleResetDatabase}
+                                disabled={resetConfirmText !== "ELIMINAR" || resetting}
+                                className="flex-1 py-3 bg-rose-600 text-white rounded-xl font-black italic text-[10px] hover:bg-rose-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                              >
+                                {resetting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                {resetting ? "Eliminando..." : "ELIMINAR TODO"}
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center">
+                          {resetResult.error ? (
+                            <>
+                              <div className="w-16 h-16 bg-rose-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <Trash2 className="w-8 h-8 text-rose-600" />
+                              </div>
+                              <h3 className="text-lg font-black italic text-zinc-950 uppercase">Error</h3>
+                              <p className="text-xs text-zinc-500 mt-2">{resetResult.error}</p>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <CheckCircle className="w-8 h-8 text-emerald-600" />
+                              </div>
+                              <h3 className="text-lg font-black italic text-zinc-950 uppercase">Base de datos reiniciada</h3>
+                              <p className="text-xs text-zinc-500 mt-2 mb-4">{resetResult.message}</p>
+                              <div className="bg-zinc-50 rounded-xl p-3 text-left max-h-48 overflow-y-auto">
+                                {Object.entries(resetResult.results || {}).map(([name, count]) => (
+                                  <div key={name} className="flex items-center justify-between py-1 border-b border-zinc-100 last:border-0">
+                                    <span className="text-[10px] font-medium text-zinc-600">{name}</span>
+                                    <span className="text-[10px] font-bold text-zinc-400">{String(count)} docs</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                          <button onClick={() => { setShowResetDb(false); setResetResult(null); setResetConfirmText(""); }}
+                            className="mt-4 w-full py-3 bg-zinc-100 text-zinc-600 rounded-xl font-black italic text-[10px] hover:bg-zinc-200 transition-all">
+                            Cerrar
+                          </button>
+                        </div>
+                      )}
+                    </motion.div>
+                  </motion.div>
                 )}
 
                 {activeTab === "history" && (
