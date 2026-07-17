@@ -150,7 +150,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
   const [orders, setOrders] = useState<{ id: number; product: string; amount: number; status: string }[]>([]);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
-  const [productForm, setProductForm] = useState({ name: "", price: "", stock: "", currency: "USD" });
+  const [productForm, setProductForm] = useState({ name: "", price: "", stock: "", currency: "USD", desc: "", barcode: "" });
   const [productImages, setProductImages] = useState<string[]>([]);
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [kbEntries, setKbEntries] = useState<{ id: number; title: string; content: string; category: string; question?: string; createdAt: string }[]>([]);
@@ -238,6 +238,8 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
   const [searchProduct, setSearchProduct] = useState("");
   const [searchCustomer, setSearchCustomer] = useState("");
   const [searchOrder, setSearchOrder] = useState("");
+  const [categorySearch, setCategorySearch] = useState("");
+  const [showCategoryGrid, setShowCategoryGrid] = useState(false);
 
   const { showToast } = useToast();
 
@@ -445,14 +447,16 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
     const price = parseFloat(productForm.price);
     const currency = productForm.currency || "USD";
     const priceUSD = convertToUSD(price, currency);
+    const desc = productForm.desc || "";
+    const barcode = productForm.barcode || "";
     let newProducts;
     if (editingProduct) {
-      newProducts = products.map(p => p.id === editingProduct.id ? { ...p, name: productForm.name, price, currency, priceUSD, stock: parseInt(productForm.stock) || 0, images: [...productImages] } : p);
+      newProducts = products.map(p => p.id === editingProduct.id ? { ...p, name: productForm.name, price, currency, priceUSD, stock: parseInt(productForm.stock) || 0, images: [...productImages], desc, barcode } : p);
     } else {
-      newProducts = [...products, { id: Date.now(), name: productForm.name, price, currency, priceUSD, stock: parseInt(productForm.stock) || 0, images: [...productImages] }];
+      newProducts = [...products, { id: Date.now(), name: productForm.name, price, currency, priceUSD, stock: parseInt(productForm.stock) || 0, images: [...productImages], desc, barcode }];
     }
     setProducts(newProducts);
-    setProductForm({ name: "", price: "", stock: "", currency: "USD" });
+    setProductForm({ name: "", price: "", stock: "", currency: "USD", desc: "", barcode: "" });
     setProductImages([]);
     setImageUrlInput("");
     setShowAddProduct(false);
@@ -902,7 +906,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                           <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <QRButton url={`${typeof window !== "undefined" ? window.location.origin : ""}/s/${userStore?.slug || "store"}?item=products|${p.id}`} label={p.name} />
                             <motion.button whileTap={{ scale: 0.9 }}
-                              onClick={(e) => { e.stopPropagation(); setEditingProduct(p); setProductForm({ name: p.name, price: String(p.price), stock: String(p.stock), currency: p.currency || "USD" }); setProductImages(p.images || []); setImageUrlInput(""); setShowAddProduct(true); }}
+                              onClick={(e) => { e.stopPropagation(); setEditingProduct(p); setProductForm({ name: p.name, price: String(p.price), stock: String(p.stock), currency: p.currency || "USD", desc: (p as any).desc || "", barcode: (p as any).barcode || "" }); setProductImages(p.images || []); setImageUrlInput(""); setShowAddProduct(true); }}
                               className="p-1.5 md:p-2 bg-white/90 backdrop-blur-sm rounded-lg text-zinc-600 hover:text-blue-600 hover:bg-white shadow-lg transition-all"
                             >
                               <Edit3 className="w-3 h-3 md:w-3.5 md:h-3.5" />
@@ -959,6 +963,11 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                           {productForm.price && productForm.currency && productForm.currency !== "USD" && (
                             <p className="text-[10px] text-zinc-400 font-medium italic text-right">≈ ${convertToUSD(parseFloat(productForm.price), productForm.currency).toFixed(2)} USD</p>
                           )}
+                          <textarea placeholder={t("biz.product_desc_placeholder") || "Descripción del producto..."} value={productForm.desc} onChange={e => setProductForm({...productForm, desc: e.target.value})} rows={2} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm resize-none" />
+                          <div className="relative">
+                            <input type="text" placeholder={t("biz.product_barcode_placeholder") || "Código de barras (opcional)"} value={productForm.barcode} onChange={e => setProductForm({...productForm, barcode: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm font-mono" />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-zinc-300 uppercase">Barcode</span>
+                          </div>
 
                           {/* Images Section */}
                           <div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100 space-y-3">
@@ -1107,7 +1116,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                               </div>
                               <div className="flex gap-2">
                                 <motion.button whileTap={{ scale: 0.95 }}
-                                  onClick={() => { setEditingProduct(viewingProduct); setProductForm({ name: viewingProduct.name, price: String(viewingProduct.price), stock: String(viewingProduct.stock), currency: viewingProduct.currency || "USD" }); setProductImages(viewingProduct.images || []); setImageUrlInput(""); setShowAddProduct(true); setViewingProduct(null); }}
+                                  onClick={() => { setEditingProduct(viewingProduct); setProductForm({ name: viewingProduct.name, price: String(viewingProduct.price), stock: String(viewingProduct.stock), currency: viewingProduct.currency || "USD", desc: viewingProduct.desc || "", barcode: viewingProduct.barcode || "" }); setProductImages(viewingProduct.images || []); setImageUrlInput(""); setShowAddProduct(true); setViewingProduct(null); }}
                                   className="flex-1 py-3 bg-zinc-950 text-white rounded-2xl font-black italic text-[10px] hover:bg-zinc-800 transition-all flex items-center justify-center gap-2"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" /> {t("biz.edit_btn")}
@@ -1285,21 +1294,13 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       <div className="space-y-4">
                         <div className="space-y-1.5">
                           <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("org.category_label")}</label>
-                          <select
-                            value={storeCategory}
-                            onChange={async (e) => {
-                              const newCat = e.target.value;
-                              if (onSaveStore && storeId) {
-                                await Promise.resolve(onSaveStore(storeId, { category: newCat }));
-                                showToast(t("org.toast_category_updated"), "success");
-                              }
-                            }}
-                            className="w-full bg-zinc-50 p-3.5 max-[400px]:p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm"
+                          <button
+                            onClick={() => setShowCategoryGrid(true)}
+                            className="w-full bg-zinc-50 p-3.5 max-[400px]:p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm text-left flex items-center justify-between"
                           >
-                            {Object.entries(CATEGORIES).map(([id, cat]) => (
-                              <option key={id} value={id}>{t("cat_" + id)}</option>
-                            ))}
-                          </select>
+                            <span>{t("cat_" + storeCategory)}</span>
+                            <ChevronDown className="w-4 h-4 text-zinc-400" />
+                          </button>
                         </div>
                         <p className="text-[10px] font-bold text-zinc-400 italic">
                           {t("cat_" + storeCategory + "_desc")}
@@ -2959,6 +2960,65 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {showCategoryGrid && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => { setShowCategoryGrid(false); setCategorySearch(""); }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[2rem] p-6 max-w-2xl w-full shadow-2xl border border-zinc-100 space-y-4 max-h-[80vh] flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-black italic text-zinc-950 uppercase">{t("org.category_label") || "Categoría"}</h3>
+                <button onClick={() => { setShowCategoryGrid(false); setCategorySearch(""); }} className="p-2 hover:bg-zinc-100 rounded-xl transition-all">
+                  <X className="w-5 h-5 text-zinc-400" />
+                </button>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
+                <input
+                  type="text"
+                  value={categorySearch}
+                  onChange={(e) => setCategorySearch(e.target.value.toLowerCase())}
+                  placeholder={t("org.search_category") || "Buscar categoría..."}
+                  className="w-full pl-9 pr-4 py-3 bg-zinc-50 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all"
+                  autoFocus
+                />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 overflow-y-auto flex-1">
+                {Object.entries(CATEGORIES)
+                  .filter(([id, cat]) => !categorySearch || t("cat_" + id).toLowerCase().includes(categorySearch) || t("cat_" + id + "_desc").toLowerCase().includes(categorySearch) || id.includes(categorySearch))
+                  .map(([id, cat]) => (
+                  <button
+                    key={id}
+                    onClick={async () => {
+                      if (onSaveStore && storeId) {
+                        await Promise.resolve(onSaveStore(storeId, { category: id }));
+                        showToast(t("org.toast_category_updated"), "success");
+                      }
+                      setShowCategoryGrid(false);
+                      setCategorySearch("");
+                    }}
+                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all ${storeCategory === id ? "bg-red-50 border-red-200 shadow-sm" : "bg-zinc-50 border-zinc-100 hover:bg-zinc-100"}`}
+                  >
+                    <span className="text-[10px] md:text-xs font-black italic text-zinc-950">{t("cat_" + id)}</span>
+                    <span className="text-[7px] md:text-[8px] font-bold text-zinc-400 line-clamp-2">{t("cat_" + id + "_desc")}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

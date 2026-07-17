@@ -381,7 +381,16 @@ export default async function StoreMainPage({ params, searchParams }: Props) {
               {(store as any).location && (
                 <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
                   <MapPin className="w-5 h-5 shrink-0" style={{ color: primary }} />
-                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{(store as any).location}</p>
+                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex-1">{(store as any).location}</p>
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${(store as any).coordinates.lat},${(store as any).coordinates.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all hover:opacity-80"
+                    style={{ backgroundColor: primary, color: "white" }}
+                  >
+                    Cómo llegar
+                  </a>
                 </div>
               )}
               <StoreMap
@@ -389,6 +398,10 @@ export default async function StoreMainPage({ params, searchParams }: Props) {
                 coordinates={(store as any).coordinates}
                 name={store.name}
                 className="w-full aspect-square shadow-md"
+                route={(store as any).coordinates ? {
+                  origin: (store as any).coordinates,
+                  destination: (store as any).coordinates,
+                } : undefined}
               />
             </div>
           </section>

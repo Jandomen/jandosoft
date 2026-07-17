@@ -25,11 +25,11 @@ export default function NotificationPanel({ token, onNavigate }: { token: string
   const panelRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = useCallback(async () => {
-    if (!token) return;
     try {
-      const res = await fetch("/api/notifications?limit=20", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const opts: RequestInit = token
+        ? { headers: { Authorization: `Bearer ${token}` } }
+        : { credentials: "include" };
+      const res = await fetch("/api/notifications?limit=20", opts);
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications || []);
@@ -43,7 +43,6 @@ export default function NotificationPanel({ token, onNavigate }: { token: string
   }, [fetchNotifications]);
 
   useEffect(() => {
-    if (!token) return;
     let es: EventSource | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let closed = false;
@@ -51,7 +50,10 @@ export default function NotificationPanel({ token, onNavigate }: { token: string
     const connect = () => {
       if (closed) return;
       if (es) { try { es.close(); } catch {} }
-      es = new EventSource(`/api/notifications/stream?token=${encodeURIComponent(token)}`);
+      const streamUrl = token
+        ? `/api/notifications/stream?token=${encodeURIComponent(token)}`
+        : "/api/notifications/stream";
+      es = new EventSource(streamUrl, token ? undefined : { withCredentials: true } as any);
       eventSourceRef.current = es;
 
       es.onmessage = (event) => {
@@ -94,26 +96,22 @@ export default function NotificationPanel({ token, onNavigate }: { token: string
   }, [open]);
 
   const markAllRead = async () => {
-    if (!token) return;
     try {
-      await fetch("/api/notifications", {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ markAllRead: true }),
-      });
+      const opts: RequestInit = token
+        ? { method: "PATCH", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ markAllRead: true }) }
+        : { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ markAllRead: true }) };
+      await fetch("/api/notifications", opts);
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch {}
   };
 
   const markRead = async (id: string) => {
-    if (!token) return;
     try {
-      await fetch("/api/notifications", {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ notificationId: id }),
-      });
+      const opts: RequestInit = token
+        ? { method: "PATCH", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ notificationId: id }) }
+        : { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ notificationId: id }) };
+      await fetch("/api/notifications", opts);
       setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch {}

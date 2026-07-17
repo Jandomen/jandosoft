@@ -6,6 +6,11 @@ export interface IProduct {
   name: string;
   price: number;
   stock: number;
+  desc?: string;
+  barcode?: string;
+  images?: string[];
+  priceUSD?: number;
+  currency?: string;
 }
 
 export interface ICustomer {
@@ -490,6 +495,11 @@ const ProductSchema = new Schema<IProduct>({
   name: { type: String, required: true },
   price: { type: Number, required: true },
   stock: { type: Number, default: 0 },
+  desc: { type: String, default: "" },
+  barcode: { type: String, default: "" },
+  images: { type: [String], default: [] },
+  priceUSD: { type: Number, default: 0 },
+  currency: { type: String, default: "USD" },
 }, { _id: false });
 
 const CustomerSchema = new Schema<ICustomer>({

@@ -53,12 +53,14 @@ import {
   ExternalLink,
   Copy,
   FileSpreadsheet,
-  HelpCircle
+  HelpCircle,
+  Inbox,
 } from "lucide-react";
 import ChatView from "@/components/chat/Chat";
 import BusinessDashboard from "@/components/business/BusinessDashboard";
 import PlansView from "@/components/store/Store";
 import MessagesPanel from "@/components/messaging/MessagesPanel";
+import SupportPanel from "@/components/support/SupportPanel";
 import UserDashboard from "@/components/user/UserDashboard";
 import UserProfilePanel from "@/components/user/UserProfilePanel";
 import { Toast, useToast } from "@/components/ui/Toast";
@@ -727,6 +729,7 @@ export default function Page() {
                   <SideNavItem2 icon={<MessageCircle className="w-4 h-4" />} label={t("nav.chat")} active={activeTab === "chat"} onClick={() => setActiveTab("chat")} dataTour="chat" />
                   <SideNavItem2 icon={<Users className="w-4 h-4" />} label={t("nav.messages")} active={activeTab === "messages"} onClick={() => setActiveTab("messages")} badge={unreadMessages} />
                   <SideNavItem2 icon={<Megaphone className="w-4 h-4" />} label={t("nav.campaigns")} active={activeTab === "business" && businessSection === "campaigns"} onClick={() => { if (activeStoreId) { setBusinessSection("campaigns"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
+                  <SideNavItem2 icon={<Inbox className="w-4 h-4" />} label={t("nav.support") || "Soporte"} active={activeTab === "support"} onClick={() => setActiveTab("support")} />
                 </div>
                 <div>
                   <SideNavItem2 icon={<Package className="w-4 h-4" />} label={user.subscription ? (t("nav.update_plan") || "Actualizar Plan") : t("nav.plans")} active={activeTab === "pricing"} onClick={() => setActiveTab("pricing")} dataTour="explore" />
@@ -952,13 +955,18 @@ export default function Page() {
                          </ErrorBoundary>
                      </motion.div>
                   )}
-                  {activeTab === "profile" && isLogged && (
+                   {activeTab === "profile" && isLogged && (
                     <UserProfilePanel
                       user={user}
                       apiFetch={apiFetch}
                       showToast={showToast}
                       onLogout={handleLogout}
                     />
+                  )}
+                  {activeTab === "support" && isLogged && (
+                    <motion.div key="support" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="max-[400px]:py-2 py-4 md:py-10">
+                      <SupportPanel />
+                    </motion.div>
                   )}
 {activeTab === "chat" && <motion.div key="chat" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="max-[400px]:py-2 py-4 md:py-10">{isLogged ? <ChatView maxMessages={(user.planLimits || getPlanLimits(user.subscription)).maxMessages} context={{ email: user.email, plan: user.subscription ?? undefined, storeName: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].name : undefined, industry: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].industry : undefined, storeType: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].type : undefined, description: Array.isArray(userStores) && userStores.length > 0 ? userStores[0].description : undefined }} userStores={userStores} onStoresChange={(stores) => setUserStores(stores)} /> : <ChatView />}</motion.div>}
                   {activeTab === "messages" && isLogged && <motion.div key="messages" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="max-w-4xl mx-auto py-4 md:py-10"><MessagesPanel /></motion.div>}
@@ -1055,7 +1063,7 @@ function MobileDrawerItem({ icon, label, active, onClick, dataTour }: { icon: Re
    );
 }
 
-type TabType = "home" | "register" | "chat" | "dashboard" | "business" | "pricing" | "messages" | "profile";
+type TabType = "home" | "register" | "chat" | "dashboard" | "business" | "pricing" | "messages" | "profile" | "support";
 
 function HeaderNav({ activeTab, isLogged, setActiveTab, setShowLogin, setMobileDrawerOpen, token, onRestartTour, onNavigateNotification }: {
   activeTab: TabType; isLogged: boolean; setActiveTab: React.Dispatch<React.SetStateAction<TabType>>; setShowLogin: (v: boolean) => void; setMobileDrawerOpen: (v: boolean) => void; token: string | null; onRestartTour: () => void; onNavigateNotification?: (section: string) => void;

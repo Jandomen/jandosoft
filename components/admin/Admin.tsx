@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/pdf-utils";
 import EmailAdminSection from "./EmailAdminSection";
+import NotificationPanel from "@/components/ui/NotificationPanel";
 
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ');
 
@@ -525,6 +526,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                 </select>
              </div>
               <LanguageCarousel />
+              <NotificationPanel token={null} />
               <button onClick={() => fetchDashboard()} className="p-2.5 hover:bg-zinc-50 rounded-xl transition-all" title="Actualizar datos">
                 <RefreshCw className={cn("w-5 h-5 text-zinc-400", loading ? "animate-spin" : "")} />
               </button>

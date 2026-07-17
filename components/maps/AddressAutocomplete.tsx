@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { loadGoogleMaps } from "@/lib/maps/loader";
-import { Settings } from "lucide-react";
+import { Settings, MapPin } from "lucide-react";
 
 interface Props {
   value: string;
@@ -16,11 +16,19 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Dirección
   const inputRef = useRef<HTMLInputElement>(null);
   const [ready, setReady] = useState(false);
   const [configError, setConfigError] = useState("");
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
 
   useEffect(() => {
     loadGoogleMaps(storeId).then(r => {
-      if (r.success) setReady(true);
-      else setConfigError(r.error || "Error");
+      if (r.success) {
+        setReady(true);
+        setApiKeyMissing(false);
+      } else {
+        setConfigError(r.error || "Error");
+        if (r.error?.includes("no configurado") || r.error?.includes("API Key")) {
+          setApiKeyMissing(true);
+        }
+      }
     });
   }, [storeId]);
 
@@ -45,6 +53,24 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Dirección
 
     return () => google.maps.event.clearInstanceListeners(autocomplete);
   }, [ready, onChange]);
+
+  if (apiKeyMissing) {
+    return (
+      <div className={`flex items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-800 border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl ${className}`}>
+        <div className="w-8 h-8 bg-zinc-200 dark:bg-zinc-700 rounded-lg flex items-center justify-center shrink-0">
+          <MapPin className="w-4 h-4 text-zinc-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-bold text-zinc-500 uppercase italic">Autocompletado desactivado</p>
+          <p className="text-[10px] text-zinc-400">Configura Google Maps en Integraciones para autocompletado de direcciones</p>
+        </div>
+        <button onClick={() => window.dispatchEvent(new CustomEvent("navigate-to-integrations"))}
+          className="text-[10px] font-black italic text-red-600 hover:text-red-700 shrink-0">
+          Configurar
+        </button>
+      </div>
+    );
+  }
 
   if (configError) {
     return (

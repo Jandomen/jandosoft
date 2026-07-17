@@ -4,6 +4,7 @@ import { getPublicStore } from "@/lib/store-utils";
 import TrackingWrapper from "@/components/TrackingWrapper";
 import StoreProductClient from "@/components/public/StoreProductClient";
 import { ThemeProvider } from "@/components/public/ThemeProvider";
+import BarcodeScanner from "@/components/public/BarcodeScanner";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -56,6 +57,9 @@ export default async function ProductsPage({ params }: Props) {
           <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-widest">
             {products.length} {products.length === 1 ? "producto disponible" : "productos disponibles"}
           </p>
+          <div className="flex justify-center mt-4">
+            <BarcodeScanner slug={slug} />
+          </div>
         </div>
 
         <StoreProductClient products={products} storeName={store.name} slug={slug} storeId={store._id?.toString()} paymentsEnabled={store.paymentsEnabled} storeCurrency={(store as any).currency || "USD"} />
