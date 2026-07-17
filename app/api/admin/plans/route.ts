@@ -30,8 +30,12 @@ export async function GET(req: Request) {
 }
 
 async function syncPlanToStripe(plan: any): Promise<{ productId?: string; priceId?: string }> {
+  const USD_TO_MXN = 20.5;
   const usdPrice = plan.priceUsd || plan.price;
   if (!usdPrice || usdPrice <= 0) return {};
+
+  const mxnAmount = Math.round(usdPrice * USD_TO_MXN);
+  if (mxnAmount < 10) return {};
 
   let productId = plan.stripeProductId;
 
@@ -52,10 +56,10 @@ async function syncPlanToStripe(plan: any): Promise<{ productId?: string; priceI
 
   const monthlyPrice = await stripe.prices.create({
     product: productId,
-    unit_amount: Math.round(usdPrice * 100),
-    currency: "usd",
+    unit_amount: mxnAmount * 100,
+    currency: "mxn",
     recurring: { interval: "month" },
-    metadata: { plan_id: plan.id },
+    metadata: { plan_id: plan.id, usd_price: usdPrice.toString() },
   });
 
   if (plan.stripePriceId && plan.stripePriceId !== monthlyPrice.id) {
@@ -93,9 +97,10 @@ export async function PUT(req: NextRequest) {
     for (let i = 0; i < config.plans.length; i++) {
       const plan = config.plans[i];
       const usdPrice = plan.priceUsd || plan.price;
+      const mxnAmount = Math.round(usdPrice * 20.5);
 
-      if (usdPrice > 0 && usdPrice < 0.50) {
-        syncErrors.push(`${plan.name}: precio USD $${usdPrice} menor al mínimo ($0.50). Sube el precio.`);
+      if (usdPrice > 0 && mxnAmount < 10) {
+        syncErrors.push(`${plan.name}: $${usdPrice} USD = $${mxnAmount} MXN < mínimo ($10 MXN). Sube a $0.50+ USD.`);
         continue;
       }
       if (usdPrice > 0) {

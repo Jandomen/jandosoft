@@ -4,6 +4,8 @@ import { User } from "@/lib/models/User";
 import { stripe } from "@/lib/stripe";
 import { getPlanConfig } from "@/lib/plan-config";
 
+const USD_TO_MXN = 20.5;
+
 export async function POST(req: NextRequest) {
   try {
     const { email, name, planId, paymentMethod, amount, currency } = await req.json();
@@ -21,12 +23,15 @@ export async function POST(req: NextRequest) {
     if (!usdPrice || usdPrice <= 0) {
       return NextResponse.json({ error: "Plan sin precio configurado" }, { status: 400 });
     }
-    if (usdPrice < 0.50) {
-      return NextResponse.json({ error: `El precio mínimo en Stripe es $0.50 USD. Precio actual: $${usdPrice} USD.` }, { status: 400 });
+
+    const chargeCurrency = "mxn";
+    const mxnAmount = Math.round(usdPrice * USD_TO_MXN);
+    if (mxnAmount < 10) {
+      return NextResponse.json({ error: `El precio mínimo en MXN es $10. Precio actual: $${mxnAmount} MXN ($${usdPrice} USD). Sube el precio.` }, { status: 400 });
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
-    const finalCurrency = "usd";
+    const amountInCents = mxnAmount * 100;
 
     if (paymentMethod === "stripe" || !paymentMethod) {
       await connectDB();
@@ -43,52 +48,27 @@ export async function POST(req: NextRequest) {
         if (user) await User.findByIdAndUpdate(user._id, { stripeCustomerId });
       }
 
-      const amountInCents = Math.round(usdPrice * 100);
-
-      if (plan.stripePriceIdUsd) {
-        const session = await stripe.checkout.sessions.create({
-          mode: "subscription",
-          payment_method_types: ["card"],
-          line_items: [{ price: plan.stripePriceIdUsd, quantity: 1 }],
-          customer: stripeCustomerId,
-          success_url: `${baseUrl}/?stripe_success={CHECKOUT_SESSION_ID}&plan=${planId}`,
-          cancel_url: `${baseUrl}/?stripe_cancel=1`,
-          metadata: { customerEmail: email, planId, planName: `Plan ${plan.name}` },
-          subscription_data: { metadata: { customerEmail: email, planId } },
-        });
-        return NextResponse.json({ url: session.url, sessionId: session.id });
-      }
-
-      if (plan.stripePriceId) {
-        const session = await stripe.checkout.sessions.create({
-          mode: "subscription",
-          payment_method_types: ["card"],
-          line_items: [{ price: plan.stripePriceId, quantity: 1 }],
-          customer: stripeCustomerId,
-          success_url: `${baseUrl}/?stripe_success={CHECKOUT_SESSION_ID}&plan=${planId}`,
-          cancel_url: `${baseUrl}/?stripe_cancel=1`,
-          metadata: { customerEmail: email, planId, planName: `Plan ${plan.name}` },
-          subscription_data: { metadata: { customerEmail: email, planId } },
-        });
-        return NextResponse.json({ url: session.url, sessionId: session.id });
-      }
+      console.log(`[PlanCheckout] plan=${planId} usdPrice=${usdPrice} mxnAmount=${mxnAmount} currency=mxn`);
 
       const session = await stripe.checkout.sessions.create({
-        mode: "payment",
+        mode: "subscription",
         payment_method_types: ["card"],
         line_items: [{
           price_data: {
-            currency: finalCurrency,
+            currency: chargeCurrency,
             product_data: { name: `Plan ${plan.name} - Jandosoft` },
             unit_amount: amountInCents,
+            recurring: { interval: "month" },
           },
           quantity: 1,
         }],
-        customer_email: email,
+        customer: stripeCustomerId,
         success_url: `${baseUrl}/?stripe_success={CHECKOUT_SESSION_ID}&plan=${planId}`,
         cancel_url: `${baseUrl}/?stripe_cancel=1`,
-        metadata: { customerEmail: email, planId, planName: `Plan ${plan.name}`, type: "plan_purchase" },
+        metadata: { customerEmail: email, planId, planName: `Plan ${plan.name}` },
+        subscription_data: { metadata: { customerEmail: email, planId } },
       });
+
       return NextResponse.json({ url: session.url, sessionId: session.id });
     }
 
@@ -122,11 +102,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Método de pago no soportado" }, { status: 400 });
   } catch (error: any) {
     console.error("[PlanCheckout] Error:", error?.message || error, error?.type, error?.code);
-    if (error?.message?.includes("No such price")) {
-      return NextResponse.json({ error: "El plan no está sincronizado con Stripe. Ve a Admin → Planes → SINCRONIZAR CON STRIPE." }, { status: 400 });
-    }
     if (error?.message?.includes("amount_too_small")) {
-      return NextResponse.json({ error: "El monto es menor al mínimo de Stripe ($0.50 USD). Sube el precio del plan." }, { status: 400 });
+      return NextResponse.json({ error: "El monto es menor al mínimo de Stripe ($10 MXN)." }, { status: 400 });
     }
     return NextResponse.json({ error: error.message || "Error al crear sesión de pago" }, { status: 500 });
   }

@@ -6,6 +6,8 @@ import { invalidatePlanCache } from "@/lib/plan-config";
 
 export const dynamic = "force-dynamic";
 
+const USD_TO_MXN = 20.5;
+
 export async function POST() {
   try {
     await connectDB();
@@ -21,8 +23,10 @@ export async function POST() {
       const plan = config.plans[i];
       const usdPrice = plan.priceUsd || plan.price;
       if (!usdPrice || usdPrice <= 0) continue;
-      if (usdPrice < 0.50) {
-        errors.push({ plan: plan.id, name: plan.name, error: `USD $${usdPrice} menor al mínimo ($0.50). Sube el precio.` });
+
+      const mxnAmount = Math.round(usdPrice * USD_TO_MXN);
+      if (mxnAmount < 10) {
+        errors.push({ plan: plan.id, name: plan.name, error: `USD $${usdPrice} = $${mxnAmount} MXN, menor al mínimo ($10 MXN). Sube el precio a al menos $0.50 USD.` });
         continue;
       }
 
@@ -42,27 +46,28 @@ export async function POST() {
           productId = product.id;
         }
 
-        const usdPriceStripe = await stripe.prices.create({
+        const mxnPrice = await stripe.prices.create({
           product: productId,
-          unit_amount: Math.round(usdPrice * 100),
-          currency: "usd",
+          unit_amount: mxnAmount * 100,
+          currency: "mxn",
           recurring: { interval: "month" },
-          metadata: { plan_id: plan.id },
+          metadata: { plan_id: plan.id, usd_price: usdPrice.toString() },
         });
 
-        if (plan.stripePriceId && plan.stripePriceId !== usdPriceStripe.id) {
+        if (plan.stripePriceId && plan.stripePriceId !== mxnPrice.id) {
           try { await stripe.prices.update(plan.stripePriceId, { active: false }); } catch {}
         }
 
         config.plans[i].stripeProductId = productId;
-        config.plans[i].stripePriceId = usdPriceStripe.id;
-        config.plans[i].stripePriceIdUsd = usdPriceStripe.id;
+        config.plans[i].stripePriceId = mxnPrice.id;
+        config.plans[i].stripePriceIdUsd = mxnPrice.id;
 
         results.push({
           plan: plan.id,
           name: plan.name,
           usdPrice,
-          priceId: usdPriceStripe.id,
+          mxnPrice,
+          priceId: mxnPrice.id,
         });
       } catch (err: any) {
         errors.push({ plan: plan.id, name: plan.name, error: err.message });
