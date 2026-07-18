@@ -68,58 +68,73 @@ function WidgetPreview({ config }: { config: Record<string, any> }) {
   const bubbleRadius = config.bubbleRadius ?? 16;
   const shadow = config.shadow || "0 8px 40px rgba(0,0,0,0.12)";
   const font = config.fontFamily || "";
+  const buttonBgOpacity = config.buttonBgOpacity ?? 100;
 
   return (
     <div className="flex items-center justify-center p-4">
-      <div className="w-[280px] bg-white rounded-3xl overflow-hidden flex flex-col" style={{ border: `1px solid ${border}`, borderRadius: `${radius}px`, boxShadow: shadow, fontFamily: font, height: "400px" }}>
-        {/* Header */}
-        <div className="px-4 py-3 flex items-center gap-2.5 shrink-0" style={{ backgroundColor: headerBg, color: headerText, borderBottom: `1px solid ${border}` }}>
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${primaryColor}25` }}>
-            {config.logo ? <img src={config.logo} alt="" className="w-4 h-4 object-contain" /> : <Sparkles className="w-4 h-4" />}
+      <div className="relative">
+        <div className="w-[280px] bg-white rounded-3xl overflow-hidden flex flex-col" style={{ border: `1px solid ${border}`, borderRadius: `${radius}px`, boxShadow: shadow, fontFamily: font, height: "400px" }}>
+          {/* Header */}
+          <div className="px-4 py-3 flex items-center gap-2.5 shrink-0" style={{ backgroundColor: headerBg, color: headerText, borderBottom: `1px solid ${border}` }}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${primaryColor}25` }}>
+              {config.logo ? <img src={config.logo} alt="" className="w-4 h-4 object-contain" /> : <Sparkles className="w-4 h-4" />}
+            </div>
+            <p className="font-bold text-xs">{config.widgetHeader || "Asistente IA"}</p>
           </div>
-          <p className="font-bold text-xs">{config.widgetHeader || "Asistente IA"}</p>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-hidden px-3 pt-4 space-y-3" style={{ backgroundColor: chatBg }}>
+            {/* Bot message */}
+            <div className="flex items-start gap-1.5">
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}>
+                <Bot className="w-3 h-3" />
+              </div>
+              <div className="px-3 py-2 text-[10px] font-medium leading-relaxed max-w-[80%]" style={{ backgroundColor: botBg, color: botText, borderRadius: `${bubbleRadius}px ${bubbleRadius}px ${bubbleRadius}px 4px`, border: `1px solid ${border}` }}>
+                {config.widgetWelcome || "¡Hola! Soy el asistente virtual. ¿En qué puedo ayudarte?"}
+              </div>
+            </div>
+
+            {/* User message */}
+            <div className="flex items-start gap-1.5 flex-row-reverse">
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-zinc-200">
+                <User className="w-3 h-3 text-zinc-600" />
+              </div>
+              <div className="px-3 py-2 text-[10px] font-medium leading-relaxed max-w-[80%]" style={{ backgroundColor: userBg, color: userText, borderRadius: `${bubbleRadius}px ${bubbleRadius}px 4px ${bubbleRadius}px` }}>
+                Quiero información sobre sus servicios
+              </div>
+            </div>
+
+            {/* Bot response */}
+            <div className="flex items-start gap-1.5">
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}>
+                <Bot className="w-3 h-3" />
+              </div>
+              <div className="px-3 py-2 text-[10px] font-medium leading-relaxed max-w-[80%]" style={{ backgroundColor: botBg, color: botText, borderRadius: `${bubbleRadius}px ${bubbleRadius}px ${bubbleRadius}px 4px`, border: `1px solid ${border}` }}>
+                ¡Claro! Tenemos varios servicios disponibles. ¿Te gustaría ver nuestro catálogo?
+              </div>
+            </div>
+          </div>
+
+          {/* Input */}
+          <div className="px-3 py-2.5 shrink-0" style={{ backgroundColor: inputBg, borderTop: `1px solid ${border}` }}>
+            <div className="flex gap-1.5">
+              <input type="text" readOnly placeholder={config.widgetPlaceholder || "Escribe tu pregunta..."} className="flex-1 px-3 py-1.5 text-[10px] font-medium outline-none" style={{ backgroundColor: chatBg, border: `1px solid ${inputBorder}`, borderRadius: `${inputRadius}px`, color: botText }} />
+              <button className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: primaryColor, color: "#ffffff" }}>
+                <Send className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
         </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-hidden px-3 pt-4 space-y-3" style={{ backgroundColor: chatBg }}>
-          {/* Bot message */}
-          <div className="flex items-start gap-1.5">
-            <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}>
-              <Bot className="w-3 h-3" />
-            </div>
-            <div className="px-3 py-2 text-[10px] font-medium leading-relaxed max-w-[80%]" style={{ backgroundColor: botBg, color: botText, borderRadius: `${bubbleRadius}px ${bubbleRadius}px ${bubbleRadius}px 4px`, border: `1px solid ${border}` }}>
-              {config.widgetWelcome || "¡Hola! Soy el asistente virtual. ¿En qué puedo ayudarte?"}
-            </div>
-          </div>
-
-          {/* User message */}
-          <div className="flex items-start gap-1.5 flex-row-reverse">
-            <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-zinc-200">
-              <User className="w-3 h-3 text-zinc-600" />
-            </div>
-            <div className="px-3 py-2 text-[10px] font-medium leading-relaxed max-w-[80%]" style={{ backgroundColor: userBg, color: userText, borderRadius: `${bubbleRadius}px ${bubbleRadius}px 4px ${bubbleRadius}px` }}>
-              Quiero información sobre sus servicios
-            </div>
-          </div>
-
-          {/* Bot response */}
-          <div className="flex items-start gap-1.5">
-            <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}>
-              <Bot className="w-3 h-3" />
-            </div>
-            <div className="px-3 py-2 text-[10px] font-medium leading-relaxed max-w-[80%]" style={{ backgroundColor: botBg, color: botText, borderRadius: `${bubbleRadius}px ${bubbleRadius}px ${bubbleRadius}px 4px`, border: `1px solid ${border}` }}>
-              ¡Claro! Tenemos varios servicios disponibles. ¿Te gustaría ver nuestro catálogo?
-            </div>
-          </div>
-        </div>
-
-        {/* Input */}
-        <div className="px-3 py-2.5 shrink-0" style={{ backgroundColor: inputBg, borderTop: `1px solid ${border}` }}>
-          <div className="flex gap-1.5">
-            <input type="text" readOnly placeholder={config.widgetPlaceholder || "Escribe tu pregunta..."} className="flex-1 px-3 py-1.5 text-[10px] font-medium outline-none" style={{ backgroundColor: chatBg, border: `1px solid ${inputBorder}`, borderRadius: `${inputRadius}px`, color: botText }} />
-            <button className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: primaryColor, color: "#ffffff" }}>
-              <Send className="w-3 h-3" />
-            </button>
+        {/* Floating button preview */}
+        <div className="absolute -bottom-2 -right-2">
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all"
+            style={{
+              backgroundColor: buttonBgOpacity >= 100 ? primaryColor : `rgba(${parseInt(primaryColor.slice(1,3),16)},${parseInt(primaryColor.slice(3,5),16)},${parseInt(primaryColor.slice(5,7),16)},${buttonBgOpacity/100})`,
+              color: "#ffffff",
+            }}
+          >
+            <Bot className="w-5 h-5" />
           </div>
         </div>
       </div>
@@ -238,6 +253,7 @@ export default function ChatAppearancePanel({ config, onChange }: ChatAppearance
           <RangeSlider label="Radio burbujas" value={config.bubbleRadius ?? 16} min={0} max={32} unit="px" onChange={v => update("bubbleRadius", v)} />
           <RangeSlider label="Radio input" value={config.inputRadius ?? 12} min={0} max={24} unit="px" onChange={v => update("inputRadius", v)} />
           <RangeSlider label="Tamaño botón" value={config.buttonSize || 56} min={40} max={80} unit="px" onChange={v => update("buttonSize", v)} />
+          <RangeSlider label="Opacidad botón" value={config.buttonBgOpacity ?? 100} min={0} max={100} unit="%" onChange={v => update("buttonBgOpacity", v)} />
           <RangeSlider label="Ancho chat" value={config.chatWidth || 380} min={300} max={500} unit="px" onChange={v => update("chatWidth", v)} />
           <RangeSlider label="Alto chat" value={config.chatHeight || 540} min={400} max={700} unit="px" onChange={v => update("chatHeight", v)} />
 

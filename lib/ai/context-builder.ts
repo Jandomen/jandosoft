@@ -83,6 +83,10 @@ const DOMAIN_INSTRUCTIONS: Record<Domain, string> = {
   analytics: `📊 ANALÍTICAS: get_analytics (días opcional) → visitas totales, visitantes únicos, desglose diario, páginas populares.`,
   marketing: `📢 MARKETING: create_campaign, update_campaign, delete_campaign, list_campaigns, send_campaign. AUTOMATIZACIONES: create_automation, update_automation, delete_automation, list_automations, toggle_automation. KB: create_kb_entry, update_kb_entry, delete_kb_entry, list_kb_entries. FORMULARIOS: create_smart_form, update_smart_form, delete_smart_form, list_smart_forms, list_form_submissions. TAREAS: schedule_task.`,
   admin: `⚙️ ADMIN: create_store, delete_store, update_store. INTEGRACIONES: configure_integration, toggle_integration, delete_integration, test_integration, list_integrations. WIDGET: get_widget_embed. TAREAS: list_scheduled_tasks, delete_scheduled_task. AGENTE: get_agent_config, update_agent_config.`,
+  legal: `📋 LEGAL: create_document, delete_document, list_documents. EXPEDIENTES: create_casefile, update_casefile, delete_casefile, list_casefiles. AUDIENCIAS: create_hearing, update_hearing, delete_hearing, list_hearings.`,
+  inventory: `📦 INVENTARIO: add_inventory_item, update_inventory_item, delete_inventory_item, list_inventory.`,
+  education: `🎓 EDUCACIÓN: create_class, update_class, delete_class, list_classes, enroll_student.`,
+  industry: `🏪 INDUSTRIA: Galería (create_gallery_item, update_gallery_item, delete_gallery_item, list_gallery_items). Testimonios (create_testimonial, update_testimonial, delete_testimonial, list_testimonials). Menú (create_menu_item, update_menu_item, delete_menu_item, list_menu_items). Recetas (create_recipe, update_recipe, delete_recipe, list_recipes). Barberos (create_barber, update_barber, delete_barber, list_barbers). Cola (add_queue_entry, update_queue_entry, delete_queue_entry, list_queue). Promociones (create_promotion, update_promotion, delete_promotion, list_promotions). Reservaciones (create_reservation, update_reservation, delete_reservation, list_reservations). Fidelidad (list_loyalty_members, add_loyalty_points, redeem_loyalty_points). Reseñas (list_reviews, reply_to_review, delete_review).`,
 };
 
 function truncateList<T>(items: T[], label: string, format: (item: T) => string): string[] {
@@ -110,6 +114,10 @@ export function buildContext(ctxReq: ContextRequest, store: any): BuiltContext {
     analytics: "Analíticas",
     marketing: "Marketing / Automatizaciones",
     admin: "Administración / Integraciones",
+    legal: "Legal / Documentos",
+    inventory: "Inventario",
+    education: "Educación / Clases",
+    industry: "Industria / Galería / Menú / Barbería",
   };
 
   const effectiveDomains = ctxReq.domains ?? [];

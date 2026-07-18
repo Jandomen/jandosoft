@@ -10,6 +10,10 @@ export type Domain =
   | "analytics"
   | "marketing"
   | "admin"
+  | "legal"
+  | "inventory"
+  | "education"
+  | "industry"
   | "general";
 
 interface DomainRoute {
@@ -100,6 +104,36 @@ const DOMAIN_ROUTES: DomainRoute[] = [
     ],
     priority: 3,
   },
+  {
+    domain: "legal",
+    keywords: [
+      "documento", "document", "expediente", "case file", "audiencia",
+      "hearing", "juzgado", "court", "juez", "judge", "abogado",
+      "demanda", "lawsuit", "contrato", "contract", "legal",
+      "caso", "case número", "case number", "tribunal",
+      "sentencia", "notificación", "notificación",
+    ],
+    priority: 8,
+  },
+  {
+    domain: "inventory",
+    keywords: [
+      "inventario", "inventory", "stock", "almacén", "warehouse",
+      "proveedor", "supplier", "materia prima", "sku",
+      "existencia", "bodega", "suministro", "supply",
+    ],
+    priority: 7,
+  },
+  {
+    domain: "education",
+    keywords: [
+      "clase", "class", "curso", "course", "estudiante", "student",
+      "profesor", "teacher", "maestro", "inscripción", "enroll",
+      "horario", "schedule", "aula", "salón", "capacitación",
+      "taller", "workshop", "alumno",
+    ],
+    priority: 6,
+  },
 ];
 
 function normalize(text: string): string {
@@ -182,6 +216,10 @@ export function getDomainLabel(domain: Domain): string {
     analytics: "Analíticas",
     marketing: "Marketing y Automatización",
     admin: "Administración",
+    legal: "Legal y Documentos",
+    inventory: "Inventario",
+    education: "Educación",
+    industry: "Industria",
     general: "General",
   };
   return labels[domain];

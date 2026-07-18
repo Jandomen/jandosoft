@@ -1,18 +1,4 @@
-/**
- * Task Planner - Determines user intent, generates execution plans,
- * and manages task lifecycle for the AI agent.
- *
- * Rules:
- * 1. Always maintain the last active intent until task completes or user changes topic
- * 2. Never assume information not provided
- * 3. Ask only for the missing required data
- * 4. Never auto-switch tasks
- * 5. Require explicit confirmation for destructive actions
- * 6. One tool per intent unless user requests multiple actions
- * 7. Clean state after execution, wait for new instructions
- * 8. User affirmatives ("sí", "ok", "hazlo") apply only to the last agent question
- */
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export type IntentType =
   | "query_products"
   | "query_services"
@@ -89,7 +75,7 @@ export interface AgentLog {
   duration?: number;
 }
 
-const AFFIRMATIVE_PATTERNS = /^(sí|si|ok|dale|hazlo|continúa|continua|adelante|yes|sure|go ahead|do it|perfecto|bien|correcto|exacto|así es|ok?|claro|por favor|dale)$/i;
+const AFFIRMATIVE_PATTERNS = /^(sí|si|ok|dale|hazlo|continúa|continua|adelante|yes|sure|go ahead|do it|perfecto|bien|correcto|exacto|así es|ok?|claro|por favor|dale|confirmo|confirmar|adelante|vamos|hágalo|hagalo|procede|proceder)$/i;
 
 const DESTRUCTIVE_KEYWORDS: Record<DestructiveAction, string[]> = {
   delete: ["eliminar", "borrar", "delete", "remove", "suprimir"],
@@ -119,12 +105,8 @@ const INTENT_KEYWORDS: Record<IntentType, string[]> = {
   unknown: [],
 };
 
-/**
- * Detect intent from user message using keyword scoring
- */
 export function detectIntent(message: string): { intent: IntentType; confidence: number } {
   const lower = message.toLowerCase().trim();
-  const words = lower.split(/\s+/);
   let bestIntent: IntentType = "unknown";
   let bestScore = 0;
 
@@ -133,7 +115,7 @@ export function detectIntent(message: string): { intent: IntentType; confidence:
     let score = 0;
     for (const keyword of keywords) {
       if (lower.includes(keyword)) {
-        score += keyword.split(" ").length; // Multi-word matches score higher
+        score += keyword.split(" ").length;
       }
     }
     if (score > bestScore) {
@@ -142,39 +124,37 @@ export function detectIntent(message: string): { intent: IntentType; confidence:
     }
   }
 
-  // Normalize confidence: 0 keywords = 0, 1 keyword = 0.5, 2+ = 0.7-1.0
   const confidence = bestScore === 0 ? 0 : Math.min(1, 0.3 + bestScore * 0.2);
 
   return { intent: bestIntent, confidence };
 }
 
-/**
- * Check if the user message is a simple affirmation responding to an agent question
- */
 export function isAffirmative(message: string): boolean {
   return AFFIRMATIVE_PATTERNS.test(message.trim());
 }
 
-/**
- * Check if message indicates a topic change
- */
-export function isTopicChange(currentIntent: IntentType, newIntent: IntentType, currentTopic: string, newMessage: string): boolean {
+export function isTopicChange(
+  currentIntent: IntentType,
+  newIntent: IntentType,
+  currentTopic: string,
+  newMessage: string,
+  currentStatus?: TaskStatus,
+): boolean {
+  // Never consider it a topic change if we're in the middle of collecting info
+  if (currentStatus === "collecting_info" || currentStatus === "awaiting_confirmation") {
+    return false;
+  }
   if (currentIntent === "unknown" || currentIntent === "greeting" || currentIntent === "farewell") return false;
   if (newIntent === "greeting" || newIntent === "farewell") return false;
   if (currentIntent === newIntent) return false;
 
-  // Check if the new message has significantly different keywords
   const { confidence } = detectIntent(newMessage);
-  return confidence > 0.5; // Only consider it a topic change if confident
+  return confidence > 0.5;
 }
 
-/**
- * Detect destructive actions in the intent
- */
 export function detectDestructiveAction(message: string, intent: IntentType): DestructiveAction | null {
   const lower = message.toLowerCase();
 
-  // Cancel intent is always destructive
   if (intent === "cancel_appointment") return "cancel";
 
   for (const [action, keywords] of Object.entries(DESTRUCTIVE_KEYWORDS) as [DestructiveAction, string[]][]) {
@@ -185,9 +165,6 @@ export function detectDestructiveAction(message: string, intent: IntentType): De
   return null;
 }
 
-/**
- * Generate a task plan from user message and store context
- */
 export function generateTaskPlan(
   message: string,
   history: any[],
@@ -198,7 +175,7 @@ export function generateTaskPlan(
   const destructiveAction = detectDestructiveAction(message, intent);
   const affirmative = isAffirmative(message);
 
-  // If it's an affirmation and we have a pending plan, reuse it
+  // If it's an affirmation and we have a pending confirmation, remove confirmation flag
   if (affirmative && currentState?.plan && currentState.status === "awaiting_confirmation") {
     return {
       ...currentState.plan,
@@ -208,27 +185,111 @@ export function generateTaskPlan(
     };
   }
 
-  // If it's an affirmation and agent asked a question, interpret as answering
-  if (affirmative && currentState?.lastAgentQuestion) {
+  // If plan exists and we're collecting info, merge new info from the message
+  if (currentState?.plan && (currentState.status === "collecting_info" || currentState.status === "executing")) {
+    const mergedPlan = mergePlanWithMessage(currentState.plan, message, store);
+    return mergedPlan;
+  }
+
+  // If it's an affirmation and agent asked a question, reuse current plan
+  if (affirmative && currentState?.lastAgentQuestion && currentState?.plan) {
     return {
-      intent: currentState.plan?.intent || "unknown",
+      ...currentState.plan,
       confidence: 0.8,
-      requiredParams: currentState.plan?.requiredParams || [],
-      providedParams: { ...currentState.plan?.providedParams, affirmative: true },
-      missingParams: currentState.plan?.missingParams || [],
-      toolToCall: null,
-      toolArgs: {},
-      needsConfirmation: false,
-      confirmationMessage: null,
-      isDestructive: false,
+      providedParams: { ...currentState.plan.providedParams, affirmative: true },
       reasoning: `Affirmative response to agent question: "${currentState.lastAgentQuestion}"`,
     };
   }
 
-  // Build plan based on intent
+  // Build new plan from scratch
   const plan = buildPlanForIntent(intent, message, store, destructiveAction);
   plan.confidence = confidence;
   return plan;
+}
+
+function mergePlanWithMessage(plan: TaskPlan, message: string, store: any): TaskPlan {
+  const mergedProvided = { ...plan.providedParams };
+  const lower = message.toLowerCase();
+
+  // Extract customer name
+  const namePatterns = [
+    /(?:mi nombre es |me llamo |soy |name is |i am |i'm )(.+?)(?:\.|,|$| y )/i,
+    /(.+?)(?:\s*(?:,|\.|$))(?=.*@|\s*a\s+las|\s*\d{1,2}:)/,
+  ];
+  for (const pattern of namePatterns) {
+    const match = message.match(pattern);
+    if (match && match[1]) {
+      const name = match[1].trim();
+      if (name.length > 2 && name.length < 50 && !name.includes("@") && !/^\d/.test(name)) {
+        mergedProvided.customerName = name;
+        break;
+      }
+    }
+  }
+
+  // Extract email
+  const emailMatch = message.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+  if (emailMatch) {
+    mergedProvided.customerEmail = emailMatch[1];
+  }
+
+  // Extract date
+  const datePatterns = [
+    /(\d{1,2})\s*de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\s*de\s*(\d{4})/i,
+    /(\d{1,2})[-/](\d{1,2})[-/](\d{4})/,
+    /(\d{4})[-/](\d{1,2})[-/](\d{1,2})/,
+    /(\d{1,2})\s*de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i,
+  ];
+  for (const pattern of datePatterns) {
+    const match = message.match(pattern);
+    if (match) {
+      mergedProvided.date = match[0];
+      break;
+    }
+  }
+
+  // Extract service name from products/services if store is available
+  if (store) {
+    const allServices = [...(store.services || []), ...(store.products || [])];
+    for (const s of allServices) {
+      if (lower.includes(s.name?.toLowerCase() || "")) {
+        mergedProvided.serviceName = s.name;
+        mergedProvided.serviceId = s._id || s.id;
+        break;
+      }
+    }
+  }
+
+  // Extract comments or additional info from the message
+  const extractionPatterns: Record<string, RegExp> = {
+    description: /(?:consulta|asesoría|orientación|sobre|acerca de|tema:?|motivo:?)\s*(.+?)(?:\.|,|$)/i,
+  };
+  for (const [key, pat] of Object.entries(extractionPatterns)) {
+    const match = message.match(pat);
+    if (match && match[1]) {
+      mergedProvided[key] = match[1].trim();
+    }
+  }
+
+  // Recalculate missing params
+  const newMissing = plan.requiredParams.filter((p) => {
+    if (mergedProvided[p]) return false;
+    if (p === "customerName" && mergedProvided.customerName) return false;
+    if (p === "customerEmail" && mergedProvided.customerEmail) return false;
+    if (p === "date" && mergedProvided.date) return false;
+    if (p === "serviceId" && mergedProvided.serviceId) return false;
+    return true;
+  });
+
+  const allParamsFilled = newMissing.length === 0;
+
+  return {
+    ...plan,
+    providedParams: mergedProvided,
+    missingParams: newMissing,
+    toolArgs: allParamsFilled ? { ...mergedProvided, intent: plan.intent } : plan.toolArgs,
+    needsConfirmation: allParamsFilled ? false : plan.needsConfirmation,
+  };
 }
 
 function buildPlanForIntent(
@@ -255,14 +316,14 @@ function buildPlanForIntent(
     case "query_products":
       return {
         ...base,
-        toolToCall: null, // Products are in system prompt context
+        toolToCall: null,
         reasoning: "Query products — information already available in system context. No tool needed.",
       };
 
     case "query_services":
       return {
         ...base,
-        toolToCall: null, // Services are in system prompt context
+        toolToCall: null,
         reasoning: "Query services — information already available in system context. No tool needed.",
       };
 
@@ -290,6 +351,14 @@ function buildPlanForIntent(
         toolToCall: "cancel_appointment",
         confirmationMessage: "¿Estás seguro de que quieres cancelar esta cita? Esta acción no se puede deshacer.",
         reasoning: "Destructive action: cancel appointment. Requires explicit confirmation.",
+      };
+
+    case "reschedule_appointment":
+      return {
+        ...base,
+        requiredParams: ["appointmentId", "date", "time"],
+        toolToCall: "reschedule_appointment",
+        reasoning: "User wants to reschedule an appointment. Need appointment ID and new date/time.",
       };
 
     case "create_order":
@@ -350,9 +419,6 @@ function buildPlanForIntent(
   }
 }
 
-/**
- * Create a new task state
- */
 export function createTaskState(plan: TaskPlan): TaskState {
   return {
     id: `task_${Date.now()}`,
@@ -375,9 +441,6 @@ export function createTaskState(plan: TaskPlan): TaskState {
   };
 }
 
-/**
- * Update task state after agent response
- */
 export function updateTaskState(state: TaskState, agentResponse: string, toolExecuted?: string, toolResult?: string): TaskState {
   const updated = { ...state, updatedAt: new Date(), turnCount: state.turnCount + 1 };
 
@@ -388,7 +451,6 @@ export function updateTaskState(state: TaskState, agentResponse: string, toolExe
     updated.plan = null;
   }
 
-  // Detect if agent asked a question (ends with ?)
   const questionPatterns = /[¿?](?:\s|$)/;
   if (questionPatterns.test(agentResponse)) {
     updated.lastAgentQuestion = agentResponse;
@@ -400,9 +462,6 @@ export function updateTaskState(state: TaskState, agentResponse: string, toolExe
   return updated;
 }
 
-/**
- * Serialize task state for storage in conversation
- */
 export function serializeTaskState(state: TaskState | null): string | null {
   if (!state) return null;
   return JSON.stringify({
@@ -417,9 +476,6 @@ export function serializeTaskState(state: TaskState | null): string | null {
   });
 }
 
-/**
- * Deserialize task state from storage
- */
 export function deserializeTaskState(data: string | null): TaskState | null {
   if (!data) return null;
   try {

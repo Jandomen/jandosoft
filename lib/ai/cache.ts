@@ -1,76 +1,75 @@
-interface CacheEntry<T> {
-  data: T;
+/* eslint-disable @typescript-eslint/no-explicit-any */
+interface CacheEntry {
+  data: any;
   expiresAt: number;
+  storeId: string;
 }
 
-class AICache {
-  private store = new Map<string, CacheEntry<any>>();
-  private hits = 0;
-  private misses = 0;
+export class AICache {
+  private store = new Map<string, CacheEntry>();
+  private readonly defaultTTL: number;
 
-  private makeKey(domain: string, key: string): string {
-    return `${domain}::${key}`;
+  constructor(defaultTTLMs = 60_000) {
+    this.defaultTTL = defaultTTLMs;
   }
 
-  get<T>(domain: string, key: string): T | null {
-    const fullKey = this.makeKey(domain, key);
+  private keyWithStore(namespace: string, key: string, storeId: string): string {
+    return `${storeId}:${namespace}:${key}`;
+  }
+
+  get<T>(namespace: string, key: string, storeId: string): T | null {
+    const fullKey = this.keyWithStore(namespace, key, storeId);
     const entry = this.store.get(fullKey);
-    if (!entry) {
-      this.misses++;
-      return null;
-    }
+    if (!entry) return null;
     if (Date.now() > entry.expiresAt) {
       this.store.delete(fullKey);
-      this.misses++;
       return null;
     }
-    this.hits++;
+    if (entry.storeId !== storeId) {
+      this.store.delete(fullKey);
+      return null;
+    }
     return entry.data as T;
   }
 
-  set<T>(domain: string, key: string, data: T, ttlMs: number = 60000): void {
-    const fullKey = this.makeKey(domain, key);
-    this.store.set(fullKey, { data, expiresAt: Date.now() + ttlMs });
+  set(namespace: string, key: string, storeId: string, data: any, ttlMs?: number): void {
+    const fullKey = this.keyWithStore(namespace, key, storeId);
+    const ttl = ttlMs ?? this.defaultTTL;
+    this.store.set(fullKey, {
+      data,
+      expiresAt: Date.now() + ttl,
+      storeId,
+    });
   }
 
-  invalidate(domain: string, key?: string): void {
-    if (key) {
-      this.store.delete(this.makeKey(domain, key));
-    } else {
-      const prefix = `${domain}::`;
-      for (const k of this.store.keys()) {
-        if (k.startsWith(prefix)) this.store.delete(k);
-      }
+  invalidate(storeId?: string, namespace?: string): void {
+    if (!storeId && !namespace) {
+      this.store.clear();
+      return;
+    }
+    for (const [fullKey, entry] of this.store.entries()) {
+      if (storeId && entry.storeId !== storeId) continue;
+      if (namespace && !fullKey.startsWith(`${entry.storeId}:${namespace}:`)) continue;
+      this.store.delete(fullKey);
     }
   }
 
-  clear(): void {
-    this.store.clear();
-    this.hits = 0;
-    this.misses = 0;
-  }
-
-  stats() {
-    return {
-      size: this.store.size,
-      hits: this.hits,
-      misses: this.misses,
-      hitRate: this.hits + this.misses > 0
-        ? (this.hits / (this.hits + this.misses)) * 100
-        : 0,
-    };
+  get size(): number {
+    return this.store.size;
   }
 }
 
 export const aiCache = new AICache();
 
-export function cachedStoreData(store: any): any {
-  if (!store?._id) return store;
-  const cached = aiCache.get<any>("store", String(store._id));
+const CACHE_TTL = 30_000;
+
+export function cachedStoreData(store: any, storeId?: string): any {
+  const sid = storeId || String(store._id || store.id);
+  const cached = aiCache.get("store", sid, sid);
   if (cached) return cached;
 
-  const storeData = {
-    _id: store._id,
+  const data = {
+    _id: store._id || store.id,
     name: store.name,
     slug: store.slug,
     type: store.type,
@@ -79,29 +78,29 @@ export function cachedStoreData(store: any): any {
     isPublic: store.isPublic,
     publicAI: store.publicAI,
     currency: store.currency,
-    paymentIntegrations: store.paymentIntegrations,
-    paymentsEnabled: store.paymentsEnabled,
-    platformFeePercent: store.platformFeePercent,
+    paymentIntegrations: store.paymentIntegrations || [],
+    paymentsEnabled: !!(store.paymentIntegrations?.length > 0),
+    platformFeePercent: store.platformFeePercent || 5,
     ownerEmail: store.ownerEmail,
     _generic: store._generic,
     organizationId: store.organizationId,
-    agentConfig: store.agentConfig,
+    agentConfig: store.agentConfig || {},
     _stores: store._stores,
     _subscription: store._subscription,
-    products: store.products,
-    customers: store.customers,
-    orders: store.orders,
-    services: store.services,
-    knowledgebase: store.knowledgebase,
-    automations: store.automations,
-    campaigns: store.campaigns,
-    smartForms: store.smartForms,
+    products: (store.products || []).slice(0, 30),
+    customers: (store.customers || []).slice(0, 30),
+    orders: (store.orders || []).slice(0, 30),
+    services: (store.services || []).slice(0, 30),
+    knowledgebase: (store.knowledgebase || []).slice(0, 30),
+    automations: (store.automations || []).slice(0, 30),
+    campaigns: (store.campaigns || []).slice(0, 30),
+    smartForms: (store.smartForms || []).slice(0, 30),
   };
 
-  aiCache.set("store", String(store._id), storeData, 30000);
-  return storeData;
+  aiCache.set("store", sid, sid, data, CACHE_TTL);
+  return data;
 }
 
 export function invalidateStoreCache(storeId: string): void {
-  aiCache.invalidate("store", storeId);
+  aiCache.invalidate(storeId);
 }

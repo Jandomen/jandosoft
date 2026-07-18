@@ -1,20 +1,22 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { stripe } from "@/lib/stripe";
 import { getPlanConfig } from "@/lib/plan-config";
+import { PLANS } from "@/lib/plans";
 
 const USD_TO_MXN = 20.5;
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, name, planId, paymentMethod, amount } = await req.json();
+    const { email, name, planId, paymentMethod, amount, userId } = await req.json();
     if (!email || !planId) {
       return NextResponse.json({ error: "email and planId required" }, { status: 400 });
     }
 
     const config = await getPlanConfig();
-    const plan = config.plans.find((p: any) => p.id === planId);
+    const plan = config.plans.find((p: any) => p.id === planId) || PLANS.find((p) => p.id === planId);
     if (!plan || plan.price === 0) {
       return NextResponse.json({ error: "Plan not found or is free" }, { status: 400 });
     }
@@ -35,24 +37,68 @@ export async function POST(req: NextRequest) {
     if (paymentMethod === "stripe" || !paymentMethod) {
       console.log(`[PlanCheckout] plan=${planId} usdPrice=${usdPrice} mxnAmount=${mxnAmount} currency=mxn`);
 
-      const session = await stripe.checkout.sessions.create({
-        mode: "subscription",
+      await connectDB();
+      const user = userId ? await User.findById(userId) : await User.findOne({ email: email });
+      let stripeCustomerId = user?.stripeCustomerId;
+
+      if (!stripeCustomerId) {
+        const customer = await stripe.customers.create({
+          email: email,
+          name: name || undefined,
+          metadata: { userId: user?._id?.toString() || "" },
+        });
+        stripeCustomerId = customer.id;
+        if (user) {
+          await User.findByIdAndUpdate(user._id, { stripeCustomerId, customerId: customer.id });
+        }
+      }
+
+      const durationDays = (plan as any).durationDays;
+      const isOneTime = !!durationDays;
+
+      const sessionConfig: any = {
+        mode: isOneTime ? "payment" : "subscription",
         payment_method_types: ["card"],
         line_items: [{
           price_data: {
             currency: "mxn",
-            product_data: { name: `Plan ${plan.name} - Jandosoft` },
+            product_data: {
+              name: `Plan ${plan.name} - Jandosoft`,
+              description: isOneTime ? `Acceso por ${durationDays} días` : undefined,
+            },
             unit_amount: amountInCents,
-            recurring: { interval: "month" },
           },
           quantity: 1,
         }],
-        customer_email: email,
+        customer: stripeCustomerId,
         success_url: `${baseUrl}/?stripe_success={CHECKOUT_SESSION_ID}&plan=${planId}`,
         cancel_url: `${baseUrl}/?stripe_cancel=1`,
-        metadata: { customerEmail: email, planId, planName: `Plan ${plan.name}` },
-        subscription_data: { metadata: { customerEmail: email, planId } },
-      });
+        metadata: {
+          customerEmail: email,
+          planId,
+          planName: `Plan ${plan.name}`,
+          userId: user?._id?.toString() || "",
+          organizationId: user?.organizationId?.toString() || "",
+        },
+      };
+
+      if (!isOneTime) {
+        sessionConfig.line_items[0].price_data.recurring = { interval: "month" };
+        sessionConfig.subscription_data = {
+          metadata: {
+            customerEmail: email,
+            planId,
+            userId: user?._id?.toString() || "",
+            organizationId: user?.organizationId?.toString() || "",
+          },
+        };
+      }
+
+      if (isOneTime && durationDays) {
+        sessionConfig.metadata.durationDays = String(durationDays);
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionConfig);
 
       return NextResponse.json({ url: session.url, sessionId: session.id });
     }

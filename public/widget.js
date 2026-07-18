@@ -5,6 +5,7 @@ var D={
   baseUrl:'https://jandosoft.vercel.app',
   position:'bottom-right',
   primaryColor:'#dc2626',
+  buttonBgOpacity:100,
   logo:'',
   title:'',
 };
@@ -42,17 +43,17 @@ function css(){
     '.jds-tl{top:24px;left:24px}',
     '.jds-win{position:fixed;z-index:2147483647;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.2);display:none;flex-direction:column;background:#fff;opacity:0;transform:scale(.95) translateY(10px);transition:opacity .25s ease,transform .25s ease}',
     '.jds-win.open{display:flex;opacity:1;transform:scale(1) translateY(0)}',
-    '.jds-hdr{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.08);cursor:grab;user-select:none;flex-shrink:0}',
+    '.jds-hdr{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.1);cursor:grab;user-select:none;flex-shrink:0;background:#1a1a1a}',
     '.jds-hdr:active{cursor:grabbing}',
     '.jds-hdr-img{width:32px;height:32px;border-radius:10px;object-fit:cover;margin-right:10px;flex-shrink:0}',
     '.jds-hdr-fb{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;margin-right:10px;flex-shrink:0}',
     '.jds-hdr-i{flex:1;min-width:0}',
-    '.jds-hdr-n{font-size:14px;font-weight:700;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.jds-hdr-n{font-size:14px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.jds-hdr-s{display:flex;align-items:center;gap:4px;font-size:11px;color:#22c55e;font-weight:600;margin-top:1px}',
     '.jds-hdr-sd{width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block}',
     '.jds-hdr-a{display:flex;gap:2px;flex-shrink:0}',
-    '.jds-hdr-b{width:32px;height:32px;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:transparent;color:#666;transition:background .15s}',
-    '.jds-hdr-b:hover{background:rgba(0,0,0,.06)}',
+    '.jds-hdr-b{width:32px;height:32px;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:transparent;color:#999;transition:background .15s}',
+    '.jds-hdr-b:hover{background:rgba(255,255,255,.1);color:#fff}',
     '.jds-hdr-b svg{width:16px;height:16px}',
     '.jds-body{flex:1;position:relative;overflow:hidden;background:#fff}',
     '.jds-body iframe{width:100%;height:100%;border:none;display:block}',
@@ -65,7 +66,7 @@ function css(){
     '.jds-rhnw{top:0;left:0;width:8px;height:8px;cursor:nw-resize}',
     '.jds-rhse{bottom:0;right:0;width:8px;height:8px;cursor:se-resize}',
     '.jds-rhsw{bottom:0;left:0;width:8px;height:8px;cursor:sw-resize}',
-    '.jds-ftr{padding:6px 16px;text-align:center;font-size:10px;color:#999;border-top:1px solid rgba(0,0,0,.06);flex-shrink:0;background:#fafafa;letter-spacing:.05em}',
+    '.jds-ftr{padding:6px 16px;text-align:center;font-size:10px;color:#888;border-top:1px solid rgba(255,255,255,.08);flex-shrink:0;background:#1a1a1a;letter-spacing:.05em}',
     '.jds-ftr a{color:#dc2626;text-decoration:none;font-weight:700}',
     '.jds-win.maxed{width:100vw!important;height:100vh!important;max-width:100vw!important;max-height:100vh!important;border-radius:0!important;top:0!important;left:0!important;right:0!important;bottom:0!important}',
     '@media(max-width:640px){.jds-win.open{width:100vw!important;height:100dvh!important;max-width:100vw!important;max-height:100dvh!important;border-radius:0!important;top:0!important;left:0!important;right:0!important;bottom:0!important}.jds-btn{width:48px;height:48px}.jds-btn svg{width:22px;height:22px}.jds-br{bottom:16px;right:16px}.jds-bl{bottom:16px;left:16px}.jds-tr{top:16px;right:16px}.jds-tl{top:16px;left:16px}}'
@@ -153,7 +154,7 @@ function build(){
 
   btn=document.createElement('button');
   btn.className='jds-btn jds-'+({br:'br',bl:'bl',tr:'tr',tl:'tl'}[C.position]||'br');
-  btn.style.background=C.primaryColor;
+  btn.style.background=btnBg();
   btn.innerHTML=icon('chat');
   btn.setAttribute('aria-label','Abrir chat');
   root.appendChild(btn);
@@ -167,7 +168,7 @@ function build(){
     img.src=C.logo;img.alt='';header.appendChild(img);
   }else{
     var fb=document.createElement('div');fb.className='jds-hdr-fb';
-    fb.style.background=C.primaryColor;
+    fb.style.background=btnBg();
     fb.textContent=(C.title||'J').charAt(0).toUpperCase();
     header.appendChild(fb);
   }
@@ -288,6 +289,16 @@ function bindEvents(){
 }
 
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function hexToRgba(hex,a){
+  var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return'rgba('+r+','+g+','+b+','+a+')';
+}
+
+function btnBg(){
+  var o=(typeof C.buttonBgOpacity==='number'?C.buttonBgOpacity:100)/100;
+  return o>=1?C.primaryColor:hexToRgba(C.primaryColor,o);
+}
 
 // ===== PUBLIC API =====
 window.Jandosoft={

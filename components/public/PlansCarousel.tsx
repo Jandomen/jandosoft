@@ -85,10 +85,10 @@ export default function PlansCarousel({ onSelectPlan }: { onSelectPlan?: (planId
             viewport={{ once: true }}
             transition={{ delay: i * 0.12, type: "spring", stiffness: 100 }}
             className={cn(
-              "snap-start shrink-0 w-[85vw] sm:w-[400px] lg:w-[440px] rounded-[2rem] p-8 md:p-10 flex flex-col transition-all duration-300 relative overflow-hidden",
+              "snap-start shrink-0 w-[85vw] max-w-[280px] sm:max-w-none sm:w-[320px] lg:w-[380px] rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-8 flex flex-col transition-all duration-300 relative overflow-hidden",
               plan.popular
-                ? "bg-white border-2 border-red-500 shadow-2xl shadow-red-500/10 scale-[1.02] z-10"
-                : "bg-white border border-zinc-200 shadow-lg hover:shadow-xl hover:border-zinc-300"
+                ? "bg-white border-2 border-red-500 shadow-xl shadow-red-500/10 scale-[1.02] z-10"
+                : "bg-white border border-zinc-200 shadow-md hover:shadow-lg hover:border-zinc-300"
             )}
             onClick={() => onSelectPlan?.(plan.id)}
           >
@@ -109,7 +109,7 @@ export default function PlansCarousel({ onSelectPlan }: { onSelectPlan?: (planId
                   )}>
                     {plan.popular ? <Zap className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
                   </div>
-                  <h3 className="text-2xl md:text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">
+                  <h3 className="text-lg md:text-xl font-black italic text-zinc-950 uppercase tracking-tighter">
                     {t(plan.nameKey || plan.name)}
                   </h3>
                 </div>
@@ -119,10 +119,10 @@ export default function PlansCarousel({ onSelectPlan }: { onSelectPlan?: (planId
               </div>
 
               <div className="flex items-baseline gap-1.5">
-                <span className="text-5xl md:text-6xl font-black italic text-zinc-950 tracking-tighter">
+                <span className="text-3xl md:text-4xl font-black italic text-zinc-950 tracking-tighter">
                   {geo.formatPrice(plan.price)}
                 </span>
-                <span className="text-zinc-400 font-black text-sm italic uppercase">
+                <span className="text-zinc-400 font-black text-xs italic uppercase">
                   {t("plans.per_month")}
                 </span>
                 {geo.currencyCode !== "USD" && (
@@ -153,13 +153,13 @@ export default function PlansCarousel({ onSelectPlan }: { onSelectPlan?: (planId
                 whileTap={{ scale: 0.97 }}
                 onClick={(e) => { e.stopPropagation(); onSelectPlan?.(plan.id); }}
                 className={cn(
-                  "w-full py-4 rounded-2xl text-sm font-black italic transition-all flex items-center justify-center gap-2 uppercase tracking-wider shadow-lg",
+                  "w-full py-2.5 rounded-xl text-xs font-black italic transition-all flex items-center justify-center gap-2 uppercase tracking-wider shadow-md",
                   plan.popular
                     ? "bg-red-600 text-white hover:bg-red-700 shadow-red-200"
                     : "bg-zinc-950 text-white hover:bg-zinc-800"
                 )}
               >
-                {t("plans.get_plan")} <ArrowRight className="w-4 h-4" />
+                {t("plans.get_plan")} <ArrowRight className="w-3.5 h-3.5" />
               </motion.button>
             </div>
           </motion.div>

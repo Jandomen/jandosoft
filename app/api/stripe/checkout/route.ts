@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
@@ -17,7 +18,7 @@ function safeCurrency(c?: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const { items, amount, currency, customerEmail, customerName, description, priceId, planId } = await req.json();
+    const { items, amount, currency, customerEmail, customerName, description, priceId, planId, userId, organizationId } = await req.json();
     if (!customerEmail) {
       return NextResponse.json({ error: "customerEmail required" }, { status: 400 });
     }
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     if (priceId) {
       await connectDB();
-      let user = await User.findOne({ email: customerEmail });
+      const user = userId ? await User.findById(userId) : await User.findOne({ email: customerEmail });
       let stripeCustomerId = user?.stripeCustomerId;
 
       if (!stripeCustomerId) {
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
         });
         stripeCustomerId = customer.id;
         if (user) {
-          await User.findByIdAndUpdate(user._id, { stripeCustomerId });
+          await User.findByIdAndUpdate(user._id, { stripeCustomerId, customerId: customer.id });
         }
       }
 
@@ -52,11 +53,15 @@ export async function POST(req: NextRequest) {
           customerEmail,
           planId: planId || "",
           planName: description || "",
+          userId: user?._id?.toString() || "",
+          organizationId: organizationId || "",
         },
         subscription_data: {
           metadata: {
             customerEmail,
             planId: planId || "",
+            userId: user?._id?.toString() || "",
+            organizationId: organizationId || "",
           },
         },
       });

@@ -5,6 +5,7 @@ import { PlanConfig } from "@/lib/models/PlanConfig";
 import { AI_CONFIG, estimateCost, formatCost } from "@/lib/ai/config";
 import { MemoryService, shrinkContext } from "@/lib/ai/memory";
 import { injectTimeContextCompact } from "@/lib/ai/time";
+import { contextIsolator, buildCognitiveContext, injectCognitiveContextHeader } from "@/lib/ai/cognitive";
 
 const openai = new OpenAI({
   baseURL: AI_CONFIG.baseURL,
@@ -222,6 +223,7 @@ ${context.email ? `- Usuario: ${context.email}` : ""}${plansBlock}
     let storeAIProvider = null;
     let storeTimezone = "";
     const businessStoreId = body.storeId || "";
+    let cognitiveCtx = null;
     if (businessStoreId) {
       try {
         await connectDB();
@@ -231,12 +233,31 @@ ${context.email ? `- Usuario: ${context.email}` : ""}${plansBlock}
           storeAIProvider = storeDoc.aiProvider;
         }
         storeTimezone = storeDoc?.timezone || "";
+
+        // Cognitive context isolation
+        const isolateResult = contextIsolator.isolateFromClient(storeDoc, null);
+        if (isolateResult.verified && isolateResult.data) {
+          cognitiveCtx = buildCognitiveContext({
+            message: messages[messages.length - 1]?.content || "",
+            storeId: isolateResult.storeId,
+            snapshot: isolateResult.data,
+            guestId: guestId || undefined,
+            authUserId: email || undefined,
+            authOrganizationId: null,
+          });
+          console.log(cognitiveCtx.trace.join("\n"));
+        } else {
+          console.error(`[Chat] Context isolation WARN: ${isolateResult.reason}`);
+        }
       } catch {}
     }
 
     // ── Inject server time into system prompt ──
     const timeContext = injectTimeContextCompact(storeTimezone ? { timezone: storeTimezone } : null);
-    const systemContentWithTime = systemContent + "\n\n" + timeContext;
+    const cognitiveHeader = cognitiveCtx ? injectCognitiveContextHeader(cognitiveCtx) : "";
+    const systemContentWithTime = cognitiveHeader
+      ? cognitiveHeader + "\n\n" + systemContent + "\n\n" + timeContext
+      : systemContent + "\n\n" + timeContext;
 
     const allMessages = messages
       .filter((m: any) => m.role !== "system")

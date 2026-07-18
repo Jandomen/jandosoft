@@ -299,6 +299,94 @@ export const TOOLS: ToolDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "create_workflow",
+      description: "Create a new workflow with trigger, conditions, and actions",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Workflow name" },
+          trigger: {
+            type: "object",
+            properties: {
+              type: { type: "string", description: "Trigger type: new_customer, new_order, new_appointment, payment_received, payment_failed, low_stock, customer_birthday, customer_inactive, webhook_received" },
+              config: { type: "object", description: "Trigger configuration" },
+            },
+            required: ["type"],
+          },
+          steps: {
+            type: "array",
+            description: "Workflow steps (each has conditions and actions)",
+            items: {
+              type: "object",
+              properties: {
+                conditions: { type: "array", description: "List of conditions (all must pass)" },
+                actions: { type: "array", description: "List of actions to execute" },
+              },
+            },
+          },
+        },
+        required: ["name", "trigger", "steps"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_workflow",
+      description: "Update an existing workflow",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "number", description: "Workflow ID" },
+          name: { type: "string" },
+          enabled: { type: "boolean" },
+          trigger: { type: "object" },
+          steps: { type: "array" },
+        },
+        required: ["id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_workflow",
+      description: "Delete a workflow by ID",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "number", description: "Workflow ID" },
+        },
+        required: ["id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_workflows",
+      description: "List all workflows for the store",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "toggle_workflow",
+      description: "Enable or disable a workflow",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "number", description: "Workflow ID" },
+          enabled: { type: "boolean", description: "True to enable, false to disable" },
+        },
+        required: ["id", "enabled"],
+      },
+    },
+  },
 ];
 
 export async function executeMarketingTool(name: string, args: any, store: any, userId: string): Promise<ToolResult> {
@@ -477,6 +565,62 @@ export async function executeMarketingTool(name: string, args: any, store: any, 
       storeId, userId,
     });
     return { success: true, message: `Tarea programada: ${args.type} para el ${new Date(args.runAt).toLocaleString("es-MX")}`, taskId: task._id };
+  }
+
+  // ── Workflow tools ──
+  const workflows = s.workflows || [];
+
+  if (name === "create_workflow") {
+    const maxId = workflows.length > 0 ? Math.max(...workflows.map((w: any) => w.id || 0)) : 0;
+    const now = new Date().toISOString();
+    s.workflows = [...workflows, {
+      id: maxId + 1,
+      name: args.name,
+      description: args.description || "",
+      enabled: true,
+      trigger: args.trigger || { type: "new_customer", config: {} },
+      steps: args.steps || [],
+      createdAt: now,
+      updatedAt: now,
+      runCount: 0,
+    }];
+    await s.save();
+    return { success: true, message: `Workflow "${args.name}" creado` };
+  }
+
+  if (name === "update_workflow") {
+    const idx = workflows.findIndex((w: any) => w.id === args.id);
+    if (idx === -1) return { error: `Workflow con ID ${args.id} no encontrado` };
+    if (args.name !== undefined) workflows[idx].name = args.name;
+    if (args.enabled !== undefined) workflows[idx].enabled = args.enabled;
+    if (args.trigger !== undefined) workflows[idx].trigger = args.trigger;
+    if (args.steps !== undefined) workflows[idx].steps = args.steps;
+    workflows[idx].updatedAt = new Date().toISOString();
+    s.workflows = workflows;
+    await s.save();
+    return { success: true, message: `Workflow "${workflows[idx].name}" actualizado` };
+  }
+
+  if (name === "delete_workflow") {
+    const wf = workflows.find((w: any) => w.id === args.id);
+    if (!wf) return { error: `Workflow con ID ${args.id} no encontrado` };
+    s.workflows = workflows.filter((w: any) => w.id !== args.id);
+    await s.save();
+    return { success: true, message: `Workflow "${wf.name}" eliminado` };
+  }
+
+  if (name === "list_workflows") {
+    return { success: true, workflows, count: workflows.length };
+  }
+
+  if (name === "toggle_workflow") {
+    const idx = workflows.findIndex((w: any) => w.id === args.id);
+    if (idx === -1) return { error: `Workflow con ID ${args.id} no encontrado` };
+    workflows[idx].enabled = args.enabled;
+    workflows[idx].updatedAt = new Date().toISOString();
+    s.workflows = workflows;
+    await s.save();
+    return { success: true, message: `Workflow "${workflows[idx].name}" ${args.enabled ? "activado" : "desactivado"}` };
   }
 
   return { error: `Unknown marketing tool: ${name}` };

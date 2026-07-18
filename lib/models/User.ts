@@ -6,6 +6,11 @@ export interface IUser extends Document {
   phone: string;
   password: string;
   subscription: string | null;
+  plan: string | null;
+  planStatus: string | null;
+  expiresAt: Date | null;
+  billingPeriod: string | null;
+  customerId: string | null;
   subscriptionExpiry: Date | null;
   isSuspended: boolean;
   suspendedUntil: Date | null;
@@ -31,6 +36,11 @@ const UserSchema = new Schema<IUser>({
   phone: { type: String, default: "" },
   password: { type: String, required: true },
   subscription: { type: String, default: null },
+  plan: { type: String, default: null },
+  planStatus: { type: String, default: null },
+  expiresAt: { type: Date, default: null },
+  billingPeriod: { type: String, default: null },
+  customerId: { type: String, default: null },
   subscriptionExpiry: { type: Date, default: null },
   isSuspended: { type: Boolean, default: false },
   suspendedUntil: { type: Date, default: null },

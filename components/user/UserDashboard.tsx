@@ -107,6 +107,7 @@ export default function UserDashboard({
     desc: "",
     industry: "tecnologia",
     type: "",
+    modules: ["services"] as string[],
   });
 
   const [step, setStep] = useState(1);
@@ -356,6 +357,7 @@ export default function UserDashboard({
       desc: "",
       industry: "tecnologia",
       type: "",
+      modules: ["services"],
     });
 
     setStep(1);
@@ -371,6 +373,7 @@ export default function UserDashboard({
       desc: store.desc || "",
       industry: store.industry || "tecnologia",
       type: store.type || "",
+      modules: store.modules?.length ? store.modules : ["services"],
     });
 
     setStep(2);
@@ -392,29 +395,19 @@ export default function UserDashboard({
       otro: t("user.store_type_other"),
     };
 
+    const storeData = {
+      name: storeForm.name,
+      desc: storeForm.desc,
+      industry: storeForm.industry,
+      type: storeForm.type,
+      typeLabel: typeLabels[storeForm.type] || storeForm.type,
+      modules: storeForm.modules,
+    };
+
     if (editingStoreId && editingStore) {
-      onEditStore?.(editingStoreId, {
-        ...editingStore,
-        name: storeForm.name,
-        desc: storeForm.desc,
-        industry: storeForm.industry,
-        type: storeForm.type,
-        typeLabel:
-          typeLabels[storeForm.type] ||
-          storeForm.type,
-      });
+      onEditStore?.(editingStoreId, { ...editingStore, ...storeData });
     } else {
-      onCreateStore?.({
-        name: storeForm.name,
-        desc: storeForm.desc,
-        industry: storeForm.industry,
-        type: storeForm.type,
-        typeLabel:
-          typeLabels[storeForm.type] ||
-          storeForm.type,
-        createdAt: new Date().toISOString(),
-        ownerEmail: user.email,
-      });
+      onCreateStore?.({ ...storeData, createdAt: new Date().toISOString(), ownerEmail: user.email });
     }
 
     setStoreForm({
@@ -422,6 +415,7 @@ export default function UserDashboard({
       desc: "",
       industry: "tecnologia",
       type: "",
+      modules: ["services"],
     });
 
     setEditingStoreId(null);
@@ -570,7 +564,7 @@ export default function UserDashboard({
                   )}
                 >
                   <Clock className="w-2.5 h-2.5 max-[400px]:w-2.5 max-[400px]:h-2.5 w-3 h-3" />
-                  {isExpired
+                  {isExpired || daysLeft <= 0
                     ? t("user.expired")
                     : t("user.days_left").replace("{n}", String(daysLeft))}
                 </motion.span>
@@ -1235,6 +1229,40 @@ export default function UserDashboard({
                     <option value="educacion">{t("user.store_type_educational")}</option>
                     <option value="otro">{t("user.store_type_other")}</option>
                   </select>
+                </div>
+                <div>
+                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">MÓDULOS</label>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {["services", "documents", "inventory", "education"].map((mod) => {
+                      const labels: Record<string, string> = {
+                        services: "Servicios",
+                        documents: "Documentos",
+                        inventory: "Inventario",
+                        education: "Educación",
+                      };
+                      const selected = storeForm.modules.includes(mod);
+                      return (
+                        <button
+                          key={mod}
+                          type="button"
+                          onClick={() => {
+                            const next = selected
+                              ? storeForm.modules.filter((m: string) => m !== mod)
+                              : [...storeForm.modules, mod];
+                            setStoreForm({...storeForm, modules: next.length ? next : ["services"]});
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold italic transition-all ${
+                            selected
+                              ? "bg-red-600 text-white shadow-md"
+                              : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
+                          }`}
+                        >
+                          {labels[mod]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[8px] text-zinc-300 italic mt-1 ml-1">Define qué módulos usa tu negocio. El agente IA solo usará herramientas de los módulos activos.</p>
                 </div>
                 <button
                   data-tour="form_submit"

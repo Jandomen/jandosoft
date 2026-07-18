@@ -34,6 +34,7 @@ import {
   Check,
   Save,
   Edit3,
+  X,
 } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/pdf-utils";
 import EmailAdminSection from "./EmailAdminSection";
@@ -67,7 +68,12 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
   const [allInvoices, setAllInvoices] = useState<any[]>([]);
   const [allPayments, setAllPayments] = useState<any[]>([]);
   const [paymentSearch, setPaymentSearch] = useState("");
+  const [paymentStatus, setPaymentStatus] = useState("all");
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const [totalPaymentsPages, setTotalPaymentsPages] = useState(1);
+  const [totalPaymentsCount, setTotalPaymentsCount] = useState(0);
   const [loadingPayments, setLoadingPayments] = useState(false);
+  const [userPaymentsModal, setUserPaymentsModal] = useState<{ email: string; name?: string } | null>(null);
   const [commercials, setCommercials] = useState<any[]>([]);
   const [searchStores, setSearchStores] = useState("");
   const [searchUsers, setSearchUsers] = useState("");
@@ -122,6 +128,9 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
     searchUsers?: string; usersPage?: number;
     searchStores?: string; storesPage?: number;
     invoicesPage?: number;
+    paymentsPage?: number;
+    paymentStatus?: string;
+    paymentSearch?: string;
   }) => {
     try {
       const uSearch = overrides?.searchUsers ?? searchUsers;
@@ -129,6 +138,16 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
       const sSearch = overrides?.searchStores ?? searchStores;
       const sPage = overrides?.storesPage ?? storesPage;
       const iPage = overrides?.invoicesPage ?? invoicesPage;
+      const pPage = overrides?.paymentsPage ?? paymentsPage;
+      const pStatus = overrides?.paymentStatus ?? paymentStatus;
+      const pSearch = overrides?.paymentSearch ?? paymentSearch;
+
+      const paymentsParams = new URLSearchParams({
+        page: String(pPage),
+        limit: "20",
+      });
+      if (pStatus && pStatus !== "all") paymentsParams.set("status", pStatus);
+      if (pSearch) paymentsParams.set("search", pSearch);
 
       const [dashRes, usersRes, storesRes, invRes, commRes, payRes] = await Promise.all([
         fetch("/api/admin/dashboard", { credentials: "include" }),
@@ -136,7 +155,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
         fetch(`/api/admin/stores?search=${encodeURIComponent(sSearch)}&page=${sPage}&limit=20`, { credentials: "include" }),
         fetch(`/api/invoices?page=${iPage}&limit=20`, { credentials: "include" }),
         fetch("/api/admin/commercials", { credentials: "include" }),
-        fetch("/api/stripe/payments?limit=100", { credentials: "include" }),
+        fetch(`/api/stripe/payments?${paymentsParams.toString()}`, { credentials: "include" }),
       ]);
       if (dashRes.ok) {
         const data = await dashRes.json();
@@ -175,6 +194,8 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
         }
         prevPaymentCount.current = newPayments.length;
         setAllPayments(newPayments);
+        setTotalPaymentsPages(data.totalPages || 1);
+        setTotalPaymentsCount(data.total || 0);
       }
     } catch (e) {
       console.error("Error fetching admin data:", e);
@@ -499,12 +520,6 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
     fetchDashboard();
     fetchPlans();
     fetchRevenue();
-    const interval = setInterval(() => {
-      fetchDashboard();
-      fetchRevenue();
-      fetchPlans();
-    }, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   const [imageUrlInput, setImageUrlInput] = useState("");
@@ -1279,8 +1294,22 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                             <motion.button whileTap={{ scale: 0.95 }} onClick={() => exportCSV(allPayments.map((p: any) => ({ cliente: p.customerName || p.customerEmail, monto: p.amount, moneda: p.displayCurrency, estado: p.status || p.paymentStatus, fecha: p.createdAt, tienda: p.storeName })), "pagos")} className="px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-xl text-[9px] font-black italic text-zinc-600 hover:bg-zinc-100 transition-all">
                               CSV ↓
                             </motion.button>
-                            <div className="px-3 md:px-4 py-1.5 md:py-2 bg-zinc-950 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase italic">{allPayments.length} Pagos</div>
+                            <div className="px-3 md:px-4 py-1.5 md:py-2 bg-zinc-950 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase italic">{totalPaymentsCount} Pagos</div>
                           </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { value: "all", label: "Todos" },
+                          { value: "completed", label: "Aprobados" },
+                          { value: "pending", label: "Pendientes" },
+                          { value: "failed", label: "Fallidos" },
+                        ].map(opt => (
+                          <motion.button key={opt.value} whileTap={{ scale: 0.95 }}
+                            onClick={() => { setPaymentStatus(opt.value); setPaymentsPage(1); fetchDashboard({ paymentStatus: opt.value, paymentsPage: 1 }); }}
+                            className={`px-4 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase italic transition-all border ${paymentStatus === opt.value ? "bg-zinc-950 text-white border-zinc-950" : "bg-zinc-50 text-zinc-500 border-zinc-100 hover:bg-zinc-100"}`}
+                          >{opt.label}</motion.button>
+                        ))}
                       </div>
 
                       <div className="relative">
@@ -1289,6 +1318,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                            type="text"
                            value={paymentSearch}
                            onChange={e => setPaymentSearch(e.target.value)}
+                           onKeyDown={e => { if (e.key === "Enter") { setPaymentsPage(1); fetchDashboard({ paymentSearch, paymentsPage: 1 }); } }}
                            placeholder="Buscar por email, descripción, recibo..."
                            className="w-full bg-zinc-50 pl-11 pr-4 py-3 rounded-2xl border border-zinc-100 outline-none font-bold text-sm focus:bg-white focus:border-red-200 transition-all italic"
                          />
@@ -1302,72 +1332,88 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                                   <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Cliente</th>
                                   <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Descripción</th>
                                   <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Monto</th>
-                                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Comisión</th>
+                                  <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Estado</th>
                                   <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest">Método</th>
                                   <th className="px-5 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Recibo</th>
                                </tr>
                             </thead>
                             <tbody>
-                               {(paymentSearch
-                                 ? allPayments.filter((p: any) =>
-                                     p.customerEmail?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
-                                     p.customerName?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
-                                     p.description?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
-                                     p.receiptNumber?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
-                                     p.displayDescription?.toLowerCase().includes(paymentSearch.toLowerCase())
-                                   )
-                                 : allPayments
-                               ).map((p: any) => (
-                                  <tr key={p._id} className="border-b border-zinc-50 hover:bg-zinc-50/50 transition-colors">
-                                     <td className="px-5 md:px-8 py-4 md:py-5">
-                                        <p className="text-[10px] md:text-xs font-black text-zinc-950 italic">{new Date(p.createdAt).toLocaleDateString()}</p>
-                                        <p className="text-[9px] md:text-[10px] text-zinc-400 font-bold">{p.receiptNumber || `#${p._id?.slice(-6)}`}</p>
-                                     </td>
-                                     <td className="px-5 md:px-8 py-4 md:py-5">
-                                        <p className="text-[10px] md:text-xs font-bold text-zinc-600 italic truncate max-w-[120px] md:max-w-none">{p.customerName || p.customerEmail}</p>
-                                     </td>
-                                     <td className="px-5 md:px-8 py-4 md:py-5">
-                                        <p className="text-[10px] md:text-xs font-bold text-zinc-600 italic truncate max-w-[120px] md:max-w-none">{p.displayDescription || p.description || "—"}</p>
-                                     </td>
-                                     <td className="px-5 md:px-8 py-4 md:py-5">
-                                        <p className="text-xs md:text-sm font-black text-red-600 italic">{p.displayCurrency || (p.currency || "USD").toUpperCase()} ${p.displayAmount?.toFixed(2) || p.amount?.toFixed(2)}</p>
-                                     </td>
-                                     <td className="px-5 md:px-8 py-4 md:py-5">
-                                        <p className="text-[10px] md:text-xs font-bold text-zinc-400 italic">{p.platformFee ? `$${p.platformFee.toFixed(2)}` : "—"}</p>
-                                     </td>
-                                     <td className="px-5 md:px-8 py-4 md:py-5">
-                                        <span className="px-2 py-0.5 bg-zinc-100 text-zinc-500 rounded-full text-[8px] md:text-[9px] font-black italic uppercase">{p.displayPaymentMethod}</span>
-                                     </td>
-                                     <td className="px-5 md:px-8 py-4 md:py-5 text-right">
-                                        <motion.button whileTap={{ scale: 0.9 }}
-                                           onClick={async () => {
-                                             try {
-                                               const res = await fetch(`/api/receipts/${p._id}`);
-                                               if (!res.ok) return;
-                                               const blob = await res.blob();
-                                               const url = URL.createObjectURL(blob);
-                                               const a = document.createElement("a");
-                                               a.href = url;
-                                               a.download = `Recibo_${p.receiptNumber || p._id?.slice(-8)}.pdf`;
-                                               a.click();
-                                               URL.revokeObjectURL(url);
-                                             } catch {}
-                                           }}
-                                           className="p-2 md:p-3 bg-zinc-50 text-zinc-400 hover:text-red-600 hover:bg-white hover:shadow-lg rounded-xl transition-all"
-                                        >
-                                           <Download className="w-4 h-4 md:w-5 md:h-5" />
-                                        </motion.button>
-                                     </td>
-                                  </tr>
-                               ))}
+                               {allPayments.map((p: any) => {
+                                  const status = p.status || p.paymentStatus || "unknown";
+                                  const statusColor = status === "completed" || status === "finished" || status === "confirmed"
+                                    ? "bg-emerald-50 text-emerald-600"
+                                    : status === "pending" || status === "waiting" || status === "confirming"
+                                    ? "bg-amber-50 text-amber-600"
+                                    : "bg-red-50 text-red-600";
+                                  return (
+                                   <tr key={p._id} className="border-b border-zinc-50 hover:bg-zinc-50/50 transition-colors">
+                                      <td className="px-5 md:px-8 py-4 md:py-5">
+                                         <p className="text-[10px] md:text-xs font-black text-zinc-950 italic">{new Date(p.createdAt).toLocaleDateString()}</p>
+                                         <p className="text-[9px] md:text-[10px] text-zinc-400 font-bold">{p.receiptNumber || `#${p._id?.slice(-6)}`}</p>
+                                      </td>
+                                      <td className="px-5 md:px-8 py-4 md:py-5">
+                                         <button onClick={() => p.customerEmail && setUserPaymentsModal({ email: p.customerEmail, name: p.customerName })} className="text-left hover:underline">
+                                           <p className="text-[10px] md:text-xs font-bold text-zinc-600 italic truncate max-w-[120px] md:max-w-none">{p.customerName || p.customerEmail || "—"}</p>
+                                           {p.customerEmail && <p className="text-[9px] md:text-[10px] text-zinc-400 italic truncate max-w-[120px] md:max-w-none">{p.customerEmail}</p>}
+                                         </button>
+                                      </td>
+                                      <td className="px-5 md:px-8 py-4 md:py-5">
+                                         <p className="text-[10px] md:text-xs font-bold text-zinc-600 italic truncate max-w-[120px] md:max-w-none">{p.displayDescription || p.description || "—"}</p>
+                                      </td>
+                                      <td className="px-5 md:px-8 py-4 md:py-5">
+                                         <p className="text-xs md:text-sm font-black text-red-600 italic">{p.displayCurrency || (p.currency || "USD").toUpperCase()} ${p.displayAmount?.toFixed(2) || p.amount?.toFixed(2)}</p>
+                                      </td>
+                                      <td className="px-5 md:px-8 py-4 md:py-5">
+                                         <span className={`px-2 py-0.5 rounded-full text-[8px] md:text-[9px] font-black italic uppercase ${statusColor}`}>{status}</span>
+                                      </td>
+                                      <td className="px-5 md:px-8 py-4 md:py-5">
+                                         <span className="px-2 py-0.5 bg-zinc-100 text-zinc-500 rounded-full text-[8px] md:text-[9px] font-black italic uppercase">{p.displayPaymentMethod}</span>
+                                      </td>
+                                      <td className="px-5 md:px-8 py-4 md:py-5 text-right">
+                                         <motion.button whileTap={{ scale: 0.9 }}
+                                            onClick={async () => {
+                                              try {
+                                                const res = await fetch(`/api/receipts/${p._id}`);
+                                                if (!res.ok) return;
+                                                const blob = await res.blob();
+                                                const url = URL.createObjectURL(blob);
+                                                const a = document.createElement("a");
+                                                a.href = url;
+                                                a.download = `Recibo_${p.receiptNumber || p._id?.slice(-8)}.pdf`;
+                                                a.click();
+                                                URL.revokeObjectURL(url);
+                                              } catch {}
+                                            }}
+                                            className="p-2 md:p-3 bg-zinc-50 text-zinc-400 hover:text-red-600 hover:bg-white hover:shadow-lg rounded-xl transition-all"
+                                         >
+                                            <Download className="w-4 h-4 md:w-5 md:h-5" />
+                                         </motion.button>
+                                      </td>
+                                   </tr>
+                                  );
+                               })}
                                {allPayments.length === 0 && (
-                                  <tr>
-                                     <td colSpan={7} className="px-5 md:px-8 py-12 md:py-16 text-center italic font-black uppercase text-zinc-200 tracking-widest text-xs md:text-sm">No hay pagos registrados</td>
-                                  </tr>
+                                   <tr>
+                                      <td colSpan={7} className="px-5 md:px-8 py-12 md:py-16 text-center italic font-black uppercase text-zinc-200 tracking-widest text-xs md:text-sm">No hay pagos registrados</td>
+                                   </tr>
                                )}
                             </tbody>
                           </table>
                        </div>
+
+                       {totalPaymentsPages > 1 && (
+                         <div className="flex items-center justify-center gap-3 pt-2">
+                           <motion.button whileTap={{ scale: 0.95 }} disabled={paymentsPage <= 1}
+                             onClick={() => { setPaymentsPage(p => p - 1); fetchDashboard({ paymentsPage: paymentsPage - 1 }); }}
+                             className="px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-[9px] font-black italic text-zinc-500 hover:bg-zinc-100 transition-all disabled:opacity-30"
+                           >ANTERIOR</motion.button>
+                           <span className="text-[10px] font-black text-zinc-400 italic">{paymentsPage} / {totalPaymentsPages}</span>
+                           <motion.button whileTap={{ scale: 0.95 }} disabled={paymentsPage >= totalPaymentsPages}
+                             onClick={() => { setPaymentsPage(p => p + 1); fetchDashboard({ paymentsPage: paymentsPage + 1 }); }}
+                             className="px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl text-[9px] font-black italic text-zinc-500 hover:bg-zinc-100 transition-all disabled:opacity-30"
+                           >SIGUIENTE</motion.button>
+                         </div>
+                       )}
                     </motion.div>
                 )}
 
@@ -1943,7 +1989,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
     baseUrl: "${widgetConfig.baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://jandosoft.vercel.app')}",
     position: "${widgetConfig.position || 'bottom-right'}",
     primaryColor: "${widgetConfig.primaryColor || '#dc2626'}",
-    ${widgetConfig.logo ? `logo: "${widgetConfig.logo}",` : ''}
+    buttonBgOpacity: ${widgetConfig.buttonBgOpacity ?? 100},${widgetConfig.logo ? `\n    logo: "${widgetConfig.logo}",` : ''}
     title: "${widgetConfig.title || 'Asistente IA'}"
   });
 <\/script>`}
@@ -1951,7 +1997,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                               <motion.button
                                 whileTap={{ scale: 0.9 }}
                                 onClick={async () => {
-                                  const code = `<!-- Jandosoft AI Chat Widget -->\n<script src="${widgetConfig.baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://jandosoft.vercel.app')}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${widgetSlug}",\n    baseUrl: "${widgetConfig.baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://jandosoft.vercel.app')}",\n    position: "${widgetConfig.position || 'bottom-right'}",\n    primaryColor: "${widgetConfig.primaryColor || '#dc2626'}",${widgetConfig.logo ? `\n    logo: "${widgetConfig.logo}",` : ''}\n    title: "${widgetConfig.title || 'Asistente IA'}"\n  });\n<\/script>`;
+                                  const code = `<!-- Jandosoft AI Chat Widget -->\n<script src="${widgetConfig.baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://jandosoft.vercel.app')}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${widgetSlug}",\n    baseUrl: "${widgetConfig.baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://jandosoft.vercel.app')}",\n    position: "${widgetConfig.position || 'bottom-right'}",\n    primaryColor: "${widgetConfig.primaryColor || '#dc2626'}",\n    buttonBgOpacity: ${widgetConfig.buttonBgOpacity ?? 100},${widgetConfig.logo ? `\n    logo: "${widgetConfig.logo}",` : ''}\n    title: "${widgetConfig.title || 'Asistente IA'}"\n  });\n<\/script>`;
                                   await navigator.clipboard.writeText(code);
                                   setWidgetCopied(true);
                                   setTimeout(() => setWidgetCopied(false), 2000);
@@ -2414,6 +2460,68 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {userPaymentsModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setUserPaymentsModal(null)}>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} onClick={e => e.stopPropagation()} className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between px-6 md:px-8 py-5 md:py-6 border-b border-zinc-100">
+                <div>
+                  <h3 className="text-lg md:text-xl font-black italic text-zinc-950 uppercase tracking-tight">Pagos de {userPaymentsModal.name || userPaymentsModal.email}</h3>
+                  <p className="text-[10px] md:text-xs text-zinc-400 font-bold italic mt-1">{userPaymentsModal.email}</p>
+                </div>
+                <motion.button whileTap={{ scale: 0.9 }} onClick={() => setUserPaymentsModal(null)} className="p-2 md:p-3 bg-zinc-50 rounded-xl hover:bg-zinc-100 transition-all">
+                  <X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" />
+                </motion.button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-6 md:px-8 py-4">
+                <UserPaymentsContent email={userPaymentsModal.email} />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function UserPaymentsContent({ email }: { email: string }) {
+  const [payments, setPayments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/stripe/payments?customerEmail=${encodeURIComponent(email)}&limit=100`, { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          setPayments(data.payments || []);
+        }
+      } catch {} finally { setLoading(false); }
+    })();
+  }, [email]);
+
+  if (loading) return <div className="py-12 text-center italic font-black uppercase text-zinc-300 text-xs tracking-widest">Cargando pagos...</div>;
+  if (!payments.length) return <div className="py-12 text-center italic font-black uppercase text-zinc-200 text-xs tracking-widest">No hay pagos para este usuario</div>;
+
+  return (
+    <div className="space-y-2">
+      {payments.map((p: any) => {
+        const status = p.status || p.paymentStatus || "unknown";
+        const statusColor = status === "completed" || status === "finished" || status === "confirmed" ? "bg-emerald-50 text-emerald-600" : status === "pending" || status === "waiting" || status === "confirming" ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600";
+        return (
+          <div key={p._id} className="flex items-center justify-between gap-3 p-3 md:p-4 bg-zinc-50 rounded-xl">
+            <div className="space-y-1">
+              <p className="text-[10px] md:text-xs font-black text-zinc-950 italic">{new Date(p.createdAt).toLocaleDateString()}</p>
+              <p className="text-[9px] md:text-[10px] text-zinc-400 font-bold italic">{p.displayDescription || p.description || "—"}</p>
+            </div>
+            <div className="text-right space-y-1">
+              <p className="text-xs md:text-sm font-black text-red-600 italic">{p.displayCurrency || "USD"} ${p.displayAmount?.toFixed(2) || p.amount?.toFixed(2)}</p>
+              <span className={`px-2 py-0.5 rounded-full text-[8px] font-black italic uppercase ${statusColor}`}>{status}</span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -2474,8 +2582,6 @@ function AdminRevenuePanel() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   if (loading) {

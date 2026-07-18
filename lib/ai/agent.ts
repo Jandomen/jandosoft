@@ -8,11 +8,13 @@ import { metrics } from "@/lib/ai/metrics";
 import { withToolTimeout, getErrorMessage } from "@/lib/ai/errors";
 import { filterToolsByDomain, executeRegisteredTool } from "@/lib/ai/tools";
 import { registerAllTools, ALL_TOOLS } from "@/lib/ai/tools/registry";
+import { registerWorkflowPlugins } from "@/lib/workflow/register";
 import { buildContext, type ContextRequest } from "@/lib/ai/context-builder";
 import { validateInput, detectPromptInjection } from "@/lib/ai/guardrails";
 import { getStoreTimezone, getDateComponents } from "@/lib/ai/time";
 
 registerAllTools();
+registerWorkflowPlugins();
 
 export const AGENT_TOOLS = ALL_TOOLS;
 
@@ -151,10 +153,12 @@ export async function askBusinessAI({
   message,
   store,
   history,
+  cognitiveHeader,
 }: {
   message: string;
   store: any;
   history?: any[];
+  cognitiveHeader?: string;
 }): Promise<string> {
   const domainInfo = detectDomain(message, (history || []).map((h: any) => h.content || ""));
   const ctxReq: ContextRequest = {
@@ -166,8 +170,12 @@ export async function askBusinessAI({
   };
   const ctx = buildContext(ctxReq, store);
 
+  const systemContent = cognitiveHeader
+    ? `${cognitiveHeader}\n\n${ctx.systemPrompt}`
+    : ctx.systemPrompt;
+
   const messages = trimHistory([
-    { role: "system", content: ctx.systemPrompt },
+    { role: "system", content: systemContent },
     ...(history || []).map((m: any) => ({ role: m.role, content: m.content })),
     { role: "user", content: message },
   ]);
@@ -181,11 +189,13 @@ export async function askBusinessAIWithTools({
   store,
   history,
   userId,
+  cognitiveHeader,
 }: {
   message: string;
   store: any;
   history?: any[];
   userId: string;
+  cognitiveHeader?: string;
 }): Promise<{ response: string; actions: any[] }> {
   const startTime = Date.now();
   const domainInfo = detectDomain(message, (history || []).map((h: any) => h.content || ""));
@@ -205,8 +215,12 @@ export async function askBusinessAIWithTools({
   };
   const ctx = buildContext(ctxReq, store);
 
+  const systemContent = cognitiveHeader
+    ? `${cognitiveHeader}\n\n${ctx.systemPrompt}`
+    : ctx.systemPrompt;
+
   const messages: any[] = trimHistory([
-    { role: "system", content: ctx.systemPrompt },
+    { role: "system", content: systemContent },
     ...(history || []).map((m: any) => ({ role: m.role, content: m.content })),
     { role: "user", content: message },
   ]);

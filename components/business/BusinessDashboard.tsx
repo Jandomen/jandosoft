@@ -68,6 +68,7 @@ interface BusinessDashboardProps {
   storeId: string | number;
   planLimits?: { maxStores: number; maxProductsPerStore: number; maxMessages: number; maxAutomations: number; maxAppointments?: number; maxCampaigns?: number; maxCustomers?: number };
   planExpired?: boolean;
+  subscription?: string | null;
   onNavigateToPricing?: () => void;
   onBack?: () => void;
   onEditStore?: (storeId: string | number, data: any) => Promise<void>;
@@ -76,7 +77,7 @@ interface BusinessDashboardProps {
   initialSection?: string;
 }
 
-export default function BusinessDashboard({ userStore, userEmail, storeId, planLimits, planExpired, onNavigateToPricing, onBack, onEditStore, onDeleteStore, onSaveStore, initialSection }: BusinessDashboardProps) {
+export default function BusinessDashboard({ userStore, userEmail, storeId, planLimits, planExpired, subscription, onNavigateToPricing, onBack, onEditStore, onDeleteStore, onSaveStore, initialSection }: BusinessDashboardProps) {
   const { t } = useLanguage();
   const storeTypeLabels: Record<string, string> = {
     general: t("user.store_type_general"),
@@ -102,26 +103,30 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeMessage, setUpgradeMessage] = useState("");
 
-  const isFreePlan = !planLimits || planLimits.maxCustomers === 0;
+  const isFreePlan = !subscription || subscription === "free" || planExpired || !planLimits || planLimits.maxCustomers === 0;
+
+  const GATED_SECTIONS: Record<string, { requiredPlan: string; message: string }> = {
+    analytics:        { requiredPlan: "El Gallito", message: "Analytics está disponible desde el plan El Gallito ($29/mes)" },
+    campaigns:        { requiredPlan: "El Gallito", message: "Las campañas están disponibles desde el plan El Gallito ($29/mes)" },
+    customers:        { requiredPlan: "El Gallito", message: "Los clientes están disponibles desde el plan El Gallito ($29/mes)" },
+    agentconfig:      { requiredPlan: "El Gallito", message: "La configuración del agente IA está disponible desde el plan El Gallito ($29/mes)" },
+    gallery:          { requiredPlan: "El Gallito", message: "La galería está disponible desde el plan El Gallito ($29/mes)" },
+    knowledgebase:    { requiredPlan: "El Gallito", message: "La base de conocimiento está disponible desde el plan El Gallito ($29/mes)" },
+    messages:         { requiredPlan: "El Gallito", message: "La mensajería inteligente está disponible desde el plan El Gallito ($29/mes)" },
+    widget:           { requiredPlan: "El Gallito", message: "La configuración del widget está disponible desde el plan El Gallito ($29/mes)" },
+    appointments:     { requiredPlan: "El Gallito", message: "Las citas están disponibles desde el plan El Gallito ($29/mes)" },
+    team:             { requiredPlan: "El Jefe", message: "El equipo está disponible desde el plan El Jefe ($79/mes)" },
+    smartforms:       { requiredPlan: "El Jefe", message: "Los formularios inteligentes están disponibles desde el plan El Jefe ($79/mes)" },
+  };
+
+  const gatedKeys = Object.keys(GATED_SECTIONS);
 
   const handleSectionChange = (newSection: string) => {
-    if (isFreePlan) {
-      const freeGated = ["analytics", "campaigns", "customers", "agentconfig", "gallery", "team", "smartforms", "knowledgebase"];
-      if (freeGated.includes(newSection)) {
-        const messages: Record<string, string> = {
-          analytics: "Analytics está disponible desde el plan Starter ($29/mes)",
-          campaigns: "Las campañas están disponibles desde el plan Starter ($29/mes)",
-          customers: "Los clientes están disponibles desde el plan Starter ($29/mes)",
-          agentconfig: "La configuración del agente IA está disponible desde el plan Starter ($29/mes)",
-          gallery: "La galería está disponible desde el plan Starter ($29/mes)",
-          team: "El equipo está disponible desde el plan Business ($79/mes)",
-          smartforms: "Los formularios inteligentes están disponibles desde el plan Business ($79/mes)",
-          knowledgebase: "La base de conocimiento está disponible desde el plan Starter ($29/mes)",
-        };
-        setUpgradeMessage(messages[newSection] || "Esta función está disponible desde un plan superior");
-        setShowUpgradeModal(true);
-        return;
-      }
+    if (isFreePlan && gatedKeys.includes(newSection)) {
+      const config = GATED_SECTIONS[newSection];
+      setUpgradeMessage(config?.message || "Esta función está disponible desde un plan superior");
+      setShowUpgradeModal(true);
+      return;
     }
     setSection(newSection);
   };
@@ -191,6 +196,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
     userTextColor: "#ffffff",
     fontFamily: "",
     buttonSize: 56,
+    buttonBgOpacity: 100,
     buttonPosition: "bottom-right",
     buttonStyle: "circle",
     chatWidth: 380,
@@ -228,7 +234,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
   const [showSettings, setShowSettings] = useState(false);
   const [editingStore, setEditingStore] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [settingsForm, setSettingsForm] = useState({ name: "", desc: "", industry: "", slug: "", image: "", location: "", phone: "", currency: "USD", coordinates: null as { lat: number; lng: number } | null });
+  const [settingsForm, setSettingsForm] = useState({ name: "", desc: "", industry: "", slug: "", image: "", location: "", phone: "", currency: "USD", coordinates: null as { lat: number; lng: number } | null, modules: [] as string[] });
   const [storeImageUploading, setStoreImageUploading] = useState(false);
   const [publicVisible, setPublicVisible] = useState(false);
   const [publicAIEnabled, setPublicAIEnabled] = useState(false);
@@ -289,6 +295,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
           userTextColor: ac.userTextColor || "#ffffff",
           fontFamily: ac.fontFamily || "",
           buttonSize: ac.buttonSize || 56,
+          buttonBgOpacity: ac.buttonBgOpacity ?? 100,
           buttonPosition: ac.buttonPosition || "bottom-right",
           buttonStyle: ac.buttonStyle || "circle",
           chatWidth: ac.chatWidth || 380,
@@ -675,7 +682,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
               </>
             )}
           </div>
-                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingStore(false); setConfirmDelete(false); setSettingsForm({ name: userStore?.name || "", desc: userStore?.desc || "", industry: userStore?.industry || "", slug: userStore?.slug || "", image: userStore?.image || "", location: (userStore as any)?.location || "", phone: (userStore as any)?.phone || "", currency: (userStore as any)?.currency || "USD", coordinates: (userStore as any)?.coordinates || null }); setPublicVisible(!!(userStore as any)?.isPublic); setPublicAIEnabled(!!(userStore as any)?.publicAI); setShowSettings(true); }} className="p-1.5 md:p-2 hover:bg-zinc-50 rounded-xl transition-all" title={t("biz.store_settings")}>
+                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingStore(false); setConfirmDelete(false); setSettingsForm({ name: userStore?.name || "", desc: userStore?.desc || "", industry: userStore?.industry || "", slug: userStore?.slug || "", image: userStore?.image || "", location: (userStore as any)?.location || "", phone: (userStore as any)?.phone || "", currency: (userStore as any)?.currency || "USD", coordinates: (userStore as any)?.coordinates || null, modules: (userStore as any)?.modules?.length ? (userStore as any).modules : ["services"] }); setPublicVisible(!!(userStore as any)?.isPublic); setPublicAIEnabled(!!(userStore as any)?.publicAI); setShowSettings(true); }} className="p-1.5 md:p-2 hover:bg-zinc-50 rounded-xl transition-all" title={t("biz.store_settings")}>
               <Settings className="w-4 h-4 md:w-5 md:h-5 text-zinc-400 hover:text-zinc-950 transition-colors" />
             </motion.button>
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => { const next = !soundOn; setSoundOn(next); setSoundEnabled(next); }} className="p-1.5 md:p-2 hover:bg-zinc-50 rounded-xl transition-all" title={soundOn ? "Silenciar sonidos" : "Activar sonidos"}>
@@ -721,7 +728,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
               >
                 <span className="w-3.5 h-3.5">{MODULE_ICONS[mod.icon]}</span>
                 {t(mod.nameKey)}
-                {isFreePlan && ["analytics", "campaigns", "customers", "agentconfig", "gallery", "team", "smartforms", "knowledgebase"].includes(mod.sectionKey) && (
+                {isFreePlan && gatedKeys.includes(mod.sectionKey) && (
                   <span className="text-[7px] bg-amber-100 text-amber-600 px-1 py-0.5 rounded-full font-black">PRO</span>
                 )}
               </motion.button>
@@ -742,7 +749,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       label={t(mod.nameKey)}
                       active={section === mod.sectionKey}
                       onClick={() => handleSectionChange(mod.sectionKey)}
-                      badge={isFreePlan && ["analytics", "campaigns", "customers", "agentconfig", "gallery", "team", "smartforms", "knowledgebase"].includes(mod.sectionKey) ? "PRO" : undefined}
+                      badge={isFreePlan && gatedKeys.includes(mod.sectionKey) ? "PRO" : undefined}
                     />
                   ))}
                 </div>
@@ -752,26 +759,26 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
           <main className="flex-1 overflow-y-auto p-4 max-[400px]:p-3 max-[340px]:p-2 md:p-8 bg-white">
             {section === "dashboard" && (
               <div className="space-y-8">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
-                  <div className="bg-white max-[400px]:p-4 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
-                    <div className="p-2 md:p-3 bg-red-50 rounded-xl w-fit"><Package className="w-4 h-4 md:w-5 md:h-5 text-red-600" /></div>
-                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">{t("biz.products_metric")}</p>
-                    <p className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">{totalProducts}</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 max-[340px]:gap-2">
+                  <div className="bg-white max-[400px]:p-4 max-[340px]:p-3 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
+                    <div className="p-2 md:p-3 bg-red-50 rounded-xl w-fit max-[340px]:p-1.5"><Package className="w-4 h-4 max-[340px]:w-3.5 max-[340px]:h-3.5 md:w-5 md:h-5 text-red-600" /></div>
+                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic max-[340px]:text-[7px]">{t("biz.products_metric")}</p>
+                    <p className="max-[400px]:text-2xl max-[340px]:text-xl text-3xl font-black italic text-zinc-950">{totalProducts}</p>
                   </div>
-                  <div className="bg-white max-[400px]:p-4 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
-                    <div className="p-2 md:p-3 bg-blue-50 rounded-xl w-fit"><Users className="w-4 h-4 md:w-5 md:h-5 text-blue-600" /></div>
-                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">{t("biz.customers_metric")}</p>
-                    <p className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">{customers.length}</p>
+                  <div className="bg-white max-[400px]:p-4 max-[340px]:p-3 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
+                    <div className="p-2 md:p-3 bg-blue-50 rounded-xl w-fit max-[340px]:p-1.5"><Users className="w-4 h-4 max-[340px]:w-3.5 max-[340px]:h-3.5 md:w-5 md:h-5 text-blue-600" /></div>
+                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic max-[340px]:text-[7px]">{t("biz.customers_metric")}</p>
+                    <p className="max-[400px]:text-2xl max-[340px]:text-xl text-3xl font-black italic text-zinc-950">{customers.length}</p>
                   </div>
-                  <div className="bg-white max-[400px]:p-4 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
-                    <div className="p-2 md:p-3 bg-amber-50 rounded-xl w-fit"><ShoppingCart className="w-4 h-4 md:w-5 md:h-5 text-amber-600" /></div>
-                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">{t("biz.orders_metric")}</p>
-                    <p className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">{orders.length}</p>
+                  <div className="bg-white max-[400px]:p-4 max-[340px]:p-3 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
+                    <div className="p-2 md:p-3 bg-amber-50 rounded-xl w-fit max-[340px]:p-1.5"><ShoppingCart className="w-4 h-4 max-[340px]:w-3.5 max-[340px]:h-3.5 md:w-5 md:h-5 text-amber-600" /></div>
+                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic max-[340px]:text-[7px]">{t("biz.orders_metric")}</p>
+                    <p className="max-[400px]:text-2xl max-[340px]:text-xl text-3xl font-black italic text-zinc-950">{orders.length}</p>
                   </div>
-                  <div className="bg-white max-[400px]:p-4 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
-                    <div className="p-2 md:p-3 bg-emerald-50 rounded-xl w-fit"><DollarSign className="w-4 h-4 md:w-5 md:h-5 text-emerald-600" /></div>
-                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">{t("biz.sales_metric")}</p>
-                    <p className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">${totalSales}</p>
+                  <div className="bg-white max-[400px]:p-4 max-[340px]:p-3 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
+                    <div className="p-2 md:p-3 bg-emerald-50 rounded-xl w-fit max-[340px]:p-1.5"><DollarSign className="w-4 h-4 max-[340px]:w-3.5 max-[340px]:h-3.5 md:w-5 md:h-5 text-emerald-600" /></div>
+                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic max-[340px]:text-[7px]">{t("biz.sales_metric")}</p>
+                    <p className="max-[400px]:text-2xl max-[340px]:text-xl text-3xl font-black italic text-zinc-950">${totalSales}</p>
                   </div>
                 </div>
 
@@ -1241,7 +1248,11 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
             )}
 
             {section === "customers" && (
-              <CrmPanel storeId={storeId as string} />
+              isFreePlan ? (
+                <FreePlanBlock feature="Los clientes" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} />
+              ) : (
+                <CrmPanel storeId={storeId as string} />
+              )
             )}
 
             {section === "orders" && (
@@ -1274,11 +1285,19 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
             )}
 
             {section === "analytics" && (
-              <AnalyticsPanel storeId={storeId} />
+              isFreePlan ? (
+                <FreePlanBlock feature="Analytics" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} />
+              ) : (
+                <AnalyticsPanel storeId={storeId} />
+              )
             )}
 
             {section === "team" && (
-              <TeamPanel />
+              isFreePlan ? (
+                <FreePlanBlock feature="El equipo" plan="El Jefe" price={79} onUpgrade={onNavigateToPricing} />
+              ) : (
+                <TeamPanel />
+              )
             )}
 
             {section === "orgsettings" && (
@@ -1324,7 +1343,11 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
             )}
 
             {section === "campaigns" && (
-              <CampaignsPanel campaigns={campaigns} setCampaigns={setCampaigns} onPersist={(d) => persistStore(undefined, undefined, undefined, undefined, undefined, d)} storeId={String(storeId)} />
+              isFreePlan ? (
+                <FreePlanBlock feature="Las campañas" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} />
+              ) : (
+                <CampaignsPanel campaigns={campaigns} setCampaigns={setCampaigns} onPersist={(d) => persistStore(undefined, undefined, undefined, undefined, undefined, d)} storeId={String(storeId)} />
+              )
             )}
 
             {section === "integrations" && (
@@ -1338,6 +1361,9 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
             )}
 
             {section === "knowledgebase" && (
+              isFreePlan ? (
+                <FreePlanBlock feature="La base de conocimiento" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} />
+              ) : (
               <div className="space-y-6 md:space-y-8">
                 <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
                   <div className="flex items-center gap-3 md:gap-4 flex-wrap">
@@ -1551,9 +1577,13 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                   )}
                 </AnimatePresence>
               </div>
+              )
             )}
 
             {section === "agentconfig" && (
+              isFreePlan ? (
+                <FreePlanBlock feature="La configuración del agente IA" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} />
+              ) : (
               <div className="space-y-6 md:space-y-8 max-w-3xl">
                 <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
                   <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("agentconfig.title")} <span className="text-red-600">{t("agentconfig.title_suffix")}</span></h3>
@@ -1706,6 +1736,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                   </div>
                 )}
               </div>
+              )
             )}
 
             {section === "agentinstall" && (
@@ -1768,12 +1799,14 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 <script>
   window.Jandosoft.init({
     slug: "${(userStore as any)?.slug || "tu-empresa"}",
-    baseUrl: "${widgetOrigin}"
+    baseUrl: "${widgetOrigin}",
+    primaryColor: "${agentConfig.primaryColor || '#dc2626'}",
+    buttonBgOpacity: ${agentConfig.buttonBgOpacity ?? 100}
   });
 </script>`}
                           </pre>
                           <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
-                            const code = `<!-- Jandosoft AI Chat Widget -->\n<script src="${widgetOrigin}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${(userStore as any)?.slug || "tu-empresa"}",\n    baseUrl: "${widgetOrigin}"\n  });\n<\/script>`;
+                            const code = `<!-- Jandosoft AI Chat Widget -->\n<script src="${widgetOrigin}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${(userStore as any)?.slug || "tu-empresa"}",\n    baseUrl: "${widgetOrigin}",\n    primaryColor: "${agentConfig.primaryColor || '#dc2626'}",\n    buttonBgOpacity: ${agentConfig.buttonBgOpacity ?? 100}\n  });\n<\/script>`;
                             navigator.clipboard.writeText(code);
                             showToast(t("agentinstall.iframe_copied"), "success");
                           }} className="absolute top-3 right-3 p-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all">
@@ -1797,12 +1830,14 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 <script>
   window.Jandosoft.init({
     slug: "${(userStore as any)?.slug || "tu-empresa"}",
-    baseUrl: "${widgetOrigin}"
+    baseUrl: "${widgetOrigin}",
+    primaryColor: "${agentConfig.primaryColor || '#dc2626'}",
+    buttonBgOpacity: ${agentConfig.buttonBgOpacity ?? 100}
   });
 </script>`}
                           </pre>
                           <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
-                            const code = `<!-- Jandosoft AI Chat Widget -->\n<script src="${widgetOrigin}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${(userStore as any)?.slug || "tu-empresa"}",\n    baseUrl: "${widgetOrigin}"\n  });\n<\/script>`;
+                            const code = `<!-- Jandosoft AI Chat Widget -->\n<script src="${widgetOrigin}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${(userStore as any)?.slug || "tu-empresa"}",\n    baseUrl: "${widgetOrigin}",\n    primaryColor: "${agentConfig.primaryColor || '#dc2626'}",\n    buttonBgOpacity: ${agentConfig.buttonBgOpacity ?? 100}\n  });\n<\/script>`;
                           navigator.clipboard.writeText(code);
                           showToast(t("agentinstall.js_copied"), "success");
                         }} className="absolute top-3 right-3 p-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all">
@@ -1846,12 +1881,14 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 <script>
   window.Jandosoft.init({
     slug: "${(userStore as any)?.slug || "tu-empresa"}",
-    baseUrl: "${widgetOrigin}"
+    baseUrl: "${widgetOrigin}",
+    primaryColor: "${agentConfig.primaryColor || '#dc2626'}",
+    buttonBgOpacity: ${agentConfig.buttonBgOpacity ?? 100}
   });
 </script>`}
                       </pre>
                       <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
-                        navigator.clipboard.writeText(`{% comment %} Jandosoft AI Chat Widget {% endcomment %}\n<script src="${widgetOrigin}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${(userStore as any)?.slug || "tu-empresa"}",\n    baseUrl: "${widgetOrigin}"\n  });\n<\/script>`);
+                        navigator.clipboard.writeText(`{% comment %} Jandosoft AI Chat Widget {% endcomment %}\n<script src="${widgetOrigin}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${(userStore as any)?.slug || "tu-empresa"}",\n    baseUrl: "${widgetOrigin}",\n    primaryColor: "${agentConfig.primaryColor || '#dc2626'}",\n    buttonBgOpacity: ${agentConfig.buttonBgOpacity ?? 100}\n  });\n<\/script>`);
                         showToast(t("agentinstall.shopify_copied"), "success");
                       }} className="absolute top-3 right-3 p-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all">
                         <Copy className="w-3.5 h-3.5" />
@@ -1891,12 +1928,14 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 <script>
   window.Jandosoft.init({
     slug: "${(userStore as any)?.slug || "tu-empresa"}",
-    baseUrl: "${widgetOrigin}"
+    baseUrl: "${widgetOrigin}",
+    primaryColor: "${agentConfig.primaryColor || '#dc2626'}",
+    buttonBgOpacity: ${agentConfig.buttonBgOpacity ?? 100}
   });
 </script>`}
                       </pre>
                       <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
-                        navigator.clipboard.writeText(`<!-- Jandosoft AI Chat Widget -->\n<script src="${widgetOrigin}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${(userStore as any)?.slug || "tu-empresa"}",\n    baseUrl: "${widgetOrigin}"\n  });\n<\/script>`);
+                        navigator.clipboard.writeText(`<!-- Jandosoft AI Chat Widget -->\n<script src="${widgetOrigin}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${(userStore as any)?.slug || "tu-empresa"}",\n    baseUrl: "${widgetOrigin}",\n    primaryColor: "${agentConfig.primaryColor || '#dc2626'}",\n    buttonBgOpacity: ${agentConfig.buttonBgOpacity ?? 100}\n  });\n<\/script>`);
                         showToast(t("agentinstall.woo_copied"), "success");
                       }} className="absolute top-3 right-3 p-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all">
                         <Copy className="w-3.5 h-3.5" />
@@ -1932,12 +1971,14 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 <script>
   window.Jandosoft.init({
     slug: "${(userStore as any)?.slug || "tu-empresa"}",
-    baseUrl: "${widgetOrigin}"
+    baseUrl: "${widgetOrigin}",
+    primaryColor: "${agentConfig.primaryColor || '#dc2626'}",
+    buttonBgOpacity: ${agentConfig.buttonBgOpacity ?? 100}
   });
 </script>`}
                       </pre>
                       <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
-                        navigator.clipboard.writeText(`<!-- Jandosoft AI Chat Widget -->\n<script src="${widgetOrigin}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${(userStore as any)?.slug || "tu-empresa"}",\n    baseUrl: "${widgetOrigin}"\n  });\n<\/script>`);
+                        navigator.clipboard.writeText(`<!-- Jandosoft AI Chat Widget -->\n<script src="${widgetOrigin}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${(userStore as any)?.slug || "tu-empresa"}",\n    baseUrl: "${widgetOrigin}",\n    primaryColor: "${agentConfig.primaryColor || '#dc2626'}",\n    buttonBgOpacity: ${agentConfig.buttonBgOpacity ?? 100}\n  });\n<\/script>`);
                         showToast(t("agentinstall.wix_copied"), "success");
                       }} className="absolute top-3 right-3 p-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all">
                         <Copy className="w-3.5 h-3.5" />
@@ -1982,12 +2023,14 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 <script>
   window.Jandosoft.init({
     slug: "${(userStore as any)?.slug || "tu-empresa"}",
-    baseUrl: "${widgetOrigin}"
+    baseUrl: "${widgetOrigin}",
+    primaryColor: "${agentConfig.primaryColor || '#dc2626'}",
+    buttonBgOpacity: ${agentConfig.buttonBgOpacity ?? 100}
   });
 </script>`}
                       </pre>
                       <motion.button whileTap={{ scale: 0.9 }} onClick={() => {
-                        navigator.clipboard.writeText(`<!-- Jandosoft AI Chat Widget -->\n<script src="${widgetOrigin}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${(userStore as any)?.slug || "tu-empresa"}",\n    baseUrl: "${widgetOrigin}"\n  });\n<\/script>`);
+                        navigator.clipboard.writeText(`<!-- Jandosoft AI Chat Widget -->\n<script src="${widgetOrigin}/widget.js"><\/script>\n<script>\n  window.Jandosoft.init({\n    slug: "${(userStore as any)?.slug || "tu-empresa"}",\n    baseUrl: "${widgetOrigin}",\n    primaryColor: "${agentConfig.primaryColor || '#dc2626'}",\n    buttonBgOpacity: ${agentConfig.buttonBgOpacity ?? 100}\n  });\n<\/script>`);
                         showToast(t("agentinstall.wp_copied"), "success");
                       }} className="absolute top-3 right-3 p-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all">
                         <Copy className="w-3.5 h-3.5" />
@@ -2012,6 +2055,9 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
             )}
 
             {section === "smartforms" && (
+              isFreePlan ? (
+                <FreePlanBlock feature="Los formularios inteligentes" plan="El Jefe" price={79} onUpgrade={onNavigateToPricing} />
+              ) : (
               <div className="space-y-6 md:space-y-8">
                 <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
                   <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("smartforms.title")} <span className="text-red-600">{t("smartforms.title_suffix")}</span></h3>
@@ -2390,6 +2436,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                   )}
                 </AnimatePresence>
               </div>
+              )
             )}
 
             {section === "automations" && (
@@ -2884,6 +2931,40 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       <p className="text-[7px] md:text-[8px] font-bold text-zinc-400 italic ml-1">Precios, facturas y pagos se mostrarán en esta moneda</p>
                     </div>
                     <div className="space-y-1.5">
+                      <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Módulos</label>
+                      <div className="flex flex-wrap gap-2">
+                        {["services", "documents", "inventory", "education"].map((mod) => {
+                          const labels: Record<string, string> = {
+                            services: "Servicios",
+                            documents: "Documentos",
+                            inventory: "Inventario",
+                            education: "Educación",
+                          };
+                          const selected = settingsForm.modules.includes(mod);
+                          return (
+                            <button
+                              key={mod}
+                              type="button"
+                              onClick={() => {
+                                const next = selected
+                                  ? settingsForm.modules.filter((m) => m !== mod)
+                                  : [...settingsForm.modules, mod];
+                                setSettingsForm({...settingsForm, modules: next.length ? next : ["services"]});
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold italic transition-all ${
+                                selected
+                                  ? "bg-red-600 text-white shadow-md"
+                                  : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
+                              }`}
+                            >
+                              {labels[mod]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[7px] md:text-[8px] font-bold text-zinc-400 italic ml-1">Define qué módulos usa tu negocio. El agente IA solo usará herramientas de los módulos activos.</p>
+                    </div>
+                    <div className="space-y-1.5">
                       <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Dirección del negocio</label>
                       <AddressAutocomplete
                         storeId={String(storeId)}
@@ -2930,7 +3011,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       <button onClick={() => setEditingStore(false)} className="w-full py-3 md:py-4 bg-zinc-50 text-zinc-600 rounded-xl md:rounded-2xl font-black italic text-[11px] md:text-sm hover:bg-zinc-100 transition-all">
                         {t("biz.config_btn_cancel")}
                       </button>
-                      <button onClick={async () => { try { await onEditStore?.(userStore?._id || userStore?.id, { name: settingsForm.name, desc: settingsForm.desc, industry: settingsForm.industry, slug: settingsForm.slug, image: settingsForm.image, location: settingsForm.location, phone: settingsForm.phone, currency: settingsForm.currency, coordinates: settingsForm.coordinates, isPublic: publicVisible, publicAI: publicAIEnabled }); setShowSettings(false); } catch (e: any) { showToast(e.message || t("status.error"), "error"); } }} disabled={!settingsForm.name} className="w-full py-3 md:py-4 bg-red-600 text-white rounded-xl md:rounded-2xl font-black italic text-[11px] md:text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2">
+                      <button onClick={async () => { try { await onEditStore?.(userStore?._id || userStore?.id, { name: settingsForm.name, desc: settingsForm.desc, industry: settingsForm.industry, slug: settingsForm.slug, image: settingsForm.image, location: settingsForm.location, phone: settingsForm.phone, currency: settingsForm.currency, coordinates: settingsForm.coordinates, modules: settingsForm.modules, isPublic: publicVisible, publicAI: publicAIEnabled }); setShowSettings(false); } catch (e: any) { showToast(e.message || t("status.error"), "error"); } }} disabled={!settingsForm.name} className="w-full py-3 md:py-4 bg-red-600 text-white rounded-xl md:rounded-2xl font-black italic text-[11px] md:text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2">
                         <CheckCircle2 className="w-3.5 h-3.5 md:w-4 md:h-4" /> {t("biz.config_btn_save")}
                       </button>
                     </div>
@@ -3033,6 +3114,23 @@ function SideBtn({ icon, label, active, onClick, badge }: { icon: any; label: st
       {icon ? React.cloneElement(icon, { className: "w-4 h-4" }) : null} {label}
       {badge && <span className="text-[7px] bg-amber-100 text-amber-600 px-1 py-0.5 rounded-full font-black ml-auto">{badge}</span>}
     </motion.button>
+  );
+}
+
+function FreePlanBlock({ feature, plan, price, onUpgrade }: { feature: string; plan: string; price: number; onUpgrade?: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 md:py-24 text-center space-y-6">
+      <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center">
+        <TrendingUp className="w-10 h-10 text-amber-500" />
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-xl md:text-2xl font-black italic text-zinc-950">{feature} son premium</h3>
+        <p className="text-sm text-zinc-400 font-bold italic">Disponible desde el plan <span className="text-red-600">{plan}</span> (${price}/mes)</p>
+      </div>
+      <motion.button whileTap={{ scale: 0.95 }} onClick={onUpgrade} className="px-8 py-3 bg-red-600 text-white rounded-2xl font-black italic text-xs hover:bg-red-700 transition-all shadow-xl">
+        Mejorar plan
+      </motion.button>
+    </div>
   );
 }
 

@@ -21,15 +21,39 @@ export async function GET(req: NextRequest) {
         await user.save();
       }
       const config = await getPlanConfig();
-      const planLimits = getPlanLimitsFromConfig(config, user.subscription);
+      const effectivePlan = user.plan || user.subscription;
       const isExpired = !!user.subscriptionExpiry && new Date(user.subscriptionExpiry) < now;
+      const planForLimits = isExpired ? null : effectivePlan;
+      const planLimits = getPlanLimitsFromConfig(config, planForLimits);
+      const displaySubscription = isExpired ? null : user.subscription;
+
+      console.log("vieltaUser:", {
+        email: user.email,
+        subscription: user.subscription,
+        plan: user.plan,
+        planStatus: user.planStatus,
+        subscriptionStatus: user.subscriptionStatus,
+        customerId: user.customerId,
+        subscriptionId: user.stripeSubscriptionId,
+        billingPeriod: user.billingPeriod,
+        expiresAt: user.expiresAt,
+        isExpired,
+        planForLimits,
+        planLimits,
+      });
+
       return NextResponse.json({
         user: {
           email: user.email,
           name: user.name,
-          subscription: isExpired ? null : user.subscription,
-          subscriptionExpiry: user.subscriptionExpiry,
+          subscription: displaySubscription,
+          plan: isExpired ? null : user.plan,
+          planStatus: isExpired ? null : user.planStatus,
           subscriptionStatus: user.subscriptionStatus,
+          subscriptionExpiry: user.subscriptionExpiry,
+          expiresAt: user.expiresAt,
+          billingPeriod: user.billingPeriod,
+          customerId: user.customerId,
           isSuspended: user.isSuspended,
           emailVerified: user.emailVerified ?? false,
           organizationId: user.organizationId,

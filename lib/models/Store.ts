@@ -302,6 +302,9 @@ export interface IBarberServiceHistory {
   date: string;
 }
 
+export const STORE_MODULES = ["services", "documents", "inventory", "education"] as const;
+export type StoreModule = typeof STORE_MODULES[number];
+
 export interface IStore extends Document {
   ownerEmail: string;
   name: string;
@@ -312,6 +315,7 @@ export interface IStore extends Document {
   type: string;
   typeLabel: string;
   category: string;
+  modules: StoreModule[];
   createdAt: string;
   location: string;
   phone: string;
@@ -362,6 +366,51 @@ export interface IStore extends Document {
   agentConfig?: IAgentConfig;
   currency?: string;
   timezone?: string;
+  workflows?: IWorkflow[];
+}
+
+export interface IWorkflowStep {
+  id: string;
+  conditions: IWorkflowCondition[];
+  actions: IWorkflowAction[];
+  label?: string;
+  position?: { x: number; y: number };
+}
+
+export interface IWorkflowCondition {
+  id: string;
+  type: string;
+  field?: string;
+  operator?: string;
+  value?: any;
+  conditions?: IWorkflowCondition[];
+}
+
+export interface IWorkflowAction {
+  id: string;
+  type: string;
+  config: Record<string, any>;
+  label?: string;
+}
+
+export interface IWorkflowTrigger {
+  id: string;
+  type: string;
+  config: Record<string, any>;
+  label?: string;
+}
+
+export interface IWorkflow {
+  id: number;
+  name: string;
+  description?: string;
+  enabled: boolean;
+  trigger: IWorkflowTrigger;
+  steps: IWorkflowStep[];
+  createdAt: string;
+  updatedAt?: string;
+  runCount?: number;
+  lastRunAt?: string;
 }
 
 interface IAutomation {
@@ -760,6 +809,7 @@ const StoreSchema = new Schema<IStore>({
   type: { type: String, default: "general" },
   typeLabel: { type: String, default: "" },
   category: { type: String, default: "general", enum: Object.keys(CATEGORIES) },
+  modules: { type: [String], default: ["services"] },
   createdAt: { type: String, default: () => new Date().toISOString() },
   products: [ProductSchema],
   customers: [CustomerSchema],
@@ -854,6 +904,7 @@ const StoreSchema = new Schema<IStore>({
   agentConfig: { type: AgentConfigSchema, default: null },
   currency: { type: String, default: "USD" },
   timezone: { type: String, default: "" },
+  workflows: { type: [Schema.Types.Mixed], default: [] },
 }, { timestamps: true });
 
 export const Store = mongoose.models.Store || mongoose.model<IStore>("Store", StoreSchema);

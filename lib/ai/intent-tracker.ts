@@ -1,15 +1,4 @@
-/**
- * Intent Tracker - Manages conversation state, confirmation flows,
- * and provides context-aware instructions to the LLM.
- *
- * This module ensures:
- * - The agent always knows the current task context
- * - Destructive actions require confirmation
- * - Affirmatives apply only to the last agent question
- * - Topic changes are handled cleanly
- * - Logs are generated for every decision
- */
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   TaskState,
   TaskPlan,
@@ -40,9 +29,6 @@ export interface TrackerDecision {
   logs: AgentLog[];
 }
 
-/**
- * Process a user message and decide what the agent should do
- */
 export function processUserMessage(
   userMessage: string,
   history: any[],
@@ -54,7 +40,6 @@ export function processUserMessage(
   const { intent, confidence } = detectIntent(userMessage);
   const affirmative = isAffirmative(userMessage);
 
-  // ── Log intent detection ──
   logs.push({
     timestamp: new Date(),
     turn: (currentTask?.turnCount || 0) + 1,
@@ -66,11 +51,42 @@ export function processUserMessage(
     outcome: "clarified",
   });
 
-  // ── Case 1: Affirmative to agent's last question ──
-  if (affirmative && currentTask?.lastAgentQuestion && currentTask.plan) {
-    const updatedState = { ...currentTask, status: "executing" as const, updatedAt: new Date() };
+  // ── Case 1: Affirmative while awaiting confirmation → execute the pending tool ──
+  if (affirmative && currentTask?.pendingConfirmation && currentTask?.plan?.toolToCall) {
+    const updatedState = {
+      ...currentTask,
+      status: "executing" as const,
+      pendingConfirmation: false,
+      lastAgentQuestion: null,
+      updatedAt: new Date(),
+    };
 
-    logs[logs.length - 1].reasoning = `Affirmative response to: "${currentTask.lastAgentQuestion.substring(0, 100)}..."`;
+    logs[logs.length - 1].reasoning = `Confirmed destructive action: "${currentTask.plan.confirmationMessage}". Executing tool.`;
+    logs[logs.length - 1].outcome = "executed";
+
+    return {
+      action: "execute_tool",
+      plan: currentTask.plan,
+      taskState: updatedState,
+      responsePrefix: null,
+      toolToExecute: {
+        name: currentTask.plan.toolToCall,
+        args: currentTask.plan.toolArgs,
+      },
+      logs,
+    };
+  }
+
+  // ── Case 2: Affirmative to last agent question (collecting info) ──
+  if (affirmative && currentTask?.lastAgentQuestion && currentTask?.plan) {
+    const updatedState = {
+      ...currentTask,
+      status: "executing" as const,
+      pendingConfirmation: false,
+      updatedAt: new Date(),
+    };
+
+    logs[logs.length - 1].reasoning = `Affirmative to: "${currentTask.lastAgentQuestion.substring(0, 100)}..."`;
     logs[logs.length - 1].outcome = "executed";
 
     return {
@@ -85,9 +101,9 @@ export function processUserMessage(
     };
   }
 
-  // ── Case 2: Affirmative without context → ask what they mean ──
-  if (affirmative && !currentTask?.lastAgentQuestion) {
-    logs[logs.length - 1].reasoning = "Affirmative without pending question. Asking for clarification.";
+  // ── Case 3: Affirmative without context → clarify ──
+  if (affirmative && !currentTask?.lastAgentQuestion && !currentTask?.pendingConfirmation) {
+    logs[logs.length - 1].reasoning = "Affirmative without pending question nor confirmation. Asking for clarification.";
     logs[logs.length - 1].outcome = "clarified";
 
     return {
@@ -100,13 +116,20 @@ export function processUserMessage(
     };
   }
 
-  // ── Case 3: Topic change ──
-  if (currentTask && currentTask.status !== "completed" && currentTask.status !== "idle") {
-    if (isTopicChange(currentTask.conversationTopic as IntentType, intent, currentTask.conversationTopic, userMessage)) {
+  // ── Case 4: Topic change ──
+  if (currentTask && currentTask.status !== "completed" && currentTask.status !== "idle" && currentTask.status !== "failed") {
+    const topicChanged = isTopicChange(
+      currentTask.conversationTopic as IntentType,
+      intent,
+      currentTask.conversationTopic,
+      userMessage,
+      currentTask.status,
+    );
+
+    if (topicChanged) {
       logs[logs.length - 1].reasoning = `Topic change detected: ${currentTask.conversationTopic} → ${intent}. Previous task abandoned.`;
       logs[logs.length - 1].outcome = "clarified";
 
-      // Generate new plan for the new intent
       const newPlan = generateTaskPlan(userMessage, history, storeContext, null);
       const newTask = createTaskState(newPlan);
 
@@ -129,82 +152,92 @@ export function processUserMessage(
     }
   }
 
-  // ── Case 4: New task from idle state or first message ──
-  if (!currentTask || currentTask.status === "idle" || currentTask.status === "completed") {
-    const plan = generateTaskPlan(userMessage, history, storeContext, null);
-    const task = createTaskState(plan);
+  // ── Case 5: Existing task in progress, continue collecting info ──
+  if (currentTask && currentTask.status !== "completed" && currentTask.status !== "idle") {
+    logs[logs.length - 1].reasoning = `Continuing task: ${currentTask.conversationTopic} (status: ${currentTask.status}). New info provided.`;
+    logs[logs.length - 1].outcome = "clarified";
 
-    if (plan.needsConfirmation) {
-      logs[logs.length - 1].outcome = "asked_confirmation";
-      logs[logs.length - 1].reasoning = `Destructive action detected. Confirmation needed: ${plan.confirmationMessage}`;
-      return {
-        action: "ask_confirmation",
-        plan,
-        taskState: task,
-        responsePrefix: plan.confirmationMessage,
-        toolToExecute: null,
-        logs,
-      };
-    }
+    // Rebuild plan with new user message to extract additional params
+    const updatedPlan = generateTaskPlan(userMessage, history, storeContext, currentTask);
 
-    if (plan.missingParams.length > 0 && plan.toolToCall) {
-      logs[logs.length - 1].outcome = "asked_for_info";
-      logs[logs.length - 1].reasoning = `Missing params: ${plan.missingParams.join(", ")}`;
-      return {
-        action: "ask_for_info",
-        plan,
-        taskState: { ...task, status: "collecting_info" },
-        responsePrefix: null,
-        toolToExecute: null,
-        logs,
-      };
-    }
-
-    if (plan.toolToCall && plan.missingParams.length === 0) {
-      logs[logs.length - 1].selectedTool = plan.toolToCall;
-      logs[logs.length - 1].outcome = "executed";
-      logs[logs.length - 1].reasoning = plan.reasoning;
-      return {
-        action: "execute_tool",
-        plan,
-        taskState: task,
-        responsePrefix: null,
-        toolToExecute: { name: plan.toolToCall, args: plan.toolArgs },
-        logs,
-      };
-    }
-
-    // No tool needed, just respond
-    logs[logs.length - 1].outcome = "executed";
-    logs[logs.length - 1].reasoning = plan.reasoning;
     return {
-      action: "respond_directly",
+      action: updatedPlan.toolToCall && updatedPlan.missingParams.length === 0 && !updatedPlan.needsConfirmation
+        ? "execute_tool"
+        : updatedPlan.missingParams.length > 0
+        ? "ask_for_info"
+        : updatedPlan.needsConfirmation
+        ? "ask_confirmation"
+        : "respond_directly",
+      plan: updatedPlan,
+      taskState: {
+        ...currentTask,
+        plan: updatedPlan,
+        updatedAt: new Date(),
+      },
+      responsePrefix: null,
+      toolToExecute: updatedPlan.toolToCall && updatedPlan.missingParams.length === 0 && !updatedPlan.needsConfirmation
+        ? { name: updatedPlan.toolToCall, args: updatedPlan.toolArgs }
+        : null,
+      logs,
+    };
+  }
+
+  // ── Case 6: New task (idle or completed) ──
+  const plan = generateTaskPlan(userMessage, history, storeContext, null);
+  const task = createTaskState(plan);
+
+  if (plan.needsConfirmation) {
+    logs[logs.length - 1].outcome = "asked_confirmation";
+    logs[logs.length - 1].reasoning = `Destructive action detected. Confirmation needed: ${plan.confirmationMessage}`;
+    return {
+      action: "ask_confirmation",
       plan,
       taskState: task,
+      responsePrefix: plan.confirmationMessage,
+      toolToExecute: null,
+      logs,
+    };
+  }
+
+  if (plan.missingParams.length > 0 && plan.toolToCall) {
+    logs[logs.length - 1].outcome = "asked_for_info";
+    logs[logs.length - 1].reasoning = `Missing params: ${plan.missingParams.join(", ")}`;
+    return {
+      action: "ask_for_info",
+      plan,
+      taskState: { ...task, status: "collecting_info" },
       responsePrefix: null,
       toolToExecute: null,
       logs,
     };
   }
 
-  // ── Case 5: Existing task in progress, new message ──
-  // Continue with existing context
-  logs[logs.length - 1].reasoning = `Continuing task: ${currentTask.conversationTopic} (status: ${currentTask.status})`;
-  logs[logs.length - 1].outcome = "clarified";
+  if (plan.toolToCall && plan.missingParams.length === 0) {
+    logs[logs.length - 1].selectedTool = plan.toolToCall;
+    logs[logs.length - 1].outcome = "executed";
+    logs[logs.length - 1].reasoning = plan.reasoning;
+    return {
+      action: "execute_tool",
+      plan,
+      taskState: task,
+      responsePrefix: null,
+      toolToExecute: { name: plan.toolToCall, args: plan.toolArgs },
+      logs,
+    };
+  }
 
+  logs[logs.length - 1].outcome = "executed";
+  logs[logs.length - 1].reasoning = plan.reasoning;
   return {
     action: "respond_directly",
-    plan: currentTask.plan,
-    taskState: currentTask,
+    plan,
+    taskState: task,
     responsePrefix: null,
     toolToExecute: null,
     logs,
   };
 }
 
-/**
- * Generate context injection for the system prompt based on current task state
- */
 export function generateTaskContext(state: TaskState | null): string {
   if (!state || !state.plan) return "";
 
@@ -241,9 +274,6 @@ export function generateTaskContext(state: TaskState | null): string {
   return lines.join("\n");
 }
 
-/**
- * Update task state after the agent has responded
- */
 export function trackAgentResponse(
   state: TaskState | null,
   agentResponse: string,

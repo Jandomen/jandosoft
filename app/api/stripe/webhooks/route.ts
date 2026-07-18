@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Store } from "@/lib/models/Store";
@@ -6,6 +7,7 @@ import { Payment } from "@/lib/models/Payment";
 import { Appointment } from "@/lib/models/Appointment";
 import { stripe } from "@/lib/stripe";
 import { getPlanConfig } from "@/lib/plan-config";
+import { PLANS } from "@/lib/plans";
 import { generatePaymentReceiptPDF } from "@/lib/pdf-utils";
 import { sendPaymentReceiptEmail, sendPaymentReceivedNotificationEmail } from "@/lib/email-service";
 
@@ -64,6 +66,101 @@ async function sendReceiptForPayment(payment: any) {
 
 export const dynamic = "force-dynamic";
 
+async function updateUserSubscription(
+  userId: string | null,
+  email: string | null,
+  planId: string,
+  subscriptionId: string,
+  customerId: string,
+  status: string,
+  periodEnd: Date,
+  billingPeriod: string
+) {
+  const config = await getPlanConfig();
+  const plan = config.plans.find((p) => p.id === planId);
+  const planType = plan?.id || "starter";
+
+  const updateData = {
+    subscription: planType,
+    plan: planType,
+    planStatus: status,
+    subscriptionExpiry: periodEnd,
+    expiresAt: periodEnd,
+    stripeSubscriptionId: subscriptionId,
+    stripeCustomerId: customerId,
+    customerId: customerId,
+    subscriptionStatus: status,
+    billingPeriod: billingPeriod,
+    updatedAt: new Date(),
+  };
+
+  // Try to find by userId first, then by email, then by stripe subscription/customer
+  let result = null;
+  if (userId) {
+    result = await User.findByIdAndUpdate(userId, { $set: updateData }, { new: true });
+  }
+  if (!result && email) {
+    result = await User.findOneAndUpdate({ email }, { $set: updateData }, { new: true });
+  }
+  if (!result) {
+    result = await User.findOneAndUpdate(
+      { stripeSubscriptionId: subscriptionId },
+      { $set: updateData },
+      { new: true }
+    );
+  }
+  if (!result) {
+    result = await User.findOneAndUpdate(
+      { stripeCustomerId: customerId },
+      { $set: updateData },
+      { new: true }
+    );
+  }
+
+  console.log(`[Webhook] User updated: ${result ? "OK" : "NOT FOUND"} plan=${planType} sub=${subscriptionId} userId=${userId}`);
+  return result;
+}
+
+async function resetUserToFree(userId: string | null, email: string | null, subscriptionId: string, deviceId: string | null) {
+  const freePlan = { id: "free", name: "Gratis" };
+
+  const updateData = {
+    subscription: freePlan.id,
+    plan: freePlan.id,
+    planStatus: "canceled",
+    subscriptionStatus: "canceled",
+    subscriptionExpiry: null,
+    expiresAt: null,
+    billingPeriod: null,
+    updatedAt: new Date(),
+  };
+
+  let result = null;
+  if (userId) {
+    result = await User.findByIdAndUpdate(userId, { $set: updateData }, { new: true });
+  }
+  if (!result && email) {
+    result = await User.findOneAndUpdate({ email }, { $set: updateData }, { new: true });
+  }
+  if (!result) {
+    result = await User.findOneAndUpdate(
+      { stripeSubscriptionId: subscriptionId },
+      { $set: updateData },
+      { new: true }
+    );
+  }
+  if (!result && deviceId) {
+    result = await User.findOneAndUpdate(
+      { "devices.deviceId": deviceId },
+      { $set: updateData },
+      { new: true }
+    );
+  }
+
+  console.log(`[Webhook] User reset to Free: ${result ? "OK" : "NOT FOUND"} sub=${subscriptionId}`);
+  return result;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.text();
@@ -79,105 +176,201 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    console.log(`[Webhook] Received event: ${event.type}`);
+    // Idempotency: skip duplicate webhook delivery using Stripe's Idempotency-Key or event ID
+    const eventId = event.id;
+    const existingEvent = await Payment.findOne({ stripePaymentIntentId: `wh_${eventId}` }).lean();
+    if (existingEvent) {
+      console.log(`[Webhook] Skipping duplicate event: ${eventId}`);
+      return NextResponse.json({ received: true });
+    }
+
+    console.log(`[Webhook] Received event: ${event.type} (${eventId})`);
 
     switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object;
-        const metadata = session.metadata || {};
-        const piId = session.payment_intent as string;
+      case "checkout.session.completed":
+      case "customer.subscription.created":
+      case "customer.subscription.updated": {
+        if (event.type === "checkout.session.completed") {
+          const session = event.data.object;
+          const metadata = session.metadata || {};
+          const piId = session.payment_intent as string;
 
-        if (session.mode === "subscription") {
-          const email = metadata.customerEmail;
-          const planId = metadata.planId;
-          const subscriptionId = session.subscription as string;
+          if (session.mode === "subscription") {
+            const userId = metadata.userId || null;
+            const customerEmail = metadata.customerEmail || null;
+            const planId = metadata.planId;
+            const subscriptionId = session.subscription as string;
+            const customerId = session.customer as string;
+            const orgId = metadata.organizationId || null;
 
-          console.log(`[Webhook] checkout.session.completed: email=${email} planId=${planId} sub=${subscriptionId}`);
-
-          if (email && subscriptionId) {
-            const sub = await stripe.subscriptions.retrieve(subscriptionId) as any;
-            const expiry = new Date(sub.current_period_end * 1000);
-
-            const config = await getPlanConfig();
-            const plan = config.plans.find((p) => p.id === planId);
-            const subType = plan?.id || "starter";
-
-            const result = await User.findOneAndUpdate(
-              { email },
-              {
-                subscription: subType,
-                subscriptionExpiry: expiry,
-                stripeSubscriptionId: subscriptionId,
-                subscriptionStatus: sub.status,
-                stripeCustomerId: session.customer as string,
-              }
-            );
-
-            console.log(`[Webhook] User updated: ${result ? "OK" : "NOT FOUND"} email=${email} plan=${subType}`);
-          }
-        } else if (metadata.type === "appointment_payment" && metadata.appointmentId) {
-          if (piId) {
-            const amount = (session.amount_total || 0) / 100;
-            await Appointment.findByIdAndUpdate(metadata.appointmentId, {
-              $set: {
-                paymentStatus: "paid",
-                stripePaymentIntentId: piId,
-              },
-            });
-            const feePercent = parseFloat(metadata.platformFeePercent || "5");
-            const platformFee = Math.round(amount * (feePercent / 100));
-            const netAmount = amount - platformFee;
-            const appointment = await Appointment.findById(metadata.appointmentId);
-            const appointmentPayment = await Payment.create({
-              storeId: metadata.storeId,
-              storeName: metadata.storeName || "",
-              ownerEmail: metadata.ownerEmail || "",
-              customerEmail: metadata.customerEmail || session.customer_email || "",
-              customerName: appointment?.customerInfo?.name || metadata.customerName || "",
-              amount,
-              currency: session.currency || "usd",
-              platformFee,
-              netAmount,
-              stripePaymentIntentId: piId,
-              provider: "stripe",
-              status: "completed",
-              description: `Pago de cita: ${appointment?.service?.name || "Servicio"}`,
-              appointmentId: appointment?._id,
-            });
-            await sendReceiptForPayment(appointmentPayment);
-          }
-        } else if (metadata.storeId) {
-          if (piId) {
-            const amount = (session.amount_total || 0) / 100;
-            const feePercent = parseFloat(metadata.platformFeePercent || "5");
-            const platformFee = Math.round(amount * (feePercent / 100));
-            const netAmount = amount - platformFee;
-
-            let storeStripeAccountId = "";
-            if (metadata.storeId) {
-              try {
-                const storeDoc = await Store.findById(metadata.storeId).lean() as any;
-                storeStripeAccountId = storeDoc?.stripeAccountId || "";
-              } catch {}
+            if (!subscriptionId) {
+              break;
             }
 
-            const payment = await Payment.create({
-              storeId: metadata.storeId,
-              storeName: metadata.storeName || "",
-              ownerEmail: metadata.ownerEmail || "",
-              customerEmail: metadata.customerEmail || session.customer_email || "",
-              customerName: metadata.customerName || "",
-              amount,
-              currency: session.currency || "usd",
-              platformFee,
-              netAmount,
-              stripePaymentIntentId: piId,
-              stripeAccountId: storeStripeAccountId,
-              provider: "stripe",
-              status: "completed",
-              description: session.metadata?.items || session.custom_fields?.[0]?.text?.value || "",
+            const sub = await stripe.subscriptions.retrieve(subscriptionId) as any;
+            const periodEnd = new Date(sub.current_period_end * 1000);
+            const status = sub.status;
+            const billingInterval = sub.items?.data?.[0]?.plan?.interval || "month";
+
+            await updateUserSubscription(
+              userId, customerEmail, planId || "starter",
+              subscriptionId, customerId, status, periodEnd, billingInterval
+            );
+
+            if (orgId) {
+              try {
+                const { Organization } = await import("@/lib/models/Organization");
+                await Organization.findByIdAndUpdate(orgId, {
+                  stripeCustomerId: customerId,
+                  plan: planId || "starter",
+                });
+              } catch (e) {
+                console.error("[Webhook] Failed to update organization:", e);
+              }
+            }
+          } else if (session.mode === "payment" && metadata.planId && metadata.durationDays) {
+            // One-time payment for a flexible plan with durationDays
+            const userId = metadata.userId || null;
+            const customerEmail = metadata.customerEmail || null;
+            const planId = metadata.planId;
+            const customerId = session.customer as string;
+            const piId = session.payment_intent as string;
+            const durationDays = parseInt(metadata.durationDays, 10) || 30;
+
+            const config = await getPlanConfig();
+            const plan = config.plans.find((p: any) => p.id === planId) || PLANS.find((p) => p.id === planId);
+            const planType = plan?.id || "free";
+
+            const now = new Date();
+            const expiry = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
+            const updateData = {
+              subscription: planType,
+              plan: planType,
+              planStatus: "active",
+              subscriptionExpiry: expiry,
+              expiresAt: expiry,
+              stripeSubscriptionId: piId,
+              stripeCustomerId: customerId,
+              customerId: customerId,
+              subscriptionStatus: "active",
+              billingPeriod: `${durationDays}_days`,
+              updatedAt: new Date(),
+            };
+
+            let result = null;
+            if (userId) {
+              result = await User.findByIdAndUpdate(userId, { $set: updateData }, { new: true });
+            }
+            if (!result && customerEmail) {
+              result = await User.findOneAndUpdate({ email: customerEmail }, { $set: updateData }, { new: true });
+            }
+            if (!result && customerId) {
+              result = await User.findOneAndUpdate({ stripeCustomerId: customerId }, { $set: updateData }, { new: true });
+            }
+
+            console.log(`[Webhook] Duration plan activated: ${planId} (${durationDays}d) -> ${result ? "OK" : "NOT FOUND"} user=${userId || customerEmail}`);
+          } else if (metadata.type === "appointment_payment" && metadata.appointmentId) {
+            if (piId) {
+              const amount = (session.amount_total || 0) / 100;
+              await Appointment.findByIdAndUpdate(metadata.appointmentId, {
+                $set: {
+                  paymentStatus: "paid",
+                  stripePaymentIntentId: piId,
+                },
+              });
+              const feePercent = parseFloat(metadata.platformFeePercent || "5");
+              const platformFee = Math.round(amount * (feePercent / 100));
+              const netAmount = amount - platformFee;
+              const appointment = await Appointment.findById(metadata.appointmentId);
+              const appointmentPayment = await Payment.create({
+                storeId: metadata.storeId,
+                storeName: metadata.storeName || "",
+                ownerEmail: metadata.ownerEmail || "",
+                customerEmail: metadata.customerEmail || session.customer_email || "",
+                customerName: appointment?.customerInfo?.name || metadata.customerName || "",
+                amount,
+                currency: session.currency || "usd",
+                platformFee,
+                netAmount,
+                stripePaymentIntentId: piId,
+                provider: "stripe",
+                status: "completed",
+                description: `Pago de cita: ${appointment?.service?.name || "Servicio"}`,
+                appointmentId: appointment?._id,
+              });
+              await sendReceiptForPayment(appointmentPayment);
+            }
+          } else if (metadata.storeId) {
+            if (piId) {
+              const amount = (session.amount_total || 0) / 100;
+              const feePercent = parseFloat(metadata.platformFeePercent || "5");
+              const platformFee = Math.round(amount * (feePercent / 100));
+              const netAmount = amount - platformFee;
+
+              let storeStripeAccountId = "";
+              if (metadata.storeId) {
+                try {
+                  const storeDoc = await Store.findById(metadata.storeId).lean() as any;
+                  storeStripeAccountId = storeDoc?.stripeAccountId || "";
+                } catch {}
+              }
+
+              const payment = await Payment.create({
+                storeId: metadata.storeId,
+                storeName: metadata.storeName || "",
+                ownerEmail: metadata.ownerEmail || "",
+                customerEmail: metadata.customerEmail || session.customer_email || "",
+                customerName: metadata.customerName || "",
+                amount,
+                currency: session.currency || "usd",
+                platformFee,
+                netAmount,
+                stripePaymentIntentId: piId,
+                stripeAccountId: storeStripeAccountId,
+                provider: "stripe",
+                status: "completed",
+                description: session.metadata?.items || session.custom_fields?.[0]?.text?.value || "",
+              });
+              await sendReceiptForPayment(payment);
+            }
+          }
+        } else if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
+          const sub = event.data.object as any;
+          const subMetadata = sub.metadata || {};
+          const userId = subMetadata.userId || null;
+          const customerEmail = subMetadata.customerEmail || null;
+          const planId = subMetadata.planId;
+          const subscriptionId = sub.id;
+          const customerId = sub.customer as string;
+          const periodEnd = new Date(sub.current_period_end * 1000);
+          const status = sub.status;
+          const billingInterval = sub.items?.data?.[0]?.plan?.interval || "month";
+
+          if (!planId && !userId && !customerEmail) {
+            // Try to get details from the checkout session
+            const sessions = await stripe.checkout.sessions.list({
+              subscription: subscriptionId,
+              limit: 1,
             });
-            await sendReceiptForPayment(payment);
+            const firstSession = sessions.data[0];
+            if (firstSession?.metadata?.planId) {
+              await updateUserSubscription(
+                firstSession.metadata.userId || null,
+                firstSession.metadata.customerEmail || null,
+                firstSession.metadata.planId,
+                subscriptionId,
+                customerId,
+                status,
+                periodEnd,
+                billingInterval
+              );
+            }
+          } else {
+            await updateUserSubscription(
+              userId, customerEmail, planId || "starter",
+              subscriptionId, customerId, status, periodEnd, billingInterval
+            );
           }
         }
         break;
@@ -186,32 +379,38 @@ export async function POST(req: NextRequest) {
       case "invoice.paid": {
         const invoice = event.data.object as any;
         const subId = invoice.subscription as string;
-        const email = invoice.customer_email || invoice.customer_details?.email;
 
         if (subId) {
           const subscription = await stripe.subscriptions.retrieve(subId) as any;
-          const metadata = subscription.metadata || {};
-          const planId = metadata.planId;
-          const expiry = new Date(subscription.current_period_end * 1000);
+          const subMetadata = subscription.metadata || {};
+          const userId = subMetadata.userId || null;
+          const customerEmail = subMetadata.customerEmail || null;
+          const planId = subMetadata.planId;
+          const customerId = subscription.customer as string;
+          const periodEnd = new Date(subscription.current_period_end * 1000);
+          const status = subscription.status;
+          const billingInterval = subscription.items?.data?.[0]?.plan?.interval || "month";
 
-          const config = await getPlanConfig();
-          const plan = config.plans.find((p) => p.id === planId);
-          const subType = plan?.id || "starter";
-
-          const updateData: any = {
-            subscriptionExpiry: expiry,
-            subscriptionStatus: subscription.status,
-            stripeSubscriptionId: subId,
-          };
-          if (planId) updateData.subscription = subType;
-
-          if (email) {
-            await User.findOneAndUpdate({ email }, { $set: updateData });
-          } else if (subscription.metadata?.customerEmail) {
+          // Only update if we have enough information
+          if (userId || customerEmail || planId) {
+            await updateUserSubscription(
+              userId, customerEmail, planId || "starter",
+              subId, customerId, status, periodEnd, billingInterval
+            );
+          } else {
+            // Fallback: look up by subscription field
+            const updateData = {
+              subscriptionExpiry: periodEnd,
+              expiresAt: periodEnd,
+              subscriptionStatus: status,
+              planStatus: status,
+              updatedAt: new Date(),
+            };
             await User.findOneAndUpdate(
-              { email: subscription.metadata.customerEmail },
+              { stripeSubscriptionId: subId },
               { $set: updateData }
             );
+            console.log(`[Webhook] invoice.paid: fallback update for sub ${subId}`);
           }
         }
         break;
@@ -221,49 +420,28 @@ export async function POST(req: NextRequest) {
         const failedInvoice = event.data.object as any;
         const failedSubId = failedInvoice.subscription as string;
         if (failedSubId) {
+          const updateData = {
+            subscriptionStatus: "past_due",
+            planStatus: "past_due",
+            updatedAt: new Date(),
+          };
           await User.findOneAndUpdate(
             { stripeSubscriptionId: failedSubId },
-            { subscriptionStatus: "past_due" }
+            { $set: updateData }
           );
-        }
-        break;
-      }
-
-      case "customer.subscription.updated": {
-        const updatedSub = event.data.object as any;
-        const updatedMetadata = updatedSub.metadata || {};
-        const customerEmail = updatedMetadata.customerEmail;
-        const periodEnd = new Date(updatedSub.current_period_end * 1000);
-        const status = updatedSub.status;
-
-        const updateFields: any = {
-          subscriptionExpiry: periodEnd,
-          subscriptionStatus: status,
-        };
-
-        if (status === "canceled" || status === "unpaid" || status === "incomplete_expired") {
-          updateFields.subscription = null;
-          updateFields.stripeSubscriptionId = null;
-        }
-
-        if (customerEmail) {
-          await User.findOneAndUpdate({ email: customerEmail }, { $set: updateFields });
+          console.log(`[Webhook] invoice.payment_failed: marked sub ${failedSubId} as past_due`);
         }
         break;
       }
 
       case "customer.subscription.deleted": {
         const deletedSub = event.data.object as any;
-        const delEmail = deletedSub.metadata?.customerEmail;
-        const updateDel: any = {
-          subscription: null,
-          subscriptionExpiry: null,
-          stripeSubscriptionId: null,
-          subscriptionStatus: "canceled",
-        };
-        if (delEmail) {
-          await User.findOneAndUpdate({ email: delEmail }, { $set: updateDel });
-        }
+        const delMetadata = deletedSub.metadata || {};
+        const deletedUserId = delMetadata.userId || null;
+        const deletedEmail = delMetadata.customerEmail || null;
+        const deletedSubId = deletedSub.id;
+
+        await resetUserToFree(deletedUserId, deletedEmail, deletedSubId, null);
         break;
       }
 

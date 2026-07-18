@@ -34,6 +34,8 @@ import {
   X,
   Bot,
   ChevronRight,
+  ChevronDown,
+  CalendarDays,
   Package,
   Star,
   Search,
@@ -68,6 +70,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn, slugify } from "@/lib/utils";
 import { useTheme } from "@/components/public/ThemeProvider";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { useGeoCurrency } from "@/lib/hooks/useGeoCurrency";
 import { getPlanLimits, getPlanLabel } from "@/lib/plans";
 import PlansCarousel from "@/components/public/PlansCarousel";
 import { LanguageCarousel } from "@/components/ui/LanguageCarousel";
@@ -108,27 +111,27 @@ function WebsitesContent({ userStores, user, onSelectStore, onCreateStore, onNav
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 md:space-y-8">
-      <div className="bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 max-[400px]:p-4 p-6 md:p-10 max-[400px]:rounded-2xl rounded-3xl text-white relative overflow-hidden">
+      <div className="bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 max-[400px]:p-4 max-[340px]:p-3 p-6 md:p-10 max-[400px]:rounded-2xl rounded-3xl text-white relative overflow-hidden">
         <div className="relative z-10">
-          <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6">
-            <div className="w-11 h-11 md:w-14 md:h-14 bg-white/10 rounded-xl flex items-center justify-center border border-white/[0.08] shrink-0">
-              <Globe className="w-5 h-5 md:w-7 md:h-7" />
+          <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 max-[340px]:mb-3">
+            <div className="w-11 h-11 md:w-14 md:h-14 bg-white/10 rounded-xl flex items-center justify-center border border-white/[0.08] shrink-0 max-[340px]:w-9 max-[340px]:h-9">
+              <Globe className="w-5 h-5 md:w-7 md:h-7 max-[340px]:w-4 max-[340px]:h-4" />
             </div>
             <div>
-              <h2 className="text-lg md:text-2xl font-bold tracking-tight">Mis Websites</h2>
-              <p className="text-zinc-400 text-xs">{storeCount} sitios · {publicStores} públicos</p>
+              <h2 className="text-lg md:text-2xl font-bold tracking-tight max-[340px]:text-base">Mis Websites</h2>
+              <p className="text-zinc-400 text-xs max-[340px]:text-[10px]">{storeCount} sitios · {publicStores} públicos</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 max-[340px]:gap-2">
             {[
               { label: "Empresas", value: storeCount, color: "text-red-400" },
               { label: "Productos", value: totalProducts, color: "text-blue-400" },
               { label: "Clientes", value: totalCustomers, color: "text-emerald-400" },
               { label: "Pedidos", value: totalOrders, color: "text-amber-400" },
             ].map(stat => (
-              <div key={stat.label} className="bg-white/[0.06] rounded-xl p-3 md:p-4 space-y-1 border border-white/[0.06]">
-                <p className="text-[9px] font-medium text-zinc-500 tracking-wide">{stat.label}</p>
-                <p className={`text-xl md:text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+              <div key={stat.label} className="bg-white/[0.06] rounded-xl p-3 md:p-4 max-[340px]:p-2 space-y-1 border border-white/[0.06]">
+                <p className="text-[9px] max-[340px]:text-[8px] font-medium text-zinc-500 tracking-wide">{stat.label}</p>
+                <p className={`text-xl md:text-2xl font-bold ${stat.color} max-[340px]:text-lg`}>{stat.value}</p>
               </div>
             ))}
           </div>
@@ -142,12 +145,15 @@ function WebsitesContent({ userStores, user, onSelectStore, onCreateStore, onNav
         </div>
         <button onClick={() => {
           if (canCreateStore) { setShowForm(true); return; }
-          if (isExpired) { showToast("Plan vencido. Renueva para crear más sitios.", "error"); onNavigate?.("pricing"); return; }
-          showToast(`Límite de ${limits.maxStores} sitios alcanzado`, "info");
+          if (isExpired) { showToast("Plan vencido. Renueva para crear más empresas.", "error"); onNavigate?.("pricing"); return; }
+          showToast(`Límite de ${limits.maxStores} empresas alcanzado. Mejora tu plan para crear más.`, "info");
           onNavigate?.("pricing");
-        }} className={cn("w-full sm:w-auto px-5 py-2.5 rounded-lg text-xs font-semibold transition-all shadow-sm flex items-center justify-center gap-2", canCreateStore ? "bg-red-600 text-white hover:bg-red-700" : "bg-zinc-200 text-zinc-400 cursor-not-allowed")}>
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-          {canCreateStore ? "NUEVA EMPRESA" : `${storeCount}/${limits.maxStores}`}
+        }} className={cn("w-full sm:w-auto px-5 py-2.5 rounded-lg text-xs font-semibold transition-all shadow-sm flex items-center justify-center gap-2", canCreateStore ? "bg-red-600 text-white hover:bg-red-700" : "bg-amber-500 text-white hover:bg-amber-600")}>
+          {canCreateStore ? (
+            <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>NUEVA EMPRESA</>
+          ) : (
+            <><Zap className="w-4 h-4" />MEJORAR PLAN</>
+          )}
         </button>
       </div>
 
@@ -156,7 +162,7 @@ function WebsitesContent({ userStores, user, onSelectStore, onCreateStore, onNav
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setShowForm(false)}>
             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-2xl p-6 md:p-8 shadow-xl relative" onClick={e => e.stopPropagation()}>
               <button onClick={() => setShowForm(false)} className="absolute top-4 right-4 p-1.5 hover:bg-zinc-50 rounded-lg"><X className="w-4 h-4 text-zinc-400" /></button>
-              <h3 className="text-lg md:text-xl font-bold text-zinc-950 mb-6">Nueva Empresa</h3>
+              <h3 className="text-lg md:text-xl font-bold text-zinc-950 mb-6">{t("user.new_store_title")}</h3>
               <div className="space-y-4">
                 <div>
                   <label className="text-xs font-medium text-zinc-400 mb-1 block">Nombre</label>
@@ -371,31 +377,28 @@ export default function Page() {
     const subType = planId || "starter";
     const expiry = new Date();
     expiry.setDate(expiry.getDate() + 30);
-    setUser(prev => ({ ...prev, subscription: subType, subscriptionExpiry: expiry }));
-    try {
-      const userRes = await apiFetch("/api/user", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscription: subType, subscriptionExpiry: expiry.toISOString() }),
-      });
-      if (userRes.ok) {
-        const userData = await userRes.json();
-        if (userData.user) {
-          setUser(prev => ({ ...prev, ...userData.user }));
+    const limits = getPlanLimits(subType);
+    setUser(prev => ({
+      ...prev,
+      subscription: subType,
+      subscriptionExpiry: expiry,
+      planLimits: limits,
+    }));
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await new Promise(r => setTimeout(r, 1000));
+      try {
+        const res = await apiFetch("/api/user");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user?.subscription) {
+            setUser(prev => ({ ...prev, ...data.user }));
+            break;
+          }
         }
-      }
-    } catch (e) {
-      console.error("Network error updating subscription:", e);
+      } catch {}
     }
-    try {
-      const getRes = await apiFetch("/api/user");
-      if (getRes.ok) {
-        const getData = await getRes.json();
-        if (getData.user) {
-          setUser(prev => ({ ...prev, ...getData.user }));
-        }
-      }
-    } catch {}
+
     setActiveTab("dashboard");
     showToast(`Plan ${subType.toUpperCase()} activado correctamente`, "success");
   };
@@ -784,17 +787,6 @@ export default function Page() {
         </div>
       </nav>
 
-      {/* Mobile floating help button */}
-      {isLogged && (
-        <button
-          onClick={() => setTourTrigger(n => n + 1)}
-          className="md:hidden fixed bottom-20 right-3 z-40 w-9 h-9 rounded-full bg-zinc-800/90 backdrop-blur text-zinc-400 hover:text-white hover:bg-zinc-700 flex items-center justify-center shadow-lg transition-all"
-          title="Tutorial"
-        >
-          <HelpCircle className="w-4 h-4" />
-        </button>
-      )}
-
       {/* Mobile fullscreen drawer */}
       <AnimatePresence>
         {mobileDrawerOpen && (
@@ -812,11 +804,11 @@ export default function Page() {
               exit={{ x: "-100%" }}
               transition={{ type: "spring", stiffness: 350, damping: 35 }}
               onClick={e => e.stopPropagation()}
-              className="absolute left-0 top-0 bottom-0 w-[300px] max-w-[85vw] bg-white shadow-4xl flex flex-col overflow-y-auto"
+              className="absolute left-0 top-0 bottom-0 w-[240px] max-w-[75vw] bg-white shadow-4xl flex flex-col overflow-y-auto"
             >
-                <div className="flex items-center justify-between px-5 h-16 border-b border-zinc-100 shrink-0">
-                  <span className="text-sm font-wallpoet tracking-[0.2em] text-red-600">JANDOSOFT</span>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between px-2 h-14 border-b border-zinc-100 shrink-0 overflow-hidden">
+                  <span className="text-[10px] font-wallpoet tracking-[0.1em] text-red-600 truncate mr-1.5 min-w-0">JANDOSOFT</span>
+                  <div className="flex items-center gap-1 shrink-0">
                     <LanguageCarousel />
                     <button
                       onClick={toggleTheme}
@@ -852,7 +844,7 @@ export default function Page() {
                 </div>
                   </div>
 
-              <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
+              <nav className="flex-1 px-2 py-3 space-y-4 overflow-y-auto">
                 {isLogged ? (
                   <>
                     <MobileDrawerGroup label={t("section.management")}>
@@ -984,7 +976,7 @@ export default function Page() {
                   {activeTab === "pricing" && <motion.div key="pricing" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="py-10"><PlansView currency={currency} isPremium={isPremium} isLogged={isLogged} userEmail={user.email} onPaymentSuccess={handlePaymentSuccess} onLoginRequest={() => setShowLogin(true)} /></motion.div>}
                  {activeTab === "business" && isLogged && activeStore && (
                     <motion.div key="business" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="py-10">
-                         <BusinessDashboard userStore={activeStore} userEmail={user.email} storeId={activeStoreId as string | number} planLimits={user.planLimits || getPlanLimits(user.subscription)} planExpired={!!(user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date())} onNavigateToPricing={() => setActiveTab("pricing")} initialSection={businessSection}
+                         <BusinessDashboard userStore={activeStore} userEmail={user.email} storeId={activeStoreId as string | number} planLimits={user.planLimits || getPlanLimits(user.subscription)} planExpired={!!(user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date())} subscription={user.subscription} onNavigateToPricing={() => setActiveTab("pricing")} initialSection={businessSection}
                          onBack={() => { setActiveStoreId(null); setActiveTab("dashboard"); }}
                           onEditStore={async (storeId, data) => {
                             const res = await apiFetch(`/api/stores/${storeId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
@@ -1041,10 +1033,10 @@ function SideNavItem2({ icon, label, active, onClick, badge, dataTour }: { icon:
 function MobileNavItem({ icon, label, active, onClick, dataTour }: { icon: React.ReactNode; label?: string; active: boolean; onClick: () => void; dataTour?: string }) {
    return (
       <button onClick={onClick} data-tour={dataTour} className={cn("flex flex-col items-center justify-center gap-0.5 px-1 max-[340px]:px-0.5 py-1 rounded-lg transition-all min-w-0 flex-1", active ? "text-red-500" : "text-zinc-500 hover:text-zinc-300")}>
-         <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center transition-all", active ? "bg-red-500/10 text-red-500" : "text-current")}>
-            {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: "w-5 h-5" })}
+         <div className={cn("w-8 h-8 max-[340px]:w-6 max-[340px]:h-6 rounded-lg flex items-center justify-center transition-all", active ? "bg-red-500/10 text-red-500" : "text-current")}>
+            {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: "w-5 h-5 max-[340px]:w-4 max-[340px]:h-4" })}
          </div>
-         {label && <span className={cn("text-[8px] font-semibold tracking-wide truncate w-full text-center", active ? "text-red-500" : "text-zinc-500")}>{label}</span>}
+         {label && <span className={cn("text-[8px] max-[340px]:text-[7px] font-semibold tracking-wide truncate w-full text-center", active ? "text-red-500" : "text-zinc-500")}>{label}</span>}
       </button>
    );
 }
@@ -1052,7 +1044,7 @@ function MobileNavItem({ icon, label, active, onClick, dataTour }: { icon: React
 function MobileDrawerGroup({ label, children }: { label: string; children: React.ReactNode }) {
    return (
       <div>
-         <p className="text-[9px] font-semibold text-zinc-400 uppercase tracking-[0.15em] px-3 mb-1.5">{label}</p>
+         <p className="text-[9px] font-semibold text-zinc-400 uppercase tracking-[0.15em] px-2 mb-1">{label}</p>
          <div className="space-y-0.5">{children}</div>
       </div>
    );
@@ -1064,12 +1056,12 @@ function MobileDrawerItem({ icon, label, active, onClick, dataTour }: { icon: Re
         whileTap={{ scale: 0.98 }}
         onClick={onClick}
         data-tour={dataTour}
-        className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all", active ? "bg-red-50 text-red-600 font-semibold" : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900")}
+        className={cn("w-full flex items-center gap-2.5 px-2 py-2 rounded-md transition-all", active ? "bg-red-50 text-red-600 font-semibold" : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900")}
       >
-         <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all", active ? "bg-red-600 text-white shadow-sm" : "bg-zinc-100 text-zinc-500")}>
-            {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: "w-4 h-4" })}
+         <div className={cn("w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-all", active ? "bg-red-600 text-white shadow-sm" : "bg-zinc-100 text-zinc-500")}>
+            {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: "w-3.5 h-3.5" })}
          </div>
-         <span className="text-sm">{label}</span>
+         <span className="text-xs">{label}</span>
       </motion.button>
    );
 }
@@ -1120,7 +1112,7 @@ function HeaderNav({ activeTab, isLogged, setActiveTab, setShowLogin, setMobileD
           </>
         )}
         {!isLogged && activeTab !== "register" && (
-          <>
+          <div className="hidden sm:flex items-center gap-2 md:gap-4">
             <motion.button whileTap={{ scale: 0.97 }} onClick={() => setActiveTab("chat")}
               className="px-3 md:px-4 py-2 md:py-2.5 bg-zinc-50 text-zinc-600 rounded-lg text-[10px] md:text-xs font-medium hover:bg-zinc-100 transition-all flex items-center gap-1.5"
             >
@@ -1131,7 +1123,7 @@ function HeaderNav({ activeTab, isLogged, setActiveTab, setShowLogin, setMobileD
             >
               {t("action.start")} <ArrowRight className="w-3.5 h-3.5" />
             </motion.button>
-          </>
+          </div>
         )}
         <motion.button whileTap={{ scale: 0.9 }} onClick={() => setMobileDrawerOpen(true)}
           className="md:hidden w-9 h-9 rounded-lg bg-zinc-50 hover:bg-zinc-100 flex items-center justify-center transition-colors"
@@ -1143,6 +1135,109 @@ function HeaderNav({ activeTab, isLogged, setActiveTab, setShowLogin, setMobileD
   );
 }
 
+function MorePlansPanel() {
+  const { t } = useLanguage();
+  const geo = useGeoCurrency();
+  const [open, setOpen] = useState(false);
+  const [flexPlans, setFlexPlans] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/plans")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.plans) {
+          setFlexPlans(data.plans.filter((p: any) => p.durationDays));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const formatPrice = (v: number) => geo.formatPrice(Math.round(v));
+
+  const durationLabel = (days: number) => {
+    if (days <= 3) return `${days} días`;
+    if (days <= 7) return `${days} días`;
+    if (days <= 15) return `${days} días`;
+    if (days === 30) return "1 mes";
+    if (days === 90) return "3 meses";
+    if (days === 180) return "6 meses";
+    return `${days} días`;
+  };
+
+  if (flexPlans.length === 0) return null;
+
+  return (
+    <div className="max-w-xl mx-auto">
+      <motion.button
+        whileTap={{ scale: 0.97 }}
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-zinc-200 rounded-xl text-sm font-bold text-zinc-700 hover:border-red-300 hover:text-red-600 transition-all shadow-sm"
+      >
+        <CalendarDays className="w-4 h-4" />
+        {t("plans.more_plans") || "Ver más planes"}
+        <ChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
+      </motion.button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 space-y-2">
+              {flexPlans.map((p: any, i: number) => {
+                const features = (p.features || []).slice(0, 4);
+                return (
+                  <motion.div
+                    key={p.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="bg-white border border-zinc-100 rounded-xl px-4 py-3 hover:border-red-200 hover:shadow-sm transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-zinc-800">
+                          {t(p.nameKey || p.name)}
+                        </span>
+                        <span className="text-[10px] font-semibold text-zinc-400 bg-zinc-50 px-2 py-0.5 rounded-md">
+                          {durationLabel(p.durationDays)}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-black text-red-600">
+                          {formatPrice(p.price)}
+                        </span>
+                        <div className="text-[9px] text-zinc-400 font-medium">
+                          {t("plans.per_day") || "/día"}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {features.map((f: string, fi: number) => (
+                        <span key={fi} className="text-[10px] font-medium text-zinc-500 bg-zinc-50 px-2 py-0.5 rounded-md">
+                          {t(f)}
+                        </span>
+                      ))}
+                      {p.features.length > 4 && (
+                        <span className="text-[10px] font-bold text-red-400">
+                          +{p.features.length - 4}
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function HomeTabContent({ setActiveTab, isLogged, setShowLogin }: {
   setActiveTab: React.Dispatch<React.SetStateAction<TabType>>; isLogged: boolean; setShowLogin: (v: boolean) => void;
 }) {
@@ -1151,31 +1246,31 @@ function HomeTabContent({ setActiveTab, isLogged, setShowLogin }: {
     <motion.div key="home" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="space-y-16 md:space-y-32 pb-16 md:pb-32"
     >
-      <section className="relative overflow-hidden rounded-3xl md:rounded-[3rem] bg-gradient-to-br from-zinc-950 via-zinc-900 to-neutral-950 max-[400px]:p-5 p-8 md:p-16 lg:p-24">
+      <section className="relative overflow-hidden rounded-3xl md:rounded-[3rem] bg-gradient-to-br from-zinc-950 via-zinc-900 to-neutral-950 max-[400px]:p-5 max-[340px]:p-3 p-8 md:p-16 lg:p-24">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(220,38,38,0.12),transparent_50%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(220,38,38,0.08),transparent_50%)]" />
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-red-600/5 rounded-full blur-[150px]" />
 
-        <div className="relative z-10 max-w-4xl mx-auto text-center space-y-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/[0.08] text-white rounded-full text-xs font-medium border border-white/[0.1] backdrop-blur-md tracking-wide">
+        <div className="relative z-10 max-w-4xl mx-auto text-center space-y-8 max-[340px]:space-y-5">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/[0.08] text-white rounded-full text-xs font-medium border border-white/[0.1] backdrop-blur-md tracking-wide max-[340px]:text-[10px] max-[340px]:py-1">
             <Zap className="w-3 h-3 text-red-400" /> {t("landing.badge")}
           </motion.div>
 
-          <motion.h2 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }} className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold leading-[1.1] tracking-tight text-white">
+          <motion.h2 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }} className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl max-[340px]:text-3xl font-bold leading-[1.1] tracking-tight text-white">
             {t("landing.hero_title")} <br/>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-red-500 to-orange-400">{t("landing.hero_title_highlight")}</span>
             <br/>{t("landing.hero_subtitle")}
           </motion.h2>
 
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }} className="text-sm md:text-lg text-zinc-400 leading-relaxed max-w-2xl mx-auto">
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }} className="text-sm md:text-lg text-zinc-400 leading-relaxed max-w-2xl mx-auto max-[340px]:text-xs">
             {t("landing.hero_desc")}
           </motion.p>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }} className="flex flex-col sm:flex-row justify-center gap-3 md:gap-4">
-            <motion.button whileTap={{ scale: 0.98 }} onClick={() => setActiveTab("register")} className="w-full sm:w-auto px-8 py-3.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-600/25 flex items-center justify-center gap-2">
-              {t("landing.cta_start")} <ArrowRight className="w-4 h-4" />
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }} className="flex flex-col sm:flex-row justify-center gap-3 md:gap-4 max-[340px]:gap-2">
+            <motion.button whileTap={{ scale: 0.98 }} onClick={() => setActiveTab("register")} className="w-full sm:w-auto px-8 py-3.5 max-[340px]:px-4 max-[340px]:py-2.5 bg-red-600 text-white rounded-xl text-sm max-[340px]:text-xs font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-600/25 flex items-center justify-center gap-2">
+              {t("landing.cta_start")} <ArrowRight className="w-4 h-4 max-[340px]:w-3.5 max-[340px]:h-3.5" />
             </motion.button>
-            <motion.button whileTap={{ scale: 0.98 }} onClick={() => isLogged ? setActiveTab("dashboard") : setShowLogin(true)} className="w-full sm:w-auto px-8 py-3.5 bg-white/[0.08] text-white border border-white/[0.15] rounded-xl text-sm font-medium hover:bg-white/[0.12] transition-all backdrop-blur-md">
+            <motion.button whileTap={{ scale: 0.98 }} onClick={() => isLogged ? setActiveTab("dashboard") : setShowLogin(true)} className="w-full sm:w-auto px-8 py-3.5 max-[340px]:px-4 max-[340px]:py-2.5 bg-white/[0.08] text-white border border-white/[0.15] rounded-xl text-sm max-[340px]:text-xs font-medium hover:bg-white/[0.12] transition-all backdrop-blur-md">
               {isLogged ? t("user.my_space") : t("action.login")}
             </motion.button>
           </motion.div>
@@ -1246,6 +1341,8 @@ function HomeTabContent({ setActiveTab, isLogged, setShowLogin }: {
         </motion.div>
 
         <PlansCarousel onSelectPlan={() => setActiveTab("register")} />
+
+        <MorePlansPanel />
 
         <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center">
           <motion.button whileTap={{ scale: 0.98 }} onClick={() => setActiveTab("register")} className="px-8 py-3.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition-all shadow-lg inline-flex items-center gap-2">

@@ -39,18 +39,18 @@ export function LanguageCarousel() {
     <div className="relative" ref={dropdownRef}>
       <motion.button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="flex items-center gap-2 px-3 py-2 bg-white/10 backdrop-blur-xl rounded-xl border border-white/10 hover:bg-white/20 transition-all"
+        className="flex items-center gap-1.5 px-2 py-1.5 bg-white/10 backdrop-blur-xl rounded-lg border border-white/10 hover:bg-white/20 transition-all"
         whileTap={{ scale: 0.95 }}
       >
-        <Globe className="w-4 h-4 text-white/70" />
-        <span className="text-sm">{FLAGS[language]}</span>
-        <span className="text-[10px] font-semibold text-white/70 uppercase tracking-wider">
+        <Globe className="w-3.5 h-3.5 text-white/70" />
+        <span className="text-xs">{FLAGS[language]}</span>
+        <span className="text-[9px] font-semibold text-white/70 uppercase tracking-wider hidden sm:inline-block">
           {LANGUAGES.find((l) => l.code === language)?.native ?? language}
         </span>
         <motion.svg
           animate={{ rotate: showDropdown ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="w-3 h-3 text-white/50"
+          className="w-2.5 h-2.5 text-white/50"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"

@@ -1,9 +1,12 @@
 import { connectDB } from "@/lib/mongodb";
 import { Store } from "@/lib/models/Store";
 import ChatUsage from "@/lib/models/ChatUsage";
+import WidgetConversation from "@/lib/models/WidgetConversation";
+import WidgetMessage from "@/lib/models/WidgetMessage";
 import { AI_CONFIG, trimHistory } from "@/lib/ai/config";
 import { callLLM, executeTool, AGENT_TOOLS } from "@/lib/ai/agent";
-import { filterToolsForCustomer } from "@/lib/ai/tools";
+import { filterToolsForCustomer, filterToolsByStoreModules, filterCustomerToolsByStoreModules } from "@/lib/ai/tools";
+import { getModulesDescription } from "@/lib/ai/modules";
 import { searchKnowledgeBase } from "@/lib/utils";
 import { Notification } from "@/lib/models/Notification";
 import { injectTimeContext, getServerNow } from "@/lib/ai/time";
@@ -12,20 +15,13 @@ import {
   generateTaskContext,
   trackAgentResponse,
   serializeTaskState,
-  deserializeTaskState,
   type TrackerDecision,
 } from "@/lib/ai/intent-tracker";
-import {
-  detectIntent,
-  isAffirmative,
-  detectDestructiveAction,
-  type TaskState,
-  type AgentLog,
-} from "@/lib/ai/task-planner";
+import { contextIsolator, requireIsolation, buildCognitiveContext, injectCognitiveContextHeader } from "@/lib/ai/cognitive";
 
-const GUEST_MAX_MESSAGES = 10;
-const STORE_OWN_PROVIDER_MAX_MESSAGES = 50;
-const GUEST_RESET_HOURS = 6;
+const GUEST_MAX_MESSAGES = 70;
+const STORE_OWN_PROVIDER_MAX_MESSAGES = 70;
+const GUEST_RESET_HOURS = 5;
 
 const CUSTOMER_TOOL_NAMES = new Set([
   "create_appointment",
@@ -43,7 +39,15 @@ const CUSTOMER_TOOL_NAMES = new Set([
   "getCurrentDateTime",
 ]);
 
-const CUSTOMER_TOOLS = filterToolsForCustomer(AGENT_TOOLS, CUSTOMER_TOOL_NAMES);
+function getToolsForStoreModules(store: any) {
+  const modules = store.modules?.length ? store.modules : ["services"];
+  const fullTools = filterToolsByStoreModules(AGENT_TOOLS, modules);
+  const customerTools = filterCustomerToolsByStoreModules(
+    filterToolsForCustomer(AGENT_TOOLS, CUSTOMER_TOOL_NAMES),
+    modules
+  );
+  return { fullTools, customerTools };
+}
 
 async function checkUsage(identifier: string, maxMessages: number = GUEST_MAX_MESSAGES): Promise<{
   allowed: boolean;
@@ -105,7 +109,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { storeId, message, history, guestId, taskState: clientTaskState } = body;
+    const { storeId, message, guestId, taskState: clientTaskState } = body;
 
     if (!storeId || !message) {
       return Response.json(
@@ -115,10 +119,33 @@ export async function POST(req: Request) {
     }
 
     await connectDB();
+
+    // Validate storeId format and load store
+    const isValidObjectId = /^[a-fA-F0-9]{24}$/.test(String(storeId));
+    if (!isValidObjectId) {
+      console.warn(`[Agent:CONTAMINATION] Invalid storeId format: ${storeId}`);
+      return Response.json({ error: "Invalid store identifier" }, { status: 400 });
+    }
+
     const store = await Store.findById(storeId).lean();
     if (!store) {
+      console.warn(`[Agent:CONTAMINATION] Store not found: ${storeId}`);
       return Response.json({ error: "Store not found" }, { status: 404 });
     }
+
+    // ── Cognitive Context Isolation ──
+    const isolateResult = contextIsolator.isolateFromDb(store, storeId);
+    const snapshot = requireIsolation(isolateResult, `Agent:${storeId}`);
+
+    const cognitiveCtx = buildCognitiveContext({
+      message,
+      storeId: isolateResult.storeId,
+      snapshot,
+      guestId: guestId || undefined,
+    });
+
+    console.log(`[Cognitive] Context built for store ${storeId}: ${snapshot.name} | ${snapshot.plan}`);
+    // ────────────────────────────────
 
     const hasOwnAI = !!(store as any).aiProvider?.enabled && (store as any).aiProvider?.provider;
     const effectiveMaxMessages = hasOwnAI ? STORE_OWN_PROVIDER_MAX_MESSAGES : GUEST_MAX_MESSAGES;
@@ -126,46 +153,73 @@ export async function POST(req: Request) {
     const identifier = guestId ? `guest:${storeId}:${guestId}` : `guest:${storeId}:${Date.now()}`;
     const { allowed, remaining } = await checkUsage(identifier, effectiveMaxMessages);
     if (!allowed) {
-      let plansInfo: any[] = [];
-      try {
-        const { getPlanConfig } = await import("@/lib/plan-config");
-        const config = await getPlanConfig();
-        plansInfo = config.plans.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          price: p.price,
-          desc: p.desc,
-          limits: p.limits,
-          features: p.features,
-        }));
-      } catch {}
-
       return Response.json(
         {
-          error: hasOwnAI
-            ? `Has alcanzado el límite de ${STORE_OWN_PROVIDER_MAX_MESSAGES} mensajes.`
-            : `Has alcanzado el límite de ${GUEST_MAX_MESSAGES} mensajes por hora. ¡Desbloquea más mensajes actualizando tu plan!`,
+          error: `Has agotado tus mensajes por ahora. Vuelve en unas horas para seguir conversando.`,
           remaining: 0,
           limitReached: true,
-          plans: plansInfo,
         },
         { status: 429 }
       );
     }
 
+    // ── 0. Reconstruct history from DB (never trust client-sent history) ──
+    const actualGuestId = guestId || "anonymous";
+
+    // Load or create the conversation
+    const conversation = await WidgetConversation.findOneAndUpdate(
+      { storeId: store._id, guestId: actualGuestId },
+      { lastMessage: message },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    // Fetch REAL message history from DB, scoped to this store's conversation
+    const dbMessages = await WidgetMessage.find({ conversationId: conversation._id })
+      .sort({ createdAt: 1 })
+      .limit(50)
+      .lean();
+
+    const serverHistory = dbMessages.map((m: any) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    // Persist the new user message
+    await WidgetMessage.create({
+      conversationId: conversation._id,
+      role: "user",
+      content: message,
+    }).catch((e) => console.error("Error saving widget message:", e));
+
+    // Load or create persistent task state for this conversation
+    const taskStateStr = (conversation as any).taskState || clientTaskState || null;
+
     // ── 1. Process intent with Task Planner ──
     const decision = processUserMessage(
       message,
-      history || [],
+      serverHistory,
       store,
-      clientTaskState || null
+      taskStateStr
     );
 
     logDecision(decision, String(storeId), guestId);
 
-    // ── 2. Handle destructive action confirmation ──
+
+    // Helper to persist assistant message + taskState
+    const persistResponse = async (text: string, taskStateSerialized: string | null) => {
+      try {
+        await WidgetMessage.create({ conversationId: conversation._id, role: "assistant", content: text });
+        if (taskStateSerialized) {
+          await WidgetConversation.findByIdAndUpdate(conversation._id, { taskState: taskStateSerialized });
+        }
+      } catch (e) {
+        console.error("Error saving assistant response:", e);
+      }
+    };
+
     if (decision.action === "ask_confirmation" && decision.responsePrefix) {
       const updatedState = trackAgentResponse(decision.taskState, decision.responsePrefix);
+      persistResponse(decision.responsePrefix, serializeTaskState(updatedState));
       return Response.json({
         text: decision.responsePrefix,
         actions: [],
@@ -185,8 +239,10 @@ export async function POST(req: Request) {
 
     // ── 3. Handle clarification (affirmative without context) ──
     if (decision.action === "clarify") {
+      const clarifyText = "¿En qué puedo ayudarte? Puedo mostrarte nuestros productos, agendar una cita, hacer un pedido o cualquier otra cosa.";
+      persistResponse(clarifyText, serializeTaskState(decision.taskState));
       return Response.json({
-        text: "¿En qué puedo ayudarte? Puedo mostrarte nuestros productos, agendar una cita, hacer un pedido o cualquier otra cosa.",
+        text: clarifyText,
         actions: [],
         remaining,
         provider: hasOwnAI ? store.aiProvider.provider : "platform",
@@ -284,7 +340,13 @@ export async function POST(req: Request) {
     // ── Generate task context for system prompt ──
     const taskContext = generateTaskContext(decision.taskState);
 
-    const systemPrompt = `${timeContext}
+    const cognitiveHeader = injectCognitiveContextHeader(cognitiveCtx);
+    const storeModules = (store as any).modules?.length ? (store as any).modules : ["services"];
+    const modulesDesc = getModulesDescription(storeModules);
+
+    const systemPrompt = `${cognitiveHeader}
+
+${timeContext}
 
 Eres el asistente virtual de ${(store as any).name}, un negocio en la plataforma Jandosoft.
 
@@ -326,6 +388,9 @@ INFORMACIÓN DEL NEGOCIO:
 - Nombre: ${(store as any).name}
 - Industria: ${(store as any).industry || "N/A"}
 - Tipo: ${(store as any).type || "N/A"}
+
+MÓDULOS ACTIVOS (solo puedes usar herramientas de estos módulos):
+${modulesDesc}
 
 PRODUCTOS:
 ${productsList}
@@ -379,13 +444,10 @@ Responde SIEMPRE en español, de forma amable y profesional. Si no puedes hacer 
 
 ${taskContext}`;
 
-    // ── 5. Build messages array ──
+    // ── 5. Build messages array from server history only ──
     const messages: any[] = trimHistory([
       { role: "system", content: systemPrompt },
-      ...(history || []).map((m: any) => ({
-        role: m.role,
-        content: m.content,
-      })),
+      ...serverHistory,
       { role: "user", content: message },
     ]);
 
@@ -394,6 +456,7 @@ ${taskContext}`;
     let finalResponse = "";
     let toolExecuted = "";
     let toolResultStr = "";
+    const { fullTools, customerTools } = getToolsForStoreModules(store);
 
     // If the planner determined a tool should be executed directly (no missing params, no confirmation needed)
     if (decision.action === "execute_tool" && decision.toolToExecute) {
@@ -434,7 +497,7 @@ ${taskContext}`;
     for (let turn = 0; turn < 4; turn++) {
       const data = await callLLM(
         messages,
-        CUSTOMER_TOOLS,
+        customerTools,
         AI_CONFIG.agentMaxTokens,
         AI_CONFIG.temperature,
         store?.aiProvider
@@ -505,6 +568,9 @@ ${taskContext}`;
       `Response length: ${finalResponse.length}`
     );
 
+    const serializedTaskState = serializeTaskState(updatedState);
+    persistResponse(finalResponse || "Acción completada.", serializedTaskState);
+
     const usedProvider = hasOwnAI ? store.aiProvider.provider : "platform";
 
     return Response.json({
@@ -512,7 +578,7 @@ ${taskContext}`;
       actions,
       remaining,
       provider: usedProvider,
-      taskState: serializeTaskState(updatedState),
+      taskState: serializedTaskState,
       intent: decision.plan?.intent || "unknown",
       logs: decision.logs.map(l => ({
         intent: l.detectedIntent,

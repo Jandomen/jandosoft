@@ -1,4 +1,6 @@
 import { DOMAIN_TOOLS, getToolsForDomains, type Domain } from "./domains";
+import { getDomainsForModules } from "../modules";
+import type { StoreModule } from "../modules";
 import { withToolTimeout } from "../errors";
 import { ToolDefinition, ToolResult } from "./base";
 import { metrics } from "../metrics";
@@ -58,4 +60,22 @@ export function filterToolsForCustomer(
   customerToolNames: Set<string>
 ): ToolDefinition[] {
   return allTools.filter((t) => customerToolNames.has(t.function.name));
+}
+
+export function filterToolsByStoreModules(
+  allTools: ToolDefinition[],
+  modules: StoreModule[]
+): ToolDefinition[] {
+  const domains = getDomainsForModules(modules);
+  const allowedNames = new Set(getToolsForDomains([...domains, "admin", "general"]));
+  return allTools.filter((t) => allowedNames.has(t.function.name));
+}
+
+export function filterCustomerToolsByStoreModules(
+  customerTools: ToolDefinition[],
+  modules: StoreModule[]
+): ToolDefinition[] {
+  const domains = getDomainsForModules(modules);
+  const allowedNames = new Set(getToolsForDomains(domains));
+  return customerTools.filter((t) => allowedNames.has(t.function.name));
 }

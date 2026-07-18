@@ -633,7 +633,7 @@ Después de ejecutar, SIEMPRE confirma el resultado en tu mensaje.`;
   };
 
   return (
-    <div className="flex flex-col h-[500px] md:h-[700px] w-full max-w-4xl mx-auto bg-zinc-50 rounded-[1.5rem] max-[340px]:rounded-xl md:rounded-[3rem] border border-zinc-100 shadow-3xl overflow-hidden relative">
+    <div className="flex flex-col h-[450px] max-[340px]:h-[380px] md:h-[700px] w-full max-w-4xl mx-auto bg-zinc-50 rounded-[1.5rem] max-[340px]:rounded-xl md:rounded-[3rem] border border-zinc-100 shadow-3xl overflow-hidden relative">
       {/* Sidebar overlay */}
       <AnimatePresence>
         {sidebarOpen && (
