@@ -23,7 +23,17 @@ export async function GET(req: Request) {
       });
     }
 
-    return NextResponse.json({ plans: (config as any).plans, freePlan: (config as any).freePlan });
+    const plans = (config as any).plans.map((p: any) => {
+      const defaultPlan = DEFAULT_PLANS.find((d) => d.id === p.id);
+      if (defaultPlan) {
+        return { ...p, name: defaultPlan.name, desc: defaultPlan.desc };
+      }
+      return p;
+    });
+
+    const freePlan = { ...(config as any).freePlan, name: DEFAULT_FREE_PLAN.name };
+
+    return NextResponse.json({ plans, freePlan });
   } catch (error) {
     console.error("GET plans error:", error);
     return NextResponse.json({ error: "Error fetching plans" }, { status: 500 });

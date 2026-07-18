@@ -17,10 +17,12 @@ export async function getPlanConfig(): Promise<PlanConfigResult> {
     await connectDB();
     const doc = await PlanConfig.findOne().lean();
     if (doc && (doc as any).plans?.length > 0) {
-      cached = {
-        plans: (doc as any).plans as IPlan[],
-        freePlan: (doc as any).freePlan as IFreePlan || DEFAULT_FREE_PLAN,
-      };
+      const plans = ((doc as any).plans as IPlan[]).map((p) => {
+        const def = DEFAULT_PLANS.find((d) => d.id === p.id);
+        return def ? { ...p, name: def.name, desc: def.desc } : p;
+      });
+      const freePlan = { ...((doc as any).freePlan as IFreePlan || DEFAULT_FREE_PLAN), name: DEFAULT_FREE_PLAN.name };
+      cached = { plans, freePlan };
       lastFetch = Date.now();
       return cached!;
     }

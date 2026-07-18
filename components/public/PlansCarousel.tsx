@@ -59,6 +59,36 @@ export default function PlansCarousel({ onSelectPlan }: { onSelectPlan?: (planId
     return () => el.removeEventListener("scroll", checkScroll);
   }, [plans]);
 
+  useEffect(() => {
+    if (plans.length <= 1) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    let paused = false;
+    const pause = () => { paused = true; };
+    const resume = () => { setTimeout(() => { paused = false; }, 4000); };
+    el.addEventListener("mouseenter", pause);
+    el.addEventListener("touchstart", pause);
+    el.addEventListener("mouseleave", resume);
+    el.addEventListener("touchend", resume);
+    const interval = setInterval(() => {
+      if (paused) return;
+      const cardWidth = el.clientWidth * 0.85 + 24;
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (el.scrollLeft >= maxScroll - 10) {
+        el.scrollTo({ left: 0, behavior: "smooth" });
+      } else {
+        el.scrollBy({ left: cardWidth, behavior: "smooth" });
+      }
+    }, 3500);
+    return () => {
+      clearInterval(interval);
+      el.removeEventListener("mouseenter", pause);
+      el.removeEventListener("touchstart", pause);
+      el.removeEventListener("mouseleave", resume);
+      el.removeEventListener("touchend", resume);
+    };
+  }, [plans.length]);
+
   const scroll = (dir: "left" | "right") => {
     if (!scrollRef.current) return;
     const el = scrollRef.current;
