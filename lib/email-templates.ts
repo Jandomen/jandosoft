@@ -5,7 +5,6 @@ const BASE_URL = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
 const BRAND = `
   <div style="text-align:center;margin-bottom:28px;">
     <h1 style="font-family:'Arial Black',Impact,'Helvetica Neue',Arial,sans-serif;font-size:26px;font-weight:900;letter-spacing:6px;text-transform:uppercase;color:#ef4444;margin:0 0 2px;">JANDOSOFT</h1>
-    <p style="font-family:'Arial Black',Impact,'Helvetica Neue',Arial,sans-serif;font-size:9px;font-weight:700;color:#666;letter-spacing:4px;text-transform:uppercase;margin:0;">Cloud Business Suite</p>
   </div>
 `;
 

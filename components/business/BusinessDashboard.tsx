@@ -104,6 +104,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
   const [upgradeMessage, setUpgradeMessage] = useState("");
 
   const isFreePlan = !subscription || subscription === "free" || planExpired || !planLimits || planLimits.maxCustomers === 0;
+  const isExpiredPaid = !!(subscription && subscription !== "free" && planExpired);
 
   const GATED_SECTIONS: Record<string, { requiredPlan: string; message: string }> = {
     analytics:        { requiredPlan: "El Gallito", message: "Analytics está disponible desde el plan El Gallito ($29/mes)" },
@@ -716,7 +717,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
           <div className="flex gap-1.5 px-3 py-2.5 min-w-max items-center">
             {isFreePlan && (
               <motion.button whileTap={{ scale: 0.92 }} onClick={onNavigateToPricing} className="flex items-center gap-1 px-3 py-2 rounded-xl text-[10px] font-black italic bg-gradient-to-r from-red-500 to-red-600 text-white whitespace-nowrap shadow-md">
-                <TrendingUp className="w-3 h-3" /> Ver planes
+                <TrendingUp className="w-3 h-3" /> {isExpiredPaid ? "Reactivar" : "Ver planes"}
               </motion.button>
             )}
             {activeModules.map((mod) => (
@@ -762,7 +763,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
               {isFreePlan && (
                 <motion.button whileTap={{ scale: 0.95 }} onClick={onNavigateToPricing} className="mt-auto p-4 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-2xl text-center space-y-2 hover:from-red-600 hover:to-red-700 transition-all shadow-lg shadow-red-200">
                   <TrendingUp className="w-5 h-5 mx-auto" />
-                  <p className="text-[10px] font-black italic uppercase">Desbloquear todo</p>
+                  <p className="text-[10px] font-black italic uppercase">{isExpiredPaid ? "Reactivar plan" : "Desbloquear todo"}</p>
                   <p className="text-[8px] font-bold opacity-80">Planes desde $29/mes</p>
                 </motion.button>
               )}
@@ -771,7 +772,21 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
           <main className="flex-1 overflow-y-auto p-4 max-[400px]:p-3 max-[340px]:p-2 md:p-8 bg-white">
             {section === "dashboard" && (
               <div className="space-y-8">
-                {isFreePlan && (
+                {isExpiredPaid && (
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-r from-red-50 via-red-50/50 to-amber-50 border border-red-200 rounded-2xl p-4 md:p-5 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center shrink-0"><TrendingUp className="w-5 h-5 text-red-600" /></div>
+                      <div>
+                        <p className="text-xs md:text-sm font-black italic text-zinc-950">Tu plan <span className="text-red-600">{subscription?.toUpperCase()}</span> expiró</p>
+                        <p className="text-[9px] md:text-[10px] font-bold text-zinc-400 italic">Reactiva para desbloquear todas las funciones</p>
+                      </div>
+                    </div>
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={onNavigateToPricing} className="px-4 md:px-6 py-2.5 md:py-3 bg-red-600 text-white rounded-xl font-black text-[9px] md:text-[10px] italic hover:bg-red-700 transition-all shadow-lg whitespace-nowrap shrink-0">
+                      Reactivar
+                    </motion.button>
+                  </motion.div>
+                )}
+                {isFreePlan && !isExpiredPaid && (
                   <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-r from-amber-50 via-amber-50/50 to-red-50 border border-amber-200 rounded-2xl p-4 md:p-5 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0"><TrendingUp className="w-5 h-5 text-amber-600" /></div>
@@ -1275,7 +1290,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
             {section === "customers" && (
               isFreePlan ? (
-                <FreePlanBlock feature="Los clientes" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} />
+                <FreePlanBlock feature="Los clientes" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} expired={isExpiredPaid} />
               ) : (
                 <CrmPanel storeId={storeId as string} />
               )
@@ -1312,7 +1327,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
             {section === "analytics" && (
               isFreePlan ? (
-                <FreePlanBlock feature="Analytics" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} />
+                <FreePlanBlock feature="Analytics" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} expired={isExpiredPaid} />
               ) : (
                 <AnalyticsPanel storeId={storeId} />
               )
@@ -1320,7 +1335,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
             {section === "team" && (
               isFreePlan ? (
-                <FreePlanBlock feature="El equipo" plan="El Jefe" price={79} onUpgrade={onNavigateToPricing} />
+                <FreePlanBlock feature="El equipo" plan="El Jefe" price={79} onUpgrade={onNavigateToPricing} expired={isExpiredPaid} />
               ) : (
                 <TeamPanel />
               )
@@ -1370,7 +1385,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
             {section === "campaigns" && (
               isFreePlan ? (
-                <FreePlanBlock feature="Las campañas" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} />
+                <FreePlanBlock feature="Las campañas" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} expired={isExpiredPaid} />
               ) : (
                 <CampaignsPanel campaigns={campaigns} setCampaigns={setCampaigns} onPersist={(d) => persistStore(undefined, undefined, undefined, undefined, undefined, d)} storeId={String(storeId)} />
               )
@@ -1388,7 +1403,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
             {section === "knowledgebase" && (
               isFreePlan ? (
-                <FreePlanBlock feature="La base de conocimiento" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} />
+                <FreePlanBlock feature="La base de conocimiento" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} expired={isExpiredPaid} />
               ) : (
               <div className="space-y-6 md:space-y-8">
                 <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
@@ -1608,7 +1623,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
             {section === "agentconfig" && (
               isFreePlan ? (
-                <FreePlanBlock feature="La configuración del agente IA" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} />
+                <FreePlanBlock feature="La configuración del agente IA" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} expired={isExpiredPaid} />
               ) : (
               <div className="space-y-6 md:space-y-8 max-w-3xl">
                 <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
@@ -2082,7 +2097,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
             {section === "smartforms" && (
               isFreePlan ? (
-                <FreePlanBlock feature="Los formularios inteligentes" plan="El Jefe" price={79} onUpgrade={onNavigateToPricing} />
+                <FreePlanBlock feature="Los formularios inteligentes" plan="El Jefe" price={79} onUpgrade={onNavigateToPricing} expired={isExpiredPaid} />
               ) : (
               <div className="space-y-6 md:space-y-8">
                 <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
@@ -3143,18 +3158,27 @@ function SideBtn({ icon, label, active, onClick, badge }: { icon: any; label: st
   );
 }
 
-function FreePlanBlock({ feature, plan, price, onUpgrade }: { feature: string; plan: string; price: number; onUpgrade?: () => void }) {
+function FreePlanBlock({ feature, plan, price, onUpgrade, expired }: { feature: string; plan: string; price: number; onUpgrade?: () => void; expired?: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 md:py-24 text-center space-y-6">
-      <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center">
-        <TrendingUp className="w-10 h-10 text-amber-500" />
+      <div className={cn("w-20 h-20 rounded-3xl flex items-center justify-center", expired ? "bg-red-50" : "bg-amber-50")}>
+        <TrendingUp className={cn("w-10 h-10", expired ? "text-red-500" : "text-amber-500")} />
       </div>
       <div className="space-y-2">
-        <h3 className="text-xl md:text-2xl font-black italic text-zinc-950">{feature} son premium</h3>
-        <p className="text-sm text-zinc-400 font-bold italic">Disponible desde el plan <span className="text-red-600">{plan}</span> (${price}/mes)</p>
+        {expired ? (
+          <>
+            <h3 className="text-xl md:text-2xl font-black italic text-zinc-950">Tu plan <span className="text-red-600">{plan}</span> expiró</h3>
+            <p className="text-sm text-zinc-400 font-bold italic">Reactiva para seguir usando <span className="text-red-600">{feature}</span></p>
+          </>
+        ) : (
+          <>
+            <h3 className="text-xl md:text-2xl font-black italic text-zinc-950">{feature} son premium</h3>
+            <p className="text-sm text-zinc-400 font-bold italic">Disponible desde el plan <span className="text-red-600">{plan}</span> (${price}/mes)</p>
+          </>
+        )}
       </div>
       <motion.button whileTap={{ scale: 0.95 }} onClick={onUpgrade} className="px-8 py-3 bg-red-600 text-white rounded-2xl font-black italic text-xs hover:bg-red-700 transition-all shadow-xl">
-        Mejorar plan
+        {expired ? "Reactivar plan" : "Mejorar plan"}
       </motion.button>
     </div>
   );
