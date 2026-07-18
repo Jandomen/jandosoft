@@ -375,28 +375,31 @@ export default function Page() {
     setTransactions(prev => [transaction, ...prev]);
     const planId = transaction.planId || "";
     const subType = planId || "starter";
-    const expiry = new Date();
-    expiry.setDate(expiry.getDate() + 30);
     const limits = getPlanLimits(subType);
     setUser(prev => ({
       ...prev,
       subscription: subType,
-      subscriptionExpiry: expiry,
+      planStatus: "active",
+      subscriptionStatus: "active",
       planLimits: limits,
     }));
 
-    for (let attempt = 0; attempt < 5; attempt++) {
-      await new Promise(r => setTimeout(r, 1000));
+    for (let attempt = 0; attempt < 10; attempt++) {
+      await new Promise(r => setTimeout(r, 1500));
       try {
         const res = await apiFetch("/api/user");
         if (res.ok) {
           const data = await res.json();
-          if (data.user?.subscription) {
+          if (data.user?.subscription && data.user.subscription !== "free") {
             setUser(prev => ({ ...prev, ...data.user }));
             break;
           }
         }
       } catch {}
+    }
+
+    if (user.email) {
+      loadFromAPI(user.email);
     }
 
     setActiveTab("dashboard");

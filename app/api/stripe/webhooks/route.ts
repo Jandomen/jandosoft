@@ -8,8 +8,6 @@ import { Appointment } from "@/lib/models/Appointment";
 import { stripe } from "@/lib/stripe";
 import { getPlanConfig } from "@/lib/plan-config";
 import { PLANS } from "@/lib/plans";
-import { generatePaymentReceiptPDF } from "@/lib/pdf-utils";
-import { sendPaymentReceiptEmail, sendPaymentReceivedNotificationEmail } from "@/lib/email-service";
 
 function generateReceiptNumber(): string {
   const now = new Date();
@@ -22,6 +20,8 @@ function generateReceiptNumber(): string {
 
 async function sendReceiptForPayment(payment: any) {
   try {
+    const { generatePaymentReceiptPDF } = await import("@/lib/pdf-utils");
+    const { sendPaymentReceiptEmail, sendPaymentReceivedNotificationEmail } = await import("@/lib/email-service");
     const receiptNumber = generateReceiptNumber();
     const pdfBuffer = await generatePaymentReceiptPDF({
       receiptNumber,
@@ -65,6 +65,7 @@ async function sendReceiptForPayment(payment: any) {
 }
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 async function updateUserSubscription(
   userId: string | null,
