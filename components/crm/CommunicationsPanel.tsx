@@ -144,10 +144,10 @@ export default function CommunicationsPanel({ storeId }: { storeId: string }) {
     : "";
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-3 md:space-y-6">
       <div className="flex items-center gap-3 md:gap-4 flex-wrap">
         <div>
-          <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">
+          <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">
             Comunicaciones
           </h3>
           <p className="text-[8px] font-wallpoet tracking-[0.2em] text-red-600 uppercase">JANDOSOFT</p>
@@ -157,7 +157,7 @@ export default function CommunicationsPanel({ storeId }: { storeId: string }) {
             const Icon = t.icon;
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
-                className={cn("flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black italic transition-all",
+                className={cn("flex items-center gap-1 px-2 py-1.5 md:px-3 md:py-2 rounded-xl text-[9px] md:text-[10px] font-black italic transition-all",
                   tab === t.id ? "bg-red-600 text-white shadow-md" : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100"
                 )}>
                 <Icon className="w-3 h-3" /> {t.label}
@@ -167,7 +167,7 @@ export default function CommunicationsPanel({ storeId }: { storeId: string }) {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
         <div className="bg-white rounded-2xl border border-zinc-100 p-4 md:p-5 space-y-4 shadow-sm">
           <h4 className="text-[10px] font-black italic text-zinc-500 uppercase tracking-wider flex items-center gap-2">
             {React.createElement(TABS.find(t => t.id === tab)!.icon, { className: "w-3.5 h-3.5 text-red-500" })}
@@ -177,13 +177,13 @@ export default function CommunicationsPanel({ storeId }: { storeId: string }) {
           <div className="relative">
             <input type="text" placeholder="Buscar cliente..."
               value={customerSearch} onChange={e => { setCustomerSearch(e.target.value); setSelectedCustomerId(""); }}
-              className="w-full bg-zinc-50 pl-9 pr-4 py-2.5 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-red-200 transition-all" />
+              className="w-full bg-zinc-50 pl-9 pr-3 py-2 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-red-200 transition-all" />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-300" />
           </div>
 
           <div className="max-h-[140px] overflow-y-auto space-y-1 -mx-1 px-1">
             {filteredCustomers.length === 0 ? (
-              <p className="text-[10px] text-zinc-400 italic text-center py-4">No hay clientes</p>
+              <p className="text-[9px] md:text-[10px] text-zinc-400 italic text-center py-4">No hay clientes</p>
             ) : filteredCustomers.map(c => {
               const hasPhone = !!c.phone;
               const hasEmail = !!c.email;
@@ -231,7 +231,7 @@ export default function CommunicationsPanel({ storeId }: { storeId: string }) {
 
           <motion.button whileTap={{ scale: 0.95 }} onClick={handleSend}
             disabled={sending || !selectedCustomerId || !body.trim()}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 text-white rounded-xl text-xs font-black italic hover:bg-red-700 transition-all shadow-lg shadow-red-100 disabled:opacity-50">
+            className="w-full flex items-center justify-center gap-2 py-2.5 md:py-3 bg-red-600 text-white rounded-xl text-[10px] md:text-xs font-black italic hover:bg-red-700 transition-all shadow-lg shadow-red-100 disabled:opacity-50">
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             {sending ? "Enviando..." : `Enviar ${tabConfig.inputLabel}`}
           </motion.button>
@@ -254,7 +254,7 @@ export default function CommunicationsPanel({ storeId }: { storeId: string }) {
             {loading ? (
               <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-zinc-300" /></div>
             ) : communications.length === 0 ? (
-              <p className="text-[10px] text-zinc-400 italic text-center py-8">Sin comunicaciones aún</p>
+              <p className="text-[9px] md:text-[10px] text-zinc-400 italic text-center py-8">Sin comunicaciones aún</p>
             ) : communications.map(comm => (
               <div key={comm._id} className="p-3 bg-zinc-50 rounded-xl border border-zinc-100 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">

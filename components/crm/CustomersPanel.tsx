@@ -278,21 +278,21 @@ export default function CustomersPanel({ storeId }: { storeId: string }) {
   const customersWithCoords = customers.filter(c => c.coordinates?.lat && c.coordinates?.lng);
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-3 md:space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3 md:gap-4 flex-wrap">
-        <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">
+        <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">
           {t("customers.header_title").replace("{count}", String(customers.length))}
         </h3>
         <div className="relative flex-1 min-w-[140px] max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
           <input type="text" placeholder={t("customers.search_placeholder_full")}
             value={search} onChange={e => setSearch(e.target.value)}
-            className="w-full bg-zinc-50 pl-10 pr-4 py-2.5 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-red-200 transition-all"
+            className="w-full bg-zinc-50 pl-9 pr-3 py-2 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-red-200 transition-all"
           />
         </div>
         <button onClick={() => setShowFilters(!showFilters)}
-          className={cn("p-2.5 rounded-xl border transition-all", showFilters ? "bg-red-50 border-red-200 text-red-600" : "bg-zinc-50 border-zinc-100 text-zinc-400 hover:text-zinc-600")}>
+          className={cn("p-2 md:p-2.5 rounded-xl border transition-all", showFilters ? "bg-red-50 border-red-200 text-red-600" : "bg-zinc-50 border-zinc-100 text-zinc-400 hover:text-zinc-600")}>
           <Filter className="w-4 h-4" />
         </button>
         <div className="flex items-center bg-zinc-50 rounded-xl border border-zinc-100 p-0.5">
@@ -319,29 +319,29 @@ export default function CustomersPanel({ storeId }: { storeId: string }) {
       )}
 
       {/* Action buttons */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
         <motion.button whileTap={{ scale: 0.95 }} onClick={openNew}
-          className="flex items-center gap-1.5 px-3.5 py-2.5 bg-red-600 text-white rounded-xl text-[10px] md:text-xs font-black italic hover:bg-red-700 transition-all shadow-lg shadow-red-100">
-          <Plus className="w-3.5 h-3.5" /> {t("customers.new_lead_btn")}
+          className="flex items-center gap-1.5 px-2.5 py-2 md:px-3.5 md:py-2.5 bg-red-600 text-white rounded-xl text-[9px] md:text-xs font-black italic hover:bg-red-700 transition-all shadow-lg shadow-red-100">
+          <Plus className="w-3 h-3 md:w-3.5 md:h-3.5" /> {t("customers.new_lead_btn")}
         </motion.button>
         <motion.button whileTap={{ scale: 0.95 }} onClick={handleCsvImport} disabled={csvImporting}
-          className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] md:text-xs font-black italic hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 disabled:opacity-50">
-          {csvImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+          className="flex items-center gap-1.5 px-2.5 py-2 md:px-3.5 md:py-2.5 bg-emerald-600 text-white rounded-xl text-[9px] md:text-xs font-black italic hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 disabled:opacity-50">
+          {csvImporting ? <Loader2 className="w-3 h-3 md:w-3.5 md:h-3.5 animate-spin" /> : <Upload className="w-3 h-3 md:w-3.5 md:h-3.5" />}
           {t("customers.import_csv_btn")}
         </motion.button>
         <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowLeadFinder(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] md:text-xs font-black italic hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100">
-          <Compass className="w-3.5 h-3.5" />
+          className="flex items-center gap-1.5 px-2.5 py-2 md:px-3.5 md:py-2.5 bg-emerald-600 text-white rounded-xl text-[9px] md:text-xs font-black italic hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100">
+          <Compass className="w-3 h-3 md:w-3.5 md:h-3.5" />
           {t("customers.find_leads_btn")}
         </motion.button>
         <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setPromotion({ subject: "", message: "" }); setPromotionResult(""); setPromoChannel("email"); setShowPromotion(true); }}
-          className="flex items-center gap-1.5 px-3.5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] md:text-xs font-black italic hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
-          <Send className="w-3.5 h-3.5" />
+          className="flex items-center gap-1.5 px-2.5 py-2 md:px-3.5 md:py-2.5 bg-blue-600 text-white rounded-xl text-[9px] md:text-xs font-black italic hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
+          <Send className="w-3 h-3 md:w-3.5 md:h-3.5" />
           {t("customers.send_promotion_btn")}
         </motion.button>
         <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setQuickEmail({ to: "", subject: "", body: "" }); setShowQuickEmail(true); }}
-          className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white text-red-600 border-2 border-red-200 rounded-xl text-[10px] md:text-xs font-black italic hover:bg-red-50 transition-all">
-          <Mail className="w-3.5 h-3.5" />
+          className="flex items-center gap-1.5 px-2.5 py-2 md:px-3.5 md:py-2.5 bg-white text-red-600 border-2 border-red-200 rounded-xl text-[9px] md:text-xs font-black italic hover:bg-red-50 transition-all">
+          <Mail className="w-3 h-3 md:w-3.5 md:h-3.5" />
           Correo rápido
         </motion.button>
       </div>
@@ -391,7 +391,7 @@ export default function CustomersPanel({ storeId }: { storeId: string }) {
               <Loader2 className="w-6 h-6 animate-spin" />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-12 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200">
+            <div className="py-8 md:py-12 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200 text-xs md:text-sm">
               {search || statusFilter ? t("customers.list_empty_filtered") : t("customers.list_empty_all")}
             </div>
           ) : (

@@ -1201,38 +1201,38 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
             )}
 
             {section === "services" && (
-              <div className="space-y-6 md:space-y-8">
-                <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
-                  <div className="flex items-center gap-3 md:gap-4 flex-wrap">
-                    <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("nav.services")} <span className="text-red-600">({services.length})</span></h3>
+              <div className="space-y-3 md:space-y-8">
+                <div className="flex items-center justify-between flex-wrap gap-2 md:gap-4">
+                  <div className="flex items-center gap-2 md:gap-4 flex-wrap">
+                    <h3 className="text-lg md:text-xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("nav.services")} <span className="text-red-600">({services.length})</span></h3>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 md:gap-2">
                     {services.length > 0 && (
                       confirmDeleteAllServices ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] md:text-xs font-bold text-rose-600">¿Eliminar todos?</span>
-                          <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setServices([]); persistStore(undefined, undefined, undefined, undefined, undefined, undefined, undefined, []); setConfirmDeleteAllServices(false); }} className="px-3 py-2 bg-rose-600 text-white rounded-xl font-black text-[10px] md:text-xs hover:bg-rose-700 transition-all">
+                        <div className="flex items-center gap-1.5 md:gap-2">
+                          <span className="text-[9px] md:text-xs font-bold text-rose-600">¿Eliminar todos?</span>
+                          <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setServices([]); persistStore(undefined, undefined, undefined, undefined, undefined, undefined, undefined, []); setConfirmDeleteAllServices(false); }} className="px-2.5 py-1.5 md:px-3 md:py-2 bg-rose-600 text-white rounded-xl font-black text-[9px] md:text-xs hover:bg-rose-700 transition-all">
                             Sí, eliminar
                           </motion.button>
-                          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setConfirmDeleteAllServices(false)} className="px-3 py-2 bg-zinc-100 text-zinc-600 rounded-xl font-bold text-[10px] md:text-xs hover:bg-zinc-200 transition-all">
+                          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setConfirmDeleteAllServices(false)} className="px-2.5 py-1.5 md:px-3 md:py-2 bg-zinc-100 text-zinc-600 rounded-xl font-bold text-[9px] md:text-xs hover:bg-zinc-200 transition-all">
                             Cancelar
                           </motion.button>
                         </div>
                       ) : (
-                        <motion.button whileTap={{ scale: 0.95 }} onClick={() => setConfirmDeleteAllServices(true)} className="px-4 py-2.5 bg-zinc-100 text-zinc-500 rounded-2xl font-black text-[10px] md:text-xs italic hover:bg-rose-50 hover:text-rose-600 transition-all flex items-center gap-1.5">
-                          <Trash2 className="w-3.5 h-3.5" /> Eliminar todos
+                        <motion.button whileTap={{ scale: 0.95 }} onClick={() => setConfirmDeleteAllServices(true)} className="px-3 py-2 md:px-4 md:py-2.5 bg-zinc-100 text-zinc-500 rounded-2xl font-black text-[9px] md:text-xs italic hover:bg-rose-50 hover:text-rose-600 transition-all flex items-center gap-1.5">
+                          <Trash2 className="w-3 h-3 md:w-3.5 md:h-3.5" /> Eliminar todos
                         </motion.button>
                       )
                     )}
-                    <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setEditingService(null); setServiceForm({ name: "", desc: "", price: "", duration: "60" }); setShowAddService(true); }} className="px-5 md:px-6 py-2.5 md:py-3 bg-red-600 text-white rounded-2xl font-black text-[10px] md:text-xs italic hover:bg-red-700 transition-all shadow-xl flex items-center gap-2">
-                      <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /> {t("services.add")}
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setEditingService(null); setServiceForm({ name: "", desc: "", price: "", duration: "60" }); setShowAddService(true); }} className="px-3 py-2 md:px-6 md:py-3 bg-red-600 text-white rounded-2xl font-black text-[9px] md:text-xs italic hover:bg-red-700 transition-all shadow-xl flex items-center gap-1.5 md:gap-2">
+                      <Plus className="w-3 h-3 md:w-4 md:h-4" /> {t("services.add")}
                     </motion.button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6">
                   {services.map((s) => (
-                    <div key={s.id} className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-zinc-100 shadow-sm p-5 md:p-6 space-y-4 hover:shadow-lg hover:border-zinc-200 transition-all group">
+                    <div key={s.id} className="bg-white rounded-[1.25rem] md:rounded-[2rem] border border-zinc-100 shadow-sm p-3 md:p-6 space-y-3 md:space-y-4 hover:shadow-lg hover:border-zinc-200 transition-all group">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <h4 className="font-black italic text-zinc-950 text-sm md:text-base leading-tight truncate">{s.name}</h4>
@@ -1263,7 +1263,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                     </div>
                   ))}
                   {services.length === 0 && (
-                    <div className="col-span-full py-16 text-center italic font-black uppercase tracking-widest text-zinc-200">{t("services.empty")}</div>
+                    <div className="col-span-full py-10 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200 text-[10px] md:text-xs">{t("services.empty")}</div>
                   )}
                 </div>
 

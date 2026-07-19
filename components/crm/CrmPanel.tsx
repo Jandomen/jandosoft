@@ -12,12 +12,12 @@ export default function CrmPanel({ storeId }: { storeId: string }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-4 md:mb-6 border-b border-zinc-100 pb-3">
+      <div className="flex items-center gap-2 mb-3 md:mb-6 border-b border-zinc-100 pb-3">
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={() => setCrmTab("customers")}
           className={cn(
-            "flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] md:text-xs font-black italic transition-all",
+            "flex items-center gap-1.5 px-2.5 py-1.5 md:px-3.5 md:py-2 rounded-xl text-[9px] md:text-xs font-black italic transition-all",
             crmTab === "customers" ? "bg-red-600 text-white shadow-md" : "text-zinc-500 hover:bg-zinc-100"
           )}
         >
@@ -27,7 +27,7 @@ export default function CrmPanel({ storeId }: { storeId: string }) {
           whileTap={{ scale: 0.95 }}
           onClick={() => setCrmTab("comms")}
           className={cn(
-            "flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] md:text-xs font-black italic transition-all",
+            "flex items-center gap-1.5 px-2.5 py-1.5 md:px-3.5 md:py-2 rounded-xl text-[9px] md:text-xs font-black italic transition-all",
             crmTab === "comms" ? "bg-red-600 text-white shadow-md" : "text-zinc-500 hover:bg-zinc-100"
           )}
         >

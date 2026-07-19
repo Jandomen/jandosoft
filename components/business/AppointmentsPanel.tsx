@@ -315,21 +315,21 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
   const upcomingAppts = appointments.filter(a => a.date >= today.toISOString().split("T")[0] && (a.status === "pending" || a.status === "confirmed"));
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-3 md:space-y-6">
       {/* Header */}
       <div className="flex items-center gap-2 md:gap-4 flex-wrap">
-        <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">
+        <h3 className="text-lg md:text-xl font-black italic text-zinc-950 uppercase tracking-tighter">
           {t("appointments.title")}
         </h3>
         <div className="flex gap-1 ml-auto">
           <button onClick={() => setViewMode("list")}
-            className={cn("flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black italic transition-all",
+            className={cn("flex items-center gap-1 md:gap-1.5 px-2.5 py-1.5 md:px-3 md:py-2 rounded-xl text-[9px] md:text-[10px] font-black italic transition-all",
               viewMode === "list" ? "bg-red-600 text-white shadow-md" : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100"
             )}>
             <List className="w-3 h-3" /> {t("appointments.view_list")}
           </button>
           <button onClick={() => setViewMode("calendar")}
-            className={cn("flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black italic transition-all",
+            className={cn("flex items-center gap-1 md:gap-1.5 px-2.5 py-1.5 md:px-3 md:py-2 rounded-xl text-[9px] md:text-[10px] font-black italic transition-all",
               viewMode === "calendar" ? "bg-red-600 text-white shadow-md" : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100"
             )}>
             <CalendarDays className="w-3 h-3" /> {t("appointments.view_calendar")}
@@ -338,48 +338,48 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-        <div className="bg-amber-50 rounded-xl md:rounded-2xl p-3 md:p-4 border border-amber-100 space-y-1">
-          <p className="text-[8px] font-black text-amber-600 uppercase italic flex items-center gap-1">
-            <Clock className="w-2.5 h-2.5" /> {t("appointments.stat_today")}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 md:gap-3">
+        <div className="bg-amber-50 rounded-xl md:rounded-2xl p-2 md:p-4 border border-amber-100 space-y-0.5 md:space-y-1">
+          <p className="text-[7px] md:text-[8px] font-black text-amber-600 uppercase italic flex items-center gap-1">
+            <Clock className="w-2 h-2 md:w-2.5 md:h-2.5" /> {t("appointments.stat_today")}
           </p>
-          <p className="text-lg md:text-2xl font-black italic text-amber-700">{stats.today}</p>
+          <p className="text-base md:text-2xl font-black italic text-amber-700">{stats.today}</p>
         </div>
-        <div className="bg-emerald-50 rounded-xl md:rounded-2xl p-3 md:p-4 border border-emerald-100 space-y-1">
-          <p className="text-[8px] font-black text-emerald-600 uppercase italic flex items-center gap-1">
-            <ArrowUpRight className="w-2.5 h-2.5" /> {t("appointments.stat_upcoming")}
+        <div className="bg-emerald-50 rounded-xl md:rounded-2xl p-2 md:p-4 border border-emerald-100 space-y-0.5 md:space-y-1">
+          <p className="text-[7px] md:text-[8px] font-black text-emerald-600 uppercase italic flex items-center gap-1">
+            <ArrowUpRight className="w-2 h-2 md:w-2.5 md:h-2.5" /> {t("appointments.stat_upcoming")}
           </p>
-          <p className="text-lg md:text-2xl font-black italic text-emerald-700">{stats.upcoming}</p>
+          <p className="text-base md:text-2xl font-black italic text-emerald-700">{stats.upcoming}</p>
         </div>
-        <div className="bg-blue-50 rounded-xl md:rounded-2xl p-3 md:p-4 border border-blue-100 space-y-1">
-          <p className="text-[8px] font-black text-blue-600 uppercase italic flex items-center gap-1">
-            <CheckCircle className="w-2.5 h-2.5" /> {t("appointments.stat_completed")}
+        <div className="bg-blue-50 rounded-xl md:rounded-2xl p-2 md:p-4 border border-blue-100 space-y-0.5 md:space-y-1">
+          <p className="text-[7px] md:text-[8px] font-black text-blue-600 uppercase italic flex items-center gap-1">
+            <CheckCircle className="w-2 h-2 md:w-2.5 md:h-2.5" /> {t("appointments.stat_completed")}
           </p>
-          <p className="text-lg md:text-2xl font-black italic text-blue-700">{stats.completed}</p>
+          <p className="text-base md:text-2xl font-black italic text-blue-700">{stats.completed}</p>
         </div>
-        <div className="bg-red-50 rounded-xl md:rounded-2xl p-3 md:p-4 border border-red-100 space-y-1">
-          <p className="text-[8px] font-black text-red-600 uppercase italic flex items-center gap-1">
-            <Ban className="w-2.5 h-2.5" /> {t("appointments.stat_cancelled")}
+        <div className="bg-red-50 rounded-xl md:rounded-2xl p-2 md:p-4 border border-red-100 space-y-0.5 md:space-y-1">
+          <p className="text-[7px] md:text-[8px] font-black text-red-600 uppercase italic flex items-center gap-1">
+            <Ban className="w-2 h-2 md:w-2.5 md:h-2.5" /> {t("appointments.stat_cancelled")}
           </p>
-          <p className="text-lg md:text-2xl font-black italic text-red-700">{stats.cancelled}</p>
+          <p className="text-base md:text-2xl font-black italic text-red-700">{stats.cancelled}</p>
         </div>
       </div>
 
       {/* Filters + Create */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-1.5 flex-wrap">
+      <div className="flex items-center justify-between flex-wrap gap-1.5 md:gap-2">
+        <div className="flex items-center gap-1 md:gap-1.5 flex-wrap">
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="bg-zinc-50 border border-zinc-100 rounded-xl px-2.5 py-1.5 text-[9px] font-black italic text-zinc-500 outline-none">
+            className="bg-zinc-50 border border-zinc-100 rounded-xl px-2 py-1 md:px-2.5 md:py-1.5 text-[8px] md:text-[9px] font-black italic text-zinc-500 outline-none">
             <option value="">{t("appointments.filter_all")}</option>
             {Object.entries(STATUS_CONFIG).map(([k, v]) => (
               <option key={k} value={k}>{v.label}</option>
             ))}
           </select>
           <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-            className="bg-zinc-50 border border-zinc-100 rounded-xl px-2.5 py-1.5 text-[9px] font-medium text-zinc-600 outline-none w-[130px]" />
+            className="bg-zinc-50 border border-zinc-100 rounded-xl px-2 py-1 md:px-2.5 md:py-1.5 text-[8px] md:text-[9px] font-medium text-zinc-600 outline-none w-[110px] md:w-[130px]" />
         </div>
         <motion.button whileTap={{ scale: 0.95 }} onClick={openCreateForm}
-          className="flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black italic hover:bg-red-700 transition-all shadow-lg shadow-red-100">
+          className="flex items-center gap-1 md:gap-1.5 px-2.5 py-1.5 md:px-3 md:py-2 bg-red-600 text-white rounded-xl text-[9px] md:text-[10px] font-black italic hover:bg-red-700 transition-all shadow-lg shadow-red-100">
           <Plus className="w-3 h-3" /> {t("appointments.new")}
         </motion.button>
       </div>
@@ -404,23 +404,23 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
       )}
 
       {/* Today's summary */}
-      <div className="grid md:grid-cols-2 gap-4 md:gap-6">
-        <div className="bg-white rounded-2xl border border-zinc-100 p-4 md:p-5 shadow-sm space-y-3">
-          <h4 className="text-[10px] font-black italic text-zinc-500 uppercase tracking-wider flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5 text-amber-500" /> {t("appointments.today_title")}
+      <div className="grid md:grid-cols-2 gap-3 md:gap-6">
+        <div className="bg-white rounded-2xl border border-zinc-100 p-3 md:p-5 shadow-sm space-y-2 md:space-y-3">
+          <h4 className="text-[9px] md:text-[10px] font-black italic text-zinc-500 uppercase tracking-wider flex items-center gap-1.5 md:gap-2">
+            <Clock className="w-3 h-3 md:w-3.5 md:h-3.5 text-amber-500" /> {t("appointments.today_title")}
           </h4>
           {appointmentsToday.length === 0 ? (
-            <p className="text-[10px] text-zinc-400 italic text-center py-6">{t("appointments.today_empty")}</p>
+            <p className="text-[9px] md:text-[10px] text-zinc-400 italic text-center py-4 md:py-6">{t("appointments.today_empty")}</p>
           ) : appointmentsToday.slice(0, 5).map(a => (
             <AppointmentRow key={a._id} appointment={a} onEdit={openEditForm} onStatusChange={handleStatusChange} compact statusConfig={STATUS_CONFIG} t={t} />
           ))}
         </div>
-        <div className="bg-white rounded-2xl border border-zinc-100 p-4 md:p-5 shadow-sm space-y-3">
-          <h4 className="text-[10px] font-black italic text-zinc-500 uppercase tracking-wider flex items-center gap-2">
-            <ArrowUpRight className="w-3.5 h-3.5 text-emerald-500" /> {t("appointments.upcoming_title")}
+        <div className="bg-white rounded-2xl border border-zinc-100 p-3 md:p-5 shadow-sm space-y-2 md:space-y-3">
+          <h4 className="text-[9px] md:text-[10px] font-black italic text-zinc-500 uppercase tracking-wider flex items-center gap-1.5 md:gap-2">
+            <ArrowUpRight className="w-3 h-3 md:w-3.5 md:h-3.5 text-emerald-500" /> {t("appointments.upcoming_title")}
           </h4>
           {upcomingAppts.length === 0 ? (
-            <p className="text-[10px] text-zinc-400 italic text-center py-6">{t("appointments.upcoming_empty")}</p>
+            <p className="text-[9px] md:text-[10px] text-zinc-400 italic text-center py-4 md:py-6">{t("appointments.upcoming_empty")}</p>
           ) : upcomingAppts.slice(0, 5).map(a => (
             <AppointmentRow key={a._id} appointment={a} onEdit={openEditForm} onStatusChange={handleStatusChange} compact statusConfig={STATUS_CONFIG} t={t} />
           ))}
@@ -578,26 +578,26 @@ function ListView({ appointments, onEdit, onDelete, onStatusChange, statusConfig
 
   if (appointments.length === 0) {
     return (
-      <div className="py-16 text-center italic font-black uppercase tracking-widest text-zinc-200 text-xs">
+      <div className="py-10 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200 text-[10px] md:text-xs">
         {t("appointments.list_empty")}
       </div>
     );
   }
 
   return (
-    <div className="space-y-2 md:space-y-3">
+    <div className="space-y-1.5 md:space-y-3">
       {appointments.map(a => (
-        <div key={a._id} className="bg-white rounded-2xl border border-zinc-100 p-4 md:p-5 shadow-sm hover:border-red-200 transition-all">
+        <div key={a._id} className="bg-white rounded-xl md:rounded-2xl border border-zinc-100 p-3 md:p-5 shadow-sm hover:border-red-200 transition-all">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-xs md:text-sm font-black italic text-zinc-950">{a.customerInfo.name}</p>
-                <span className={cn("px-2 py-0.5 rounded-full text-[8px] font-black italic border flex items-center gap-1", statusConfig[a.status]?.bg, statusConfig[a.status]?.color)}>
+            <div className="min-w-0 flex-1 space-y-1 md:space-y-1.5">
+              <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
+                <p className="text-[10px] md:text-sm font-black italic text-zinc-950">{a.customerInfo.name}</p>
+                <span className={cn("px-1.5 md:px-2 py-0.5 rounded-full text-[7px] md:text-[8px] font-black italic border flex items-center gap-0.5 md:gap-1", statusConfig[a.status]?.bg, statusConfig[a.status]?.color)}>
                   {statusConfig[a.status]?.icon}
                   {statusConfig[a.status]?.label}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-[10px] text-zinc-500 font-medium flex-wrap">
+              <div className="flex items-center gap-2 md:gap-3 text-[8px] md:text-[10px] text-zinc-500 font-medium flex-wrap">
                 <span className="flex items-center gap-1">
                   <CalendarIcon className="w-3 h-3" />
                   {new Date(a.date + "T" + (a.time || "00:00")).toLocaleDateString(locale, { day: "numeric", month: "short" })}
@@ -636,25 +636,25 @@ function ListView({ appointments, onEdit, onDelete, onStatusChange, statusConfig
                   </span>
                 )}
               </div>
-              {a.notes && <p className="text-[10px] text-zinc-400 italic">{a.notes}</p>}
+              {a.notes && <p className="text-[8px] md:text-[10px] text-zinc-400 italic">{a.notes}</p>}
             </div>
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
 <StatusMenu current={a.status} onChange={(s) => onStatusChange(a._id, s)} statusConfig={statusConfig} />
               <motion.button whileTap={{ scale: 0.9 }} onClick={() => onEdit(a)}
-                className="p-1.5 hover:bg-zinc-50 rounded-lg transition-all">
-                <Edit3 className="w-3.5 h-3.5 text-zinc-400" />
+                className="p-1 md:p-1.5 hover:bg-zinc-50 rounded-lg transition-all">
+                <Edit3 className="w-3 h-3 md:w-3.5 md:h-3.5 text-zinc-400" />
               </motion.button>
               {confirmDeleteId === a._id ? (
-                <div className="flex gap-1">
+                <div className="flex gap-0.5 md:gap-1">
                   <motion.button whileTap={{ scale: 0.9 }} onClick={() => { onDelete(a._id); setConfirmDeleteId(null); }}
-                    className="p-1.5 bg-red-100 text-red-600 rounded-lg text-[8px] font-black italic">{t("appointments.delete_yes")}</motion.button>
+                    className="p-1 md:p-1.5 bg-red-100 text-red-600 rounded-lg text-[7px] md:text-[8px] font-black italic">{t("appointments.delete_yes")}</motion.button>
                   <motion.button whileTap={{ scale: 0.9 }} onClick={() => setConfirmDeleteId(null)}
-                    className="p-1.5 bg-zinc-100 text-zinc-500 rounded-lg text-[8px] font-black italic">{t("appointments.delete_no")}</motion.button>
+                    className="p-1 md:p-1.5 bg-zinc-100 text-zinc-500 rounded-lg text-[7px] md:text-[8px] font-black italic">{t("appointments.delete_no")}</motion.button>
                 </div>
               ) : (
                 <motion.button whileTap={{ scale: 0.9 }} onClick={() => setConfirmDeleteId(a._id)}
-                  className="p-1.5 hover:bg-rose-50 rounded-lg transition-all">
-                  <Trash2 className="w-3.5 h-3.5 text-zinc-300 hover:text-rose-500" />
+                  className="p-1 md:p-1.5 hover:bg-rose-50 rounded-lg transition-all">
+                  <Trash2 className="w-3 h-3 md:w-3.5 md:h-3.5 text-zinc-300 hover:text-rose-500" />
                 </motion.button>
               )}
             </div>
@@ -687,53 +687,53 @@ function CalendarView({ view, setView, year, month, setYear, setMonth, date, set
   return (
     <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-sm">
       {/* Calendar nav */}
-      <div className="flex items-center justify-between p-3 md:p-4 border-b border-zinc-100">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between p-2 md:p-4 border-b border-zinc-100">
+        <div className="flex items-center gap-1 md:gap-2">
           <motion.button whileTap={{ scale: 0.9 }} onClick={prevMonth}
-            className="p-1.5 hover:bg-zinc-50 rounded-lg transition-all">
-            <ChevronLeft className="w-4 h-4 text-zinc-500" />
+            className="p-1 md:p-1.5 hover:bg-zinc-50 rounded-lg transition-all">
+            <ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4 text-zinc-500" />
           </motion.button>
-          <h4 className="text-xs md:text-sm font-black italic text-zinc-950 uppercase tracking-tighter min-w-[140px] text-center">
+          <h4 className="text-[10px] md:text-sm font-black italic text-zinc-950 uppercase tracking-tighter min-w-[100px] md:min-w-[140px] text-center">
             {months[month]} {year}
           </h4>
           <motion.button whileTap={{ scale: 0.9 }} onClick={nextMonth}
-            className="p-1.5 hover:bg-zinc-50 rounded-lg transition-all">
-            <ChevronRight className="w-4 h-4 text-zinc-500" />
+            className="p-1 md:p-1.5 hover:bg-zinc-50 rounded-lg transition-all">
+            <ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4 text-zinc-500" />
           </motion.button>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-0.5 md:gap-1">
           {(["month", "week", "day"] as CalendarView[]).map(v => (
             <button key={v} onClick={() => setView(v)}
-              className={cn("px-2.5 py-1 rounded-lg text-[8px] font-black italic uppercase transition-all",
+              className={cn("px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-lg text-[7px] md:text-[8px] font-black italic uppercase transition-all",
                 view === v ? "bg-red-600 text-white" : "text-zinc-400 hover:bg-zinc-50"
               )}>{v === "month" ? t("appointments.view_month") : v === "week" ? t("appointments.view_week") : t("appointments.view_day")}</button>
           ))}
         </div>
       </div>
 
-      <div className="p-3 md:p-4">
+      <div className="p-2 md:p-4">
         {/* Month grid */}
-        <div className="grid grid-cols-7 gap-px bg-zinc-100 rounded-xl overflow-hidden">
+        <div className="grid grid-cols-7 gap-px bg-zinc-100 rounded-lg md:rounded-xl overflow-hidden">
           {days.map(d => (
-            <div key={d} className="bg-zinc-50 p-1.5 md:p-2 text-center text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">{d}</div>
+            <div key={d} className="bg-zinc-50 p-1 md:p-2 text-center text-[7px] md:text-[9px] font-black text-zinc-400 uppercase italic">{d}</div>
           ))}
           {monthDays.map((day, i) => {
-            if (day === null) return <div key={`e${i}`} className="bg-white p-1.5 md:p-2 min-h-[60px] md:min-h-[80px]" />;
+            if (day === null) return <div key={`e${i}`} className="bg-white p-1 md:p-2 min-h-[40px] md:min-h-[80px]" />;
             const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
             const dayApps = getApptsForDay(year, month, day);
             const isToday = dateStr === todayStr;
             return (
               <div key={day} onClick={() => onDateClick(dateStr)}
-                className={cn("bg-white p-1.5 md:p-2 min-h-[60px] md:min-h-[80px] cursor-pointer hover:bg-zinc-50 transition-all border-b border-zinc-50",
+                className={cn("bg-white p-1 md:p-2 min-h-[40px] md:min-h-[80px] cursor-pointer hover:bg-zinc-50 transition-all border-b border-zinc-50",
                   isToday && "bg-red-50/30"
                 )}>
-                <span className={cn("text-[9px] md:text-[10px] font-black italic inline-flex items-center justify-center w-5 h-5 rounded-full",
-                  isToday && "bg-red-600 text-white w-5 h-5"
+                <span className={cn("text-[8px] md:text-[10px] font-black italic inline-flex items-center justify-center w-4 h-4 md:w-5 md:h-5 rounded-full",
+                  isToday && "bg-red-600 text-white w-4 h-4 md:w-5 md:h-5"
                 )}>{day}</span>
-                <div className="space-y-0.5 mt-0.5">
+                <div className="space-y-px md:space-y-0.5 mt-px md:mt-0.5">
                   {dayApps.slice(0, 2).map(a => (
                     <div key={a._id} onClick={e => { e.stopPropagation(); onEdit(a); }}
-                      className={cn("text-[6px] md:text-[7px] font-black italic px-1 py-0.5 rounded truncate leading-tight",
+                      className={cn("text-[5px] md:text-[7px] font-black italic px-0.5 md:px-1 py-px rounded truncate leading-tight",
                         a.status === "confirmed" ? "bg-emerald-100 text-emerald-700" :
                         a.status === "in_progress" ? "bg-blue-100 text-blue-700" :
                         a.status === "completed" ? "bg-zinc-100 text-zinc-500" :
@@ -744,7 +744,7 @@ function CalendarView({ view, setView, year, month, setYear, setMonth, date, set
                     </div>
                   ))}
                   {dayApps.length > 2 && (
-                    <span className="text-[6px] font-black text-zinc-400 italic">{t("appointments.calendar_more").replace("{n}", String(dayApps.length - 2))}</span>
+                    <span className="text-[5px] md:text-[6px] font-black text-zinc-400 italic">{t("appointments.calendar_more").replace("{n}", String(dayApps.length - 2))}</span>
                   )}
                 </div>
               </div>
@@ -754,15 +754,15 @@ function CalendarView({ view, setView, year, month, setYear, setMonth, date, set
 
         {/* Day detail (for week/day view — simplified for now) */}
         {view !== "month" && (
-          <div className="mt-4 space-y-2">
-            <h5 className="text-[10px] font-black italic text-zinc-500 uppercase tracking-wider">
+          <div className="mt-2 md:mt-4 space-y-1.5 md:space-y-2">
+            <h5 className="text-[9px] md:text-[10px] font-black italic text-zinc-500 uppercase tracking-wider">
               {view === "day" ? t("appointments.calendar_day_title") : t("appointments.calendar_week_title")}
             </h5>
             {dayAppointments.length === 0 ? (
-              <p className="text-[10px] text-zinc-400 italic py-4 text-center">{t("appointments.calendar_empty")}</p>
+              <p className="text-[9px] md:text-[10px] text-zinc-400 italic py-3 md:py-4 text-center">{t("appointments.calendar_empty")}</p>
             ) : dayAppointments.map(a => (
-              <div key={a._id} className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl border border-zinc-100">
-                <span className={cn("w-2 h-2 rounded-full shrink-0",
+              <div key={a._id} className="flex items-center gap-2 md:gap-3 p-2 md:p-3 bg-zinc-50 rounded-lg md:rounded-xl border border-zinc-100">
+                <span className={cn("w-1.5 h-1.5 md:w-2 md:h-2 rounded-full shrink-0",
                   a.status === "confirmed" ? "bg-emerald-500" :
                   a.status === "in_progress" ? "bg-blue-500" :
                   a.status === "completed" ? "bg-zinc-400" :
@@ -792,7 +792,7 @@ function StatusMenu({ current, onChange, statusConfig }: { current: AppointmentS
   return (
     <div className="relative">
       <motion.button whileTap={{ scale: 0.9 }} onClick={() => setOpen(!open)}
-        className={cn("px-2 py-1 rounded-lg text-[8px] font-black italic border flex items-center gap-1", statusConfig[current]?.bg, statusConfig[current]?.color)}>
+        className={cn("px-1.5 py-0.5 md:px-2 md:py-1 rounded-md md:rounded-lg text-[7px] md:text-[8px] font-black italic border flex items-center gap-0.5 md:gap-1", statusConfig[current]?.bg, statusConfig[current]?.color)}>
         {statusConfig[current]?.icon}
         <span className="hidden sm:inline">{statusConfig[current]?.label}</span>
         <span className="sm:hidden">{statusConfig[current]?.label[0]}</span>
@@ -800,10 +800,10 @@ function StatusMenu({ current, onChange, statusConfig }: { current: AppointmentS
       <AnimatePresence>
         {open && (
           <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
-            className="absolute right-0 top-full mt-1 bg-white border border-zinc-100 rounded-xl shadow-xl z-20 p-1 min-w-[130px]">
+            className="absolute right-0 top-full mt-1 bg-white border border-zinc-100 rounded-lg md:rounded-xl shadow-xl z-20 p-0.5 md:p-1 min-w-[110px] md:min-w-[130px]">
             {nextStates.filter(s => s !== current).concat(current !== "cancelled" ? ["cancelled" as AppointmentStatus] : []).map(s => (
               <button key={s} onClick={() => { onChange(s); setOpen(false); }}
-                className={cn("w-full text-left flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] font-medium transition-all hover:bg-zinc-50", statusConfig[s]?.color)}>
+                className={cn("w-full text-left flex items-center gap-1.5 md:gap-2 px-2 py-1 md:px-2.5 md:py-1.5 rounded-md md:rounded-lg text-[8px] md:text-[10px] font-medium transition-all hover:bg-zinc-50", statusConfig[s]?.color)}>
                 {statusConfig[s]?.icon} {statusConfig[s]?.label}
               </button>
             ))}
@@ -824,23 +824,23 @@ function AppointmentRow({ appointment: a, onEdit, onStatusChange, compact, statu
   t: (key: string) => string;
 }) {
   return (
-    <div className={cn("flex items-center justify-between gap-2 p-2.5 rounded-xl border transition-all hover:border-red-200",
+    <div className={cn("flex items-center justify-between gap-1.5 md:gap-2 p-2 md:p-2.5 rounded-lg md:rounded-xl border transition-all hover:border-red-200",
       statusConfig[a.status]?.bg)}>
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center shrink-0">
-          <User className="w-3.5 h-3.5 text-zinc-400" />
+      <div className="flex items-center gap-1.5 md:gap-2 min-w-0 flex-1">
+        <div className="w-5 h-5 md:w-7 md:h-7 bg-white rounded-md md:rounded-lg flex items-center justify-center shrink-0">
+          <User className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 text-zinc-400" />
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-black italic text-zinc-700 truncate">{a.customerInfo.name}</p>
-          <p className="text-[8px] text-zinc-400 font-medium">{a.time} · {a.service?.name || t("appointments.no_service")}</p>
+          <p className="text-[8px] md:text-[10px] font-black italic text-zinc-700 truncate">{a.customerInfo.name}</p>
+          <p className="text-[7px] md:text-[8px] text-zinc-400 font-medium">{a.time} · {a.service?.name || t("appointments.no_service")}</p>
         </div>
       </div>
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
         <StatusMenu current={a.status} onChange={(s) => onStatusChange(a._id, s)} statusConfig={statusConfig} />
         {!compact && (
           <motion.button whileTap={{ scale: 0.9 }} onClick={() => onEdit(a)}
-            className="p-1 hover:bg-white rounded-lg transition-all">
-            <Edit3 className="w-3 h-3 text-zinc-400" />
+            className="p-0.5 md:p-1 hover:bg-white rounded-md md:rounded-lg transition-all">
+            <Edit3 className="w-2.5 h-2.5 md:w-3 md:h-3 text-zinc-400" />
           </motion.button>
         )}
       </div>
