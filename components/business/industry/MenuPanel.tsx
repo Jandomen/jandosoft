@@ -60,7 +60,7 @@ export default function MenuPanel({ storeId, onSaveStore, store }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {items.map(item => (
           <div key={item.id} className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-zinc-100 shadow-sm p-5 md:p-6 space-y-4 hover:shadow-lg hover:border-zinc-200 transition-all group">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-2 md:gap-3">
               <div className="min-w-0 flex-1">
                 <h4 className="font-black italic text-zinc-950 text-sm md:text-base leading-tight truncate">{item.name}</h4>
                 {item.desc && <p className="text-[11px] md:text-xs text-zinc-400 font-medium italic mt-1 line-clamp-2">{item.desc}</p>}
@@ -92,20 +92,20 @@ export default function MenuPanel({ storeId, onSaveStore, store }: Props) {
       <AnimatePresence>
         {showModal && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4" onClick={() => { setShowModal(false); setEditing(null); }}>
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
               <button onClick={() => { setShowModal(false); setEditing(null); }} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
-              <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editing ? t("industry.menu.edit_title") : t("industry.menu.new_title")}</h3>
+              <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editing ? t("industry.menu.edit_title") : t("industry.menu.new_title")}</h3>
               <div className="space-y-3 md:space-y-4">
-                <input type="text" placeholder={t("industry.menu.name_placeholder")} value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                <textarea placeholder={t("industry.menu.desc_placeholder")} value={form.desc} onChange={e => setForm({...form, desc: e.target.value})} rows={2} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm resize-none" />
-                <div className="grid grid-cols-2 gap-3">
+                <input type="text" placeholder={t("industry.menu.name_placeholder")} value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
+                <textarea placeholder={t("industry.menu.desc_placeholder")} value={form.desc} onChange={e => setForm({...form, desc: e.target.value})} rows={2} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm resize-none" />
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.menu.price_label")}</label>
-                    <input type="number" step="0.01" placeholder="0.00" value={form.price} onChange={e => setForm({...form, price: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    <input type="number" step="0.01" placeholder="0.00" value={form.price} onChange={e => setForm({...form, price: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.menu.category_label")}</label>
-                    <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm">
+                    <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm">
                       <option value="entradas">{t("industry.menu.cat_entradas")}</option>
                       <option value="platos_fuertes">{t("industry.menu.cat_platos_fuertes")}</option>
                       <option value="postres">{t("industry.menu.cat_postres")}</option>
@@ -114,24 +114,24 @@ export default function MenuPanel({ storeId, onSaveStore, store }: Props) {
                     </select>
                   </div>
                 </div>
-                <input type="text" placeholder={t("industry.menu.image_url_placeholder")} value={form.imageUrl} onChange={e => setForm({...form, imageUrl: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                <div className="grid grid-cols-2 gap-3">
+                <input type="text" placeholder={t("industry.menu.image_url_placeholder")} value={form.imageUrl} onChange={e => setForm({...form, imageUrl: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.menu.calories_label")}</label>
-                    <input type="number" placeholder={t("industry.menu.calories_placeholder")} value={form.calories} onChange={e => setForm({...form, calories: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    <input type="number" placeholder={t("industry.menu.calories_placeholder")} value={form.calories} onChange={e => setForm({...form, calories: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.menu.prep_time_label")}</label>
-                    <input type="number" placeholder={t("industry.menu.prep_time_placeholder")} value={form.preparationTime} onChange={e => setForm({...form, preparationTime: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    <input type="number" placeholder={t("industry.menu.prep_time_placeholder")} value={form.preparationTime} onChange={e => setForm({...form, preparationTime: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                   </div>
                 </div>
-                <textarea placeholder={t("industry.menu.ingredients_placeholder")} value={form.ingredients} onChange={e => setForm({...form, ingredients: e.target.value})} rows={2} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm resize-none" />
-                <input type="text" placeholder={t("industry.menu.dietary_placeholder")} value={form.dietaryInfo} onChange={e => setForm({...form, dietaryInfo: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                <textarea placeholder={t("industry.menu.ingredients_placeholder")} value={form.ingredients} onChange={e => setForm({...form, ingredients: e.target.value})} rows={2} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm resize-none" />
+                <input type="text" placeholder={t("industry.menu.dietary_placeholder")} value={form.dietaryInfo} onChange={e => setForm({...form, dietaryInfo: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="featured" checked={form.featured} onChange={e => setForm({...form, featured: e.target.checked})} className="w-4 h-4 rounded border-zinc-300 text-red-600 focus:ring-red-500" />
                   <label htmlFor="featured" className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest">{t("industry.menu.featured_label")}</label>
                 </div>
-                <button onClick={addItem} disabled={!form.name || !form.price} className="w-full py-5 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
+                <button onClick={addItem} disabled={!form.name || !form.price} className="w-full py-3 md:py-4 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
                   {editing ? t("industry.update") : t("industry.save")}
                 </button>
               </div>

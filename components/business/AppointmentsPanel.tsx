@@ -434,10 +434,10 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
             className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
             onClick={() => setShowForm(false)}>
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              className="bg-white rounded-[2rem] p-5 md:p-8 max-w-lg w-full shadow-2xl border border-zinc-100 max-h-[90vh] overflow-y-auto space-y-5"
+              className="bg-white rounded-[2rem] p-4 md:p-6 max-w-lg w-full shadow-2xl border border-zinc-100 max-h-[90vh] overflow-y-auto space-y-3 md:space-y-5"
               onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-black italic text-zinc-950 uppercase tracking-tighter">
+                <h3 className="text-base md:text-lg font-black italic text-zinc-950 uppercase tracking-tighter">
                   {editingId ? t("appointments.form_edit") : t("appointments.form_new")}
                 </h3>
                 <motion.button whileTap={{ scale: 0.9 }} onClick={() => setShowForm(false)}
@@ -461,7 +461,7 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-300" />
                     <input type="text" placeholder={t("appointments.form_customer_search")} value={customerSearch}
                       onChange={e => setCustomerSearch(e.target.value)}
-                      className="w-full bg-zinc-50 pl-8 pr-3 py-2 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-red-200 transition-all" />
+                      className="w-full bg-zinc-50 pl-8 pr-3 py-2 rounded-xl border border-zinc-100 outline-none text-[11px] md:text-xs font-medium focus:bg-white focus:border-red-200 transition-all" />
                   </div>
                   {customerSearch && (
                     <div className="max-h-[100px] overflow-y-auto space-y-0.5 bg-white border border-zinc-100 rounded-xl p-1">
@@ -485,7 +485,7 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
                     </label>
                     <input type="email" value={formData.customerEmail}
                       onChange={e => setFormData(prev => ({...prev, customerEmail: e.target.value}))}
-                      className="w-full h-10 bg-zinc-50 border border-zinc-100 rounded-xl px-3 text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all" />
+                      className="w-full h-9 md:h-10 bg-zinc-50 border border-zinc-100 rounded-xl px-3 text-[11px] md:text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all" />
                   </div>
                 </div>
                 <div className="space-y-1.5">
@@ -494,7 +494,7 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
                   </label>
                   <input type="text" value={formData.customerPhone}
                     onChange={e => setFormData(prev => ({...prev, customerPhone: e.target.value}))}
-                    className="w-full h-10 bg-zinc-50 border border-zinc-100 rounded-xl px-3 text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all" />
+                    className="w-full h-9 md:h-10 bg-zinc-50 border border-zinc-100 rounded-xl px-3 text-[11px] md:text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -507,13 +507,13 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_date")}</label>
                     <input type="date" value={formData.date}
                       onChange={e => setFormData(prev => ({...prev, date: e.target.value}))}
-                      className="w-full h-10 bg-zinc-50 border border-zinc-100 rounded-xl px-3 text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all" />
+                      className="w-full h-9 md:h-10 bg-zinc-50 border border-zinc-100 rounded-xl px-3 text-[11px] md:text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_time")}</label>
                     <input type="time" value={formData.time}
                       onChange={e => setFormData(prev => ({...prev, time: e.target.value}))}
-                      className="w-full h-10 bg-zinc-50 border border-zinc-100 rounded-xl px-3 text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all" />
+                      className="w-full h-9 md:h-10 bg-zinc-50 border border-zinc-100 rounded-xl px-3 text-[11px] md:text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all" />
                   </div>
                 </div>
 
@@ -523,7 +523,7 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_status")}</label>
                     <select value={formData.status}
                       onChange={e => setFormData(prev => ({...prev, status: e.target.value as AppointmentStatus}))}
-                      className="w-full h-10 bg-zinc-50 border border-zinc-100 rounded-xl px-3 text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all">
+                      className="w-full h-9 md:h-10 bg-zinc-50 border border-zinc-100 rounded-xl px-3 text-[11px] md:text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all">
                       {Object.entries(STATUS_CONFIG).map(([k, v]) => (
                         <option key={k} value={k}>{v.label}</option>
                       ))}
@@ -535,7 +535,7 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_notes")}</label>
                   <textarea value={formData.notes}
                     onChange={e => setFormData(prev => ({...prev, notes: e.target.value}))} rows={3}
-                    className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all resize-none" />
+                    className="w-full bg-zinc-50 border border-zinc-100 rounded-xl p-3 text-[11px] md:text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all resize-none" />
                 </div>
               </div>
 
@@ -547,7 +547,7 @@ export default function AppointmentsPanel({ storeId, refreshTrigger = 0 }: { sto
               )}
 
               <motion.button whileTap={{ scale: 0.95 }} onClick={handleSave} disabled={saving || !canSave}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 text-white rounded-xl text-xs font-black italic hover:bg-red-700 transition-all shadow-lg shadow-red-100 disabled:opacity-50">
+                className="w-full flex items-center justify-center gap-2 py-3 md:py-4 bg-red-600 text-white rounded-xl text-xs font-black italic hover:bg-red-700 transition-all shadow-lg shadow-red-100 disabled:opacity-50">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {saving ? t("appointments.form_saving") : editingId ? t("appointments.form_save") : t("appointments.form_create")}
               </motion.button>
@@ -853,7 +853,7 @@ function InputField({ label, type = "text", value, onChange }: { label: string; 
     <div className="space-y-1.5">
       <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{label}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)}
-        className="w-full h-10 bg-zinc-50 border border-zinc-100 rounded-xl px-3 text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all" />
+        className="w-full h-9 md:h-10 bg-zinc-50 border border-zinc-100 rounded-xl px-3 text-[11px] md:text-xs font-medium outline-none focus:bg-white focus:border-red-200 transition-all" />
     </div>
   );
 }

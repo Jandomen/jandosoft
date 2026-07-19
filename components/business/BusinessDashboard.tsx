@@ -999,32 +999,32 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <AnimatePresence>
                     {showAddProduct && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4" onClick={() => { setShowAddProduct(false); setEditingProduct(null); }}>
-                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
                         <button onClick={() => { setShowAddProduct(false); setEditingProduct(null); }} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
-                        <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editingProduct ? t("biz.edit_product") : t("biz.new_product")}</h3>
+                        <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 mb-3 md:mb-6 uppercase tracking-tighter">{editingProduct ? t("biz.edit_product") : t("biz.new_product")}</h3>
                         <div className="space-y-3 md:space-y-4 max-h-[70vh] overflow-y-auto pr-1 md:pr-2">
-                          <input type="text" placeholder={t("biz.product_name_placeholder")} value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                          <input type="text" placeholder={t("biz.product_name_placeholder")} value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
                             <div className="col-span-1">
-                              <select value={productForm.currency} onChange={e => setProductForm({...productForm, currency: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm italic">
+                              <select value={productForm.currency} onChange={e => setProductForm({...productForm, currency: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm italic">
                                 {CURRENCIES.filter((c, i, a) => a.findIndex(x => x.code === c.code) === i).map(c => (
                                   <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>
                                 ))}
                               </select>
                             </div>
                             <div className="col-span-1 flex gap-2 md:gap-4">
-                              <input type="number" step="0.01" placeholder={t("biz.product_price_placeholder")} value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                              <input type="number" step="0.01" placeholder={t("biz.product_price_placeholder")} value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                             </div>
                             <div className="col-span-2 md:col-span-1">
-                              <input type="number" placeholder={t("biz.product_stock_placeholder")} value={productForm.stock} onChange={e => setProductForm({...productForm, stock: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                              <input type="number" placeholder={t("biz.product_stock_placeholder")} value={productForm.stock} onChange={e => setProductForm({...productForm, stock: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                             </div>
                           </div>
                           {productForm.price && productForm.currency && productForm.currency !== "USD" && (
                             <p className="text-[10px] text-zinc-400 font-medium italic text-right">≈ ${convertToUSD(parseFloat(productForm.price), productForm.currency).toFixed(2)} USD</p>
                           )}
-                          <textarea placeholder={t("biz.product_desc_placeholder") || "Descripción del producto..."} value={productForm.desc} onChange={e => setProductForm({...productForm, desc: e.target.value})} rows={2} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm resize-none" />
+                          <textarea placeholder={t("biz.product_desc_placeholder") || "Descripción del producto..."} value={productForm.desc} onChange={e => setProductForm({...productForm, desc: e.target.value})} rows={2} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm resize-none" />
                           <div className="relative">
-                            <input type="text" placeholder={t("biz.product_barcode_placeholder") || "Código de barras (opcional)"} value={productForm.barcode} onChange={e => setProductForm({...productForm, barcode: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm font-mono" />
+                            <input type="text" placeholder={t("biz.product_barcode_placeholder") || "Código de barras (opcional)"} value={productForm.barcode} onChange={e => setProductForm({...productForm, barcode: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm font-mono" />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-zinc-300 uppercase">Barcode</span>
                           </div>
 
@@ -1100,7 +1100,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                             </div>
                           </div>
 
-                          <button onClick={addProduct} disabled={!productForm.name || !productForm.price} className="w-full py-5 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
+                          <button onClick={addProduct} disabled={!productForm.name || !productForm.price} className="w-full py-3.5 md:py-5 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
                             {editingProduct ? t("biz.update_product") : t("biz.save_product")}
                           </button>
                         </div>
@@ -1270,23 +1270,23 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <AnimatePresence>
                   {showAddService && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4" onClick={() => { setShowAddService(false); setEditingService(null); }}>
-                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
                         <button onClick={() => { setShowAddService(false); setEditingService(null); }} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
-                        <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editingService ? t("services.edit") : t("services.new")}</h3>
+                        <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 mb-3 md:mb-6 uppercase tracking-tighter">{editingService ? t("services.edit") : t("services.new")}</h3>
                         <div className="space-y-3 md:space-y-4">
-                          <input type="text" placeholder={t("services.name_placeholder")} value={serviceForm.name} onChange={e => setServiceForm({...serviceForm, name: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                          <textarea placeholder={t("services.desc_placeholder")} value={serviceForm.desc} onChange={e => setServiceForm({...serviceForm, desc: e.target.value})} rows={3} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm resize-none" />
-                          <div className="grid grid-cols-2 gap-3">
+                          <input type="text" placeholder={t("services.name_placeholder")} value={serviceForm.name} onChange={e => setServiceForm({...serviceForm, name: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
+                          <textarea placeholder={t("services.desc_placeholder")} value={serviceForm.desc} onChange={e => setServiceForm({...serviceForm, desc: e.target.value})} rows={3} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm resize-none" />
+                          <div className="grid grid-cols-2 gap-2 md:gap-3">
                             <div className="space-y-1.5">
                               <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("services.price")}</label>
-                              <input type="number" step="0.01" placeholder="0.00" value={serviceForm.price} onChange={e => setServiceForm({...serviceForm, price: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                              <input type="number" step="0.01" placeholder="0.00" value={serviceForm.price} onChange={e => setServiceForm({...serviceForm, price: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                             </div>
                             <div className="space-y-1.5">
                               <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("services.duration")}</label>
-                              <input type="number" placeholder="60" value={serviceForm.duration} onChange={e => setServiceForm({...serviceForm, duration: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                              <input type="number" placeholder="60" value={serviceForm.duration} onChange={e => setServiceForm({...serviceForm, duration: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                             </div>
                           </div>
-                          <button onClick={addService} disabled={!serviceForm.name || !serviceForm.price} className="w-full py-5 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
+                          <button onClick={addService} disabled={!serviceForm.name || !serviceForm.price} className="w-full py-3.5 md:py-5 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
                             {editingService ? t("services.update_btn") : t("services.save_btn")}
                           </button>
                         </div>
@@ -1457,7 +1457,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                     {searchKb ? t("knowledgebase.no_results").replace("{query}", searchKb) : t("knowledgebase.empty")}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 md:gap-4">
                     {kbEntries.filter(e => !searchKb || e.title.toLowerCase().includes(searchKb.toLowerCase()) || e.content.toLowerCase().includes(searchKb.toLowerCase()) || e.category.toLowerCase().includes(searchKb.toLowerCase()) || (e.question && e.question.toLowerCase().includes(searchKb.toLowerCase()))).map((entry) => (
                       <div key={entry.id} className="bg-white max-[400px]:p-4 rounded-[1.5rem] md:rounded-[2rem] border border-zinc-100 p-6 space-y-3 md:space-y-4 group hover:border-red-200 transition-all shadow-sm">
                         <div className="flex items-start justify-between gap-3 md:gap-4">
@@ -1489,9 +1489,9 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <AnimatePresence>
                   {showAddKb && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => { setShowAddKb(false); setEditingKb(null); }}>
-                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-lg bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-lg bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
                         <button onClick={() => { setShowAddKb(false); setEditingKb(null); }} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
-                        <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editingKb ? t("knowledgebase.form_edit") : t("knowledgebase.form_new")}</h3>
+                        <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 mb-3 md:mb-6 uppercase tracking-tighter">{editingKb ? t("knowledgebase.form_edit") : t("knowledgebase.form_new")}</h3>
                         <div className="space-y-3 md:space-y-5">
                           <div className="flex items-center gap-2">
                             <motion.button whileTap={{ scale: 0.95 }}
@@ -1504,17 +1504,17 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                           {kbForm.question ? (
                             <div>
                               <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("knowledgebase.question_label")}</label>
-                              <input type="text" placeholder={t("knowledgebase.question_placeholder")} value={kbForm.question} onChange={e => setKbForm({...kbForm, question: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                              <input type="text" placeholder={t("knowledgebase.question_placeholder")} value={kbForm.question} onChange={e => setKbForm({...kbForm, question: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                             </div>
                           ) : (
                             <div>
                               <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("knowledgebase.title_label")}</label>
-                              <input type="text" placeholder={t("knowledgebase.title_placeholder")} value={kbForm.title} onChange={e => setKbForm({...kbForm, title: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                              <input type="text" placeholder={t("knowledgebase.title_placeholder")} value={kbForm.title} onChange={e => setKbForm({...kbForm, title: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                             </div>
                           )}
                           <div>
                             <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("knowledgebase.category_label")}</label>
-                            <select value={kbForm.category} onChange={e => setKbForm({...kbForm, category: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 italic text-sm">
+                            <select value={kbForm.category} onChange={e => setKbForm({...kbForm, category: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 italic text-xs md:text-sm">
                               {kbCategories.map(cat => (
                                 <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
                               ))}
@@ -1522,7 +1522,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                           </div>
                           <div>
                             <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("knowledgebase.answer_label")}</label>
-                            <textarea placeholder={t("knowledgebase.answer_placeholder")} value={kbForm.content} onChange={e => setKbForm({...kbForm, content: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-32 md:h-40 mt-1 text-sm" />
+                            <textarea placeholder={t("knowledgebase.answer_placeholder")} value={kbForm.content} onChange={e => setKbForm({...kbForm, content: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 md:h-40 mt-1 text-xs md:text-sm" />
                           </div>
                           <button onClick={() => {
                             const title = kbForm.question || kbForm.title;
@@ -1538,7 +1538,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                             setShowAddKb(false);
                             setEditingKb(null);
                             setKbForm({ title: "", content: "", category: kbCategories[0], question: "" });
-                          }} disabled={!(kbForm.question || kbForm.title) || !kbForm.content} className="w-full py-4 md:py-5 bg-red-600 text-white rounded-2xl font-black italic text-sm md:text-base hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
+                          }} disabled={!(kbForm.question || kbForm.title) || !kbForm.content} className="w-full py-3 md:py-5 bg-red-600 text-white rounded-2xl font-black italic text-sm md:text-base hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
                             {editingKb ? t("knowledgebase.form_update") : t("knowledgebase.form_save")}
                           </button>
                         </div>
@@ -1551,12 +1551,12 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <AnimatePresence>
                   {showManageCategories && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setShowManageCategories(false)}>
-                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
                         <button onClick={() => setShowManageCategories(false)} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
-                        <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{t("knowledgebase.categories_title")}</h3>
-                        <div className="space-y-3">
+                        <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 mb-3 md:mb-6 uppercase tracking-tighter">{t("knowledgebase.categories_title")}</h3>
+                        <div className="space-y-2 md:space-y-3">
                           <div className="flex items-center gap-2">
-                            <input type="text" placeholder={t("knowledgebase.categories_new_placeholder")} value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="flex-1 bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                            <input type="text" placeholder={t("knowledgebase.categories_new_placeholder")} value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className="flex-1 bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                             <motion.button whileTap={{ scale: 0.95 }} onClick={() => {
                               const name = newCategoryName.trim().toLowerCase();
                               if (!name || kbCategories.includes(name)) return;
@@ -1601,7 +1601,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <AnimatePresence>
                   {showConfirmClearKb && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setShowConfirmClearKb(false)}>
-                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-sm bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-sm bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
                         <button onClick={() => setShowConfirmClearKb(false)} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
                         <div className="text-center space-y-4">
                           <div className="w-14 h-14 mx-auto bg-rose-100 rounded-2xl flex items-center justify-center text-rose-600">
@@ -1686,7 +1686,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                         <div>
                           <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("agentconfig.model_label")}</label>
                           <p className="text-[8px] text-zinc-300 italic ml-1 mb-2 font-medium">{t("agentconfig.model_desc")}</p>
-                          <select value={agentConfig.model} onChange={e => setAgentConfig(c => ({...c, model: e.target.value}))} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all italic text-sm">
+                          <select value={agentConfig.model} onChange={e => setAgentConfig(c => ({...c, model: e.target.value}))} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all italic text-xs md:text-sm">
                             <option value="gpt-4o-mini">{t("agentconfig.model_fast")}</option>
                             <option value="gpt-4o">{t("agentconfig.model_powerful")}</option>
                             <option value="gpt-3.5-turbo">{t("agentconfig.model_economical")}</option>
@@ -1768,17 +1768,17 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                     <div>
                       <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("agentconfig.welcome_label")}</label>
                       <p className="text-[8px] text-zinc-300 italic ml-1 mb-2 font-medium">{t("agentconfig.welcome_desc")}</p>
-                      <input type="text" value={agentConfig.widgetWelcome} onChange={e => setAgentConfig(c => ({...c, widgetWelcome: e.target.value}))} placeholder={t("agentconfig.welcome_placeholder")} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                      <input type="text" value={agentConfig.widgetWelcome} onChange={e => setAgentConfig(c => ({...c, widgetWelcome: e.target.value}))} placeholder={t("agentconfig.welcome_placeholder")} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                     </div>
                     <div>
                       <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("agentconfig.input_placeholder_label")}</label>
                       <p className="text-[8px] text-zinc-300 italic ml-1 mb-2 font-medium">{t("agentconfig.input_placeholder_desc")}</p>
-                      <input type="text" value={agentConfig.widgetPlaceholder} onChange={e => setAgentConfig(c => ({...c, widgetPlaceholder: e.target.value}))} placeholder={t("agentconfig.input_placeholder_eg")} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                      <input type="text" value={agentConfig.widgetPlaceholder} onChange={e => setAgentConfig(c => ({...c, widgetPlaceholder: e.target.value}))} placeholder={t("agentconfig.input_placeholder_eg")} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                     </div>
                     <div>
                       <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("agentconfig.header_label")}</label>
                       <p className="text-[8px] text-zinc-300 italic ml-1 mb-2 font-medium">{t("agentconfig.header_desc")}</p>
-                      <input type="text" value={agentConfig.widgetHeader} onChange={e => setAgentConfig(c => ({...c, widgetHeader: e.target.value}))} placeholder={t("agentconfig.header_placeholder")} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                      <input type="text" value={agentConfig.widgetHeader} onChange={e => setAgentConfig(c => ({...c, widgetHeader: e.target.value}))} placeholder={t("agentconfig.header_placeholder")} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                     </div>
                     <div className="border-t border-zinc-100 pt-5">
                       <ChatAppearancePanel config={agentConfig} onChange={setAgentConfig} />
@@ -2127,7 +2127,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                     {t("smartforms.empty")}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 md:gap-4">
                     {smartForms.map(form => (
                       <div key={form.id} className="bg-white max-[400px]:p-4 p-6 rounded-[1.5rem] md:rounded-[2rem] border border-zinc-100 space-y-3 md:space-y-4 group hover:border-red-200 transition-all shadow-sm">
                         <div className="flex items-start justify-between gap-3">
@@ -2171,18 +2171,18 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <AnimatePresence>
                   {showAddSmartForm && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 md:p-6" onClick={() => { setShowAddSmartForm(false); setEditingSmartForm(null); }}>
-                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-2xl bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative max-h-[90vh] overflow-y-auto no-scrollbar" onClick={e => e.stopPropagation()}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-2xl bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative max-h-[90vh] overflow-y-auto no-scrollbar" onClick={e => e.stopPropagation()}>
                         <button onClick={() => { setShowAddSmartForm(false); setEditingSmartForm(null); }} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
-                        <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-6 uppercase tracking-tighter">{editingSmartForm ? t("smartforms.form_edit") : t("smartforms.form_new")}</h3>
+                        <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editingSmartForm ? t("smartforms.form_edit") : t("smartforms.form_new")}</h3>
 
-                        <div className="space-y-5">
+                        <div className="space-y-3 md:space-y-5">
                           <div>
                             <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("smartforms.form_name_label")}</label>
-                            <input type="text" value={smartFormName} onChange={e => setSmartFormName(e.target.value)} placeholder={t("smartforms.form_name_placeholder")} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                            <input type="text" value={smartFormName} onChange={e => setSmartFormName(e.target.value)} placeholder={t("smartforms.form_name_placeholder")} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                           </div>
                           <div>
                             <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("smartforms.form_desc_label")}</label>
-                            <textarea value={smartFormDesc} onChange={e => setSmartFormDesc(e.target.value)} placeholder={t("smartforms.form_desc_placeholder")} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-sm" />
+                            <textarea value={smartFormDesc} onChange={e => setSmartFormDesc(e.target.value)} placeholder={t("smartforms.form_desc_placeholder")} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-xs md:text-sm" />
                           </div>
 
                           {/* Fields */}
@@ -2197,7 +2197,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                                   <p className="text-[9px] font-black text-zinc-400 uppercase italic">{editingSFormField === -1 ? t("smartforms.field_new") : t("smartforms.field_edit")}</p>
                                   <button onClick={() => setEditingSFormField(null)} className="text-[9px] font-black text-rose-400 hover:text-rose-600 italic">{t("smartforms.field_cancel")}</button>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                                   <div>
                                     <label className="text-[8px] font-black text-zinc-400 uppercase italic">{t("smartforms.field_type_label")}</label>
                                     <select value={sformFieldType} onChange={e => setSformFieldType(e.target.value)} className="w-full bg-white p-2.5 rounded-xl border border-zinc-100 outline-none font-medium text-xs mt-1">
@@ -2218,7 +2218,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                                     <input type="text" value={sformFieldLabel} onChange={e => setSformFieldLabel(e.target.value)} placeholder={t("smartforms.field_label_placeholder")} className="w-full bg-white p-2.5 rounded-xl border border-zinc-100 outline-none font-medium text-xs mt-1" />
                                   </div>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                                   <div>
                                     <label className="text-[8px] font-black text-zinc-400 uppercase italic">{t("smartforms.field_placeholder_label")}</label>
                                     <input type="text" value={sformFieldPlaceholder} onChange={e => setSformFieldPlaceholder(e.target.value)} placeholder={t("smartforms.field_placeholder_eg")} className="w-full bg-white p-2.5 rounded-xl border border-zinc-100 outline-none font-medium text-xs mt-1" />
@@ -2343,7 +2343,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                             setSmartFormDesc("");
                             setSmartFormFields([]);
                             showToast(editingSmartForm ? t("smartforms.form_updated") : t("smartforms.form_created"), "success");
-                          }} disabled={!smartFormName.trim() || smartFormFields.length === 0} className="w-full py-4 bg-red-600 text-white rounded-2xl font-black italic text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
+                          }} disabled={!smartFormName.trim() || smartFormFields.length === 0} className="w-full py-3 md:py-4 bg-red-600 text-white rounded-2xl font-black italic text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
                             {editingSmartForm ? t("smartforms.form_update_btn") : t("smartforms.form_create_btn")}
                           </button>
                         </div>
@@ -2356,9 +2356,9 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <AnimatePresence>
                   {showFormSubmissions && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 md:p-6" onClick={() => setShowFormSubmissions(null)}>
-                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-4xl bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-4xl bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                         <button onClick={() => setShowFormSubmissions(null)} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
-                        <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-2 uppercase tracking-tighter">{showFormSubmissions.name}</h3>
+                        <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 mb-1.5 md:mb-2 uppercase tracking-tighter">{showFormSubmissions.name}</h3>
                         <p className="text-[9px] md:text-[10px] font-bold text-zinc-400 italic mb-6">{(showFormSubmissions.submissions || []).length} {t("smartforms.submissions_title")}</p>
 
                         {(showFormSubmissions.submissions || []).length === 0 ? (
@@ -2398,13 +2398,13 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <AnimatePresence>
                   {showFormEmbed && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 md:p-6" onClick={() => setShowFormEmbed(null)}>
-                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-lg bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-lg bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
                         <button onClick={() => setShowFormEmbed(null)} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
-                        <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-2 uppercase tracking-tighter">{t("smartforms.embed_title")} <span className="text-red-600">{showFormEmbed.name}</span></h3>
+                        <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 mb-1.5 md:mb-2 uppercase tracking-tighter">{t("smartforms.embed_title")} <span className="text-red-600">{showFormEmbed.name}</span></h3>
                         <p className="text-[9px] font-bold text-zinc-400 italic mb-6">{t("smartforms.embed_desc")}</p>
-                        <div className="space-y-5">
-                          <div className="bg-zinc-50 rounded-2xl p-4 space-y-3">
-                            <h4 className="text-[9px] font-black text-zinc-500 uppercase italic tracking-wider">{t("smartforms.embed_iframe")}</h4>
+                         <div className="space-y-3 md:space-y-5">
+                           <div className="bg-zinc-50 rounded-2xl p-4 space-y-3">
+                             <h4 className="text-[9px] font-black text-zinc-500 uppercase italic tracking-wider">{t("smartforms.embed_iframe")}</h4>
                             <div className="relative">
                               <pre className="bg-zinc-950 text-zinc-100 p-3 rounded-xl text-[9px] md:text-[10px] font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap">
 {`<iframe
@@ -2458,7 +2458,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <AnimatePresence>
                   {confirmDeleteForm && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setConfirmDeleteForm(null)}>
-                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-sm bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-sm bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
                         <button onClick={() => setConfirmDeleteForm(null)} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
                         <div className="text-center space-y-4">
                           <div className="w-14 h-14 mx-auto bg-rose-100 rounded-2xl flex items-center justify-center text-rose-600">
@@ -2587,17 +2587,17 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <AnimatePresence>
                   {showAddAutomation && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => { setShowAddAutomation(false); setEditingAutomation(null); }}>
-                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-lg bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-lg bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
                         <button onClick={() => { setShowAddAutomation(false); setEditingAutomation(null); }} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
-                        <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editingAutomation ? t("automations.form_edit") : t("automations.form_new")}</h3>
+                        <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 mb-3 md:mb-6 uppercase tracking-tighter">{editingAutomation ? t("automations.form_edit") : t("automations.form_new")}</h3>
                         <div className="space-y-3 md:space-y-5 max-h-[70vh] overflow-y-auto pr-1 md:pr-2">
                           <div>
                             <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_name_label")}</label>
-                            <input type="text" placeholder={t("automations.form_name_placeholder")} value={automationForm.name} onChange={e => setAutomationForm({...automationForm, name: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                            <input type="text" placeholder={t("automations.form_name_placeholder")} value={automationForm.name} onChange={e => setAutomationForm({...automationForm, name: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                           </div>
                           <div>
                             <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_trigger_label")}</label>
-                            <select value={automationForm.trigger} onChange={e => setAutomationForm({...automationForm, trigger: e.target.value, triggerConfig: {} })} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic text-sm">
+                            <select value={automationForm.trigger} onChange={e => setAutomationForm({...automationForm, trigger: e.target.value, triggerConfig: {} })} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm italic">
                               <option value="new_order">{t("automations.form_trigger_new_order")}</option>
                               <option value="new_customer">{t("automations.form_trigger_new_customer")}</option>
                               <option value="new_product">{t("automations.form_trigger_new_product")}</option>
@@ -2609,13 +2609,13 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                           {(automationForm.trigger === "low_stock") && (
                             <div>
                               <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_stock_label")}</label>
-                              <input type="number" placeholder={t("automations.form_stock_placeholder")} value={automationForm.triggerConfig.stockThreshold ?? 5} onChange={e => setAutomationForm({...automationForm, triggerConfig: { ...automationForm.triggerConfig, stockThreshold: parseInt(e.target.value) || 5 }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                              <input type="number" placeholder={t("automations.form_stock_placeholder")} value={automationForm.triggerConfig.stockThreshold ?? 5} onChange={e => setAutomationForm({...automationForm, triggerConfig: { ...automationForm.triggerConfig, stockThreshold: parseInt(e.target.value) || 5 }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                             </div>
                           )}
 
                           <div>
                             <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_action_label")}</label>
-                            <select value={automationForm.actionType} onChange={e => setAutomationForm({...automationForm, actionType: e.target.value, actionConfig: {} })} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic text-sm">
+                            <select value={automationForm.actionType} onChange={e => setAutomationForm({...automationForm, actionType: e.target.value, actionConfig: {} })} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm italic">
                               <optgroup label={t("automations.form_action_general")}>
                                 <option value="send_notification">{t("automations.form_action_notification")}</option>
                                 <option value="webhook">{t("automations.form_action_webhook")}</option>
@@ -2634,14 +2634,14 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                           {automationForm.actionType === "send_notification" && (
                             <div>
                               <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_notification_label")}</label>
-                              <input type="text" placeholder={t("automations.form_notification_placeholder")} value={automationForm.actionConfig.message || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, message: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                              <input type="text" placeholder={t("automations.form_notification_placeholder")} value={automationForm.actionConfig.message || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, message: e.target.value }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                             </div>
                           )}
 
                           {automationForm.actionType === "webhook" && (
                             <div>
                               <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_webhook_label")}</label>
-                              <input type="url" placeholder={t("automations.form_webhook_placeholder")} value={automationForm.actionConfig.webhookUrl || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, webhookUrl: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                              <input type="url" placeholder={t("automations.form_webhook_placeholder")} value={automationForm.actionConfig.webhookUrl || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, webhookUrl: e.target.value }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                             </div>
                           )}
 
@@ -2649,15 +2649,15 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                             <>
                               <div>
                                 <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_to_label")}</label>
-                                <input type="email" placeholder={t("automations.form_to_placeholder")} value={automationForm.actionConfig.to || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, to: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                                <input type="email" placeholder={t("automations.form_to_placeholder")} value={automationForm.actionConfig.to || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, to: e.target.value }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                               </div>
                               <div>
                                 <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_subject_label")}</label>
-                                <input type="text" placeholder={t("automations.form_subject_placeholder")} value={automationForm.actionConfig.subject || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, subject: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                                <input type="text" placeholder={t("automations.form_subject_placeholder")} value={automationForm.actionConfig.subject || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, subject: e.target.value }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                               </div>
                               <div>
                                 <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_body_label")}</label>
-                                <textarea placeholder={t("automations.form_body_placeholder")} value={automationForm.actionConfig.body || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, body: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-32 mt-1 text-sm font-mono" />
+                                <textarea placeholder={t("automations.form_body_placeholder")} value={automationForm.actionConfig.body || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, body: e.target.value }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 md:h-32 mt-1 text-xs md:text-sm font-mono" />
                               </div>
                             </>
                           )}
@@ -2665,7 +2665,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                           {automationForm.actionType === "ai_generate" && (
                             <div>
                               <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_ai_label")}</label>
-                              <textarea placeholder={t("automations.form_ai_placeholder")} value={automationForm.actionConfig.prompt || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, prompt: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-24 mt-1 text-sm" />
+                              <textarea placeholder={t("automations.form_ai_placeholder")} value={automationForm.actionConfig.prompt || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, prompt: e.target.value }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-24 mt-1 text-xs md:text-sm" />
                               <div className="mt-2">
                                 <label className="text-[8px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_model_label")}</label>
                                 <select value={automationForm.actionConfig.model || "gpt-4o-mini"} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, model: e.target.value }})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 italic text-xs">
@@ -2681,9 +2681,9 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                           {automationForm.actionType === "send_telegram" && (
                             <div>
                               <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_chat_id_label")}</label>
-                              <input type="text" placeholder={t("automations.form_chat_id_placeholder")} value={automationForm.actionConfig.chatId || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, chatId: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                              <input type="text" placeholder={t("automations.form_chat_id_placeholder")} value={automationForm.actionConfig.chatId || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, chatId: e.target.value }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                               <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest mt-3 block">{t("automations.form_chat_message_label")}</label>
-                              <textarea placeholder={t("automations.form_chat_message_placeholder")} value={automationForm.actionConfig.message || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, message: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-sm" />
+                              <textarea placeholder={t("automations.form_chat_message_placeholder")} value={automationForm.actionConfig.message || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, message: e.target.value }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-xs md:text-sm" />
                             </div>
                           )}
 
@@ -2691,11 +2691,11 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                             <>
                               <div>
                                 <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_webhook_label")}</label>
-                                <input type="url" placeholder={t("automations.form_webhook_placeholder")} value={automationForm.actionConfig.webhookUrl || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, webhookUrl: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                                <input type="url" placeholder={t("automations.form_webhook_placeholder")} value={automationForm.actionConfig.webhookUrl || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, webhookUrl: e.target.value }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                               </div>
                               <div>
                                 <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_chat_message_label")}</label>
-                                <textarea placeholder={t("automations.form_chat_message_placeholder")} value={automationForm.actionConfig.message || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, message: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-sm" />
+                                <textarea placeholder={t("automations.form_chat_message_placeholder")} value={automationForm.actionConfig.message || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, message: e.target.value }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-xs md:text-sm" />
                               </div>
                             </>
                           )}
@@ -2704,11 +2704,11 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                             <>
                               <div>
                                 <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_channel_label")}</label>
-                                <input type="text" placeholder={t("automations.form_channel_placeholder")} value={automationForm.actionConfig.channel || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, channel: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                                <input type="text" placeholder={t("automations.form_channel_placeholder")} value={automationForm.actionConfig.channel || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, channel: e.target.value }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                               </div>
                               <div>
                                 <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_chat_message_label")}</label>
-                                <textarea placeholder={t("automations.form_chat_message_placeholder")} value={automationForm.actionConfig.message || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, message: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-sm" />
+                                <textarea placeholder={t("automations.form_chat_message_placeholder")} value={automationForm.actionConfig.message || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, message: e.target.value }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-xs md:text-sm" />
                               </div>
                             </>
                           )}
@@ -2717,11 +2717,11 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                             <>
                               <div>
                               <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_social_label")}</label>
-                              <textarea placeholder={t("automations.form_social_placeholder")} value={automationForm.actionConfig.message || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, message: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-sm" />
+                              <textarea placeholder={t("automations.form_social_placeholder")} value={automationForm.actionConfig.message || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, message: e.target.value }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-xs md:text-sm" />
                               </div>
                               <div>
                               <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("automations.form_url_label")}</label>
-                              <input type="url" placeholder={t("automations.form_url_placeholder")} value={automationForm.actionConfig.url || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, url: e.target.value }})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                              <input type="url" placeholder={t("automations.form_url_placeholder")} value={automationForm.actionConfig.url || ""} onChange={e => setAutomationForm({...automationForm, actionConfig: { ...automationForm.actionConfig, url: e.target.value }})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                               </div>
                             </>
                           )}
@@ -2738,7 +2738,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                             persistStore(undefined, undefined, undefined, undefined, newAutomations);
                             setShowAddAutomation(false);
                             setEditingAutomation(null);
-                          }} disabled={!automationForm.name || (automationForm.actionType === "webhook" && !automationForm.actionConfig.webhookUrl) || (automationForm.actionType === "send_email" && (!automationForm.actionConfig.to || !automationForm.actionConfig.subject || !automationForm.actionConfig.body)) || (automationForm.actionType === "send_telegram" && !automationForm.actionConfig.chatId) || (automationForm.actionType === "send_discord" && !automationForm.actionConfig.webhookUrl) || (automationForm.actionType === "send_slack" && !automationForm.actionConfig.channel)} className="w-full py-4 md:py-5 bg-red-600 text-white rounded-2xl font-black italic text-sm md:text-base hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
+                          }} disabled={!automationForm.name || (automationForm.actionType === "webhook" && !automationForm.actionConfig.webhookUrl) || (automationForm.actionType === "send_email" && (!automationForm.actionConfig.to || !automationForm.actionConfig.subject || !automationForm.actionConfig.body)) || (automationForm.actionType === "send_telegram" && !automationForm.actionConfig.chatId) || (automationForm.actionType === "send_discord" && !automationForm.actionConfig.webhookUrl) || (automationForm.actionType === "send_slack" && !automationForm.actionConfig.channel)} className="w-full py-3 md:py-5 bg-red-600 text-white rounded-2xl font-black italic text-sm md:text-base hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
                             {editingAutomation ? t("automations.form_update") : t("automations.form_create")}
                           </button>
                         </div>
@@ -2785,7 +2785,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
         <AnimatePresence>
           {showSettings && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-md flex items-center justify-center p-4 md:p-6">
-              <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-lg bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-3xl relative overflow-hidden">
+              <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-lg bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-3xl relative overflow-hidden">
                 <button onClick={() => setShowSettings(false)} className="absolute top-4 md:top-8 right-4 md:right-8 p-1 hover:bg-zinc-100 rounded-lg"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
 
                 <div className="text-center mb-6 md:mb-8">
@@ -2903,11 +2903,11 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                   <div className="space-y-4 md:space-y-5">
                     <div className="space-y-1.5">
                       <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_edit_name")}</label>
-                      <input type="text" placeholder={t("biz.config_edit_name_placeholder")} value={settingsForm.name} onChange={e => setSettingsForm({...settingsForm, name: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                      <input type="text" placeholder={t("biz.config_edit_name_placeholder")} value={settingsForm.name} onChange={e => setSettingsForm({...settingsForm, name: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_edit_industry")}</label>
-                      <select value={settingsForm.industry} onChange={e => setSettingsForm({...settingsForm, industry: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all italic text-sm">
+                      <select value={settingsForm.industry} onChange={e => setSettingsForm({...settingsForm, industry: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all italic text-xs md:text-sm">
                         <option value="tecnologia">{t("biz.industry_technology")}</option>
                         <option value="comercio">{t("biz.industry_commerce")}</option>
                         <option value="servicios">{t("biz.industry_services")}</option>
@@ -2918,7 +2918,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_edit_desc")}</label>
-                      <textarea placeholder={t("biz.config_edit_desc_placeholder")} value={settingsForm.desc} onChange={e => setSettingsForm({...settingsForm, desc: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 md:h-24 text-sm" />
+                      <textarea placeholder={t("biz.config_edit_desc_placeholder")} value={settingsForm.desc} onChange={e => setSettingsForm({...settingsForm, desc: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 md:h-24 text-xs md:text-sm" />
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_edit_logo")}</label>
@@ -2962,18 +2962,18 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("settings.slug_label")}</label>
                       <div className="flex items-center gap-2">
                         <span className="text-[8px] md:text-[9px] font-bold text-zinc-400 italic whitespace-nowrap">/s/</span>
-                        <input type="text" placeholder="mi-empresa" value={settingsForm.slug} onChange={e => setSettingsForm({...settingsForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "")})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all font-mono text-sm" />
+                        <input type="text" placeholder="mi-empresa" value={settingsForm.slug} onChange={e => setSettingsForm({...settingsForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "")})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all font-mono text-xs md:text-sm" />
                       </div>
                       <p className="text-[7px] md:text-[8px] font-bold text-zinc-400 italic ml-1">/s/{settingsForm.slug || "mi-empresa"}</p>
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Teléfono</label>
-                      <input type="text" placeholder="+52 55 1234 5678" value={settingsForm.phone} onChange={e => setSettingsForm({...settingsForm, phone: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                      <input type="text" placeholder="+52 55 1234 5678" value={settingsForm.phone} onChange={e => setSettingsForm({...settingsForm, phone: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Moneda de la tienda</label>
                       <select value={settingsForm.currency} onChange={e => setSettingsForm({...settingsForm, currency: e.target.value})}
-                        className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm">
+                        className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm">
                         {CURRENCIES.map(c => (
                           <option key={c.code} value={c.code}>{c.symbol} {c.code} — {c.name}</option>
                         ))}
@@ -3021,7 +3021,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                         value={settingsForm.location}
                         onChange={(address, coords) => setSettingsForm(prev => ({ ...prev, location: address, coordinates: coords || prev.coordinates }))}
                         placeholder="Calle, número, colonia, ciudad"
-                        className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm"
+                        className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm"
                       />
                     </div>
                     <div className="flex items-center justify-between p-3 md:p-4 bg-zinc-50 rounded-xl md:rounded-2xl border border-zinc-100 gap-2">

@@ -49,7 +49,7 @@ export default function GradesPanel({ storeId, onSaveStore, store }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {items.map(item => (
           <div key={item.id} className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-zinc-100 shadow-sm p-5 md:p-6 space-y-4 hover:shadow-lg hover:border-zinc-200 transition-all group">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-2 md:gap-3">
               <div className="min-w-0 flex-1">
                 <h4 className="font-black italic text-zinc-950 text-sm md:text-base leading-tight truncate">{item.studentName}</h4>
                 <p className="text-[11px] md:text-xs text-zinc-400 font-medium italic mt-1">{item.course} {item.period ? `— ${item.period}` : ""}</p>
@@ -77,41 +77,41 @@ export default function GradesPanel({ storeId, onSaveStore, store }: Props) {
       <AnimatePresence>
         {showModal && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4" onClick={() => { setShowModal(false); setEditing(null); }}>
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
               <button onClick={() => { setShowModal(false); setEditing(null); }} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
-              <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editing ? t("industry.grades.edit_title") : t("industry.grades.new_title")}</h3>
+              <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editing ? t("industry.grades.edit_title") : t("industry.grades.new_title")}</h3>
               <div className="space-y-3 md:space-y-4">
-                <input type="text" placeholder={t("industry.grades.student_name_placeholder")} value={form.studentName} onChange={e => setForm({...form, studentName: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                <div className="grid grid-cols-2 gap-3">
-                  <input type="text" placeholder={t("industry.grades.course_placeholder")} value={form.course} onChange={e => setForm({...form, course: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                  <input type="text" placeholder={t("industry.grades.period_placeholder")} value={form.period} onChange={e => setForm({...form, period: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                <input type="text" placeholder={t("industry.grades.student_name_placeholder")} value={form.studentName} onChange={e => setForm({...form, studentName: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
+                  <input type="text" placeholder={t("industry.grades.course_placeholder")} value={form.course} onChange={e => setForm({...form, course: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
+                  <input type="text" placeholder={t("industry.grades.period_placeholder")} value={form.period} onChange={e => setForm({...form, period: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.grades.score_label")}</label>
-                  <input type="number" min="0" max="100" placeholder="0" value={form.score} onChange={e => setForm({...form, score: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                  <input type="number" min="0" max="100" placeholder="0" value={form.score} onChange={e => setForm({...form, score: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                 </div>
-                <textarea placeholder={t("industry.grades.comments_placeholder")} value={form.comments} onChange={e => setForm({...form, comments: e.target.value})} rows={2} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm resize-none" />
-                <div className="grid grid-cols-2 gap-3">
+                <textarea placeholder={t("industry.grades.comments_placeholder")} value={form.comments} onChange={e => setForm({...form, comments: e.target.value})} rows={2} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm resize-none" />
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.grades.subject_label")}</label>
-                    <input type="text" placeholder={t("industry.grades.subject_placeholder")} value={form.subject} onChange={e => setForm({...form, subject: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    <input type="text" placeholder={t("industry.grades.subject_placeholder")} value={form.subject} onChange={e => setForm({...form, subject: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.grades.letter_label")}</label>
-                    <input type="text" placeholder="A, B, C..." value={form.letterGrade} onChange={e => setForm({...form, letterGrade: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    <input type="text" placeholder="A, B, C..." value={form.letterGrade} onChange={e => setForm({...form, letterGrade: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.grades.semester_label")}</label>
-                    <input type="text" placeholder={t("industry.grades.semester_placeholder")} value={form.semester} onChange={e => setForm({...form, semester: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    <input type="text" placeholder={t("industry.grades.semester_placeholder")} value={form.semester} onChange={e => setForm({...form, semester: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.grades.attendance_label")}</label>
-                    <input type="number" placeholder="0-100" value={form.attendance} onChange={e => setForm({...form, attendance: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    <input type="number" placeholder="0-100" value={form.attendance} onChange={e => setForm({...form, attendance: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                   </div>
                 </div>
-                <button onClick={addItem} disabled={!form.studentName || !form.score} className="w-full py-5 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
+                <button onClick={addItem} disabled={!form.studentName || !form.score} className="w-full py-3 md:py-4 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
                   {editing ? t("industry.update") : t("industry.save")}
                 </button>
               </div>

@@ -1267,62 +1267,62 @@ export default function UserDashboard({
         {showApptForm && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6"
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 md:p-6"
             onClick={() => setShowApptForm(false)}
           >
             <motion.div
               initial={{ scale: 0.9 }} animate={{ scale: 1 }}
-              className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative"
+              className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative"
               onClick={e => e.stopPropagation()}
             >
               <button onClick={() => setShowApptForm(false)} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl">
                 <X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" />
               </button>
-              <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-6 uppercase tracking-tighter">
+              <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">
                 {editingApptId ? t("appointments.form_edit") : t("appointments.form_new")}
               </h3>
-              <div className="space-y-4">
+              <div className="space-y-2.5 md:space-y-4">
                 <div>
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_customer_label")}</label>
-                  <input type="text" value={apptForm.customerName} onChange={e => setApptForm({...apptForm, customerName: e.target.value})} placeholder={t("appointments.form_name_placeholder")} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                  <input type="text" value={apptForm.customerName} onChange={e => setApptForm({...apptForm, customerName: e.target.value})} placeholder={t("appointments.form_name_placeholder")} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div>
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_email")}</label>
-                    <input type="email" value={apptForm.customerEmail} onChange={e => setApptForm({...apptForm, customerEmail: e.target.value})} placeholder={t("appointments.form_email")} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                    <input type="email" value={apptForm.customerEmail} onChange={e => setApptForm({...apptForm, customerEmail: e.target.value})} placeholder={t("appointments.form_email")} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                   </div>
                   <div>
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_phone")}</label>
-                    <input type="tel" value={apptForm.customerPhone} onChange={e => setApptForm({...apptForm, customerPhone: e.target.value})} placeholder={t("appointments.form_phone")} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                    <input type="tel" value={apptForm.customerPhone} onChange={e => setApptForm({...apptForm, customerPhone: e.target.value})} placeholder={t("appointments.form_phone")} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                   </div>
                 </div>
                 <div>
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_store")}</label>
-                  <select value={apptForm.storeId} onChange={e => setApptForm({...apptForm, storeId: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic">
+                  <select value={apptForm.storeId} onChange={e => setApptForm({...apptForm, storeId: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm italic">
                     <option value="">{t("appointments.no_store")}</option>
                     {stores.map((s: any) => (
                       <option key={s._id || s.id} value={s._id || s.id}>{s.name}</option>
                     ))}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div>
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_date")}</label>
-                    <input type="date" value={apptForm.date} onChange={e => setApptForm({...apptForm, date: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                    <input type="date" value={apptForm.date} onChange={e => setApptForm({...apptForm, date: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                   </div>
                   <div>
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_time")}</label>
-                    <input type="time" value={apptForm.time} onChange={e => setApptForm({...apptForm, time: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                    <input type="time" value={apptForm.time} onChange={e => setApptForm({...apptForm, time: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div>
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_duration")}</label>
-                    <input type="number" value={apptForm.duration} onChange={e => setApptForm({...apptForm, duration: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                    <input type="number" value={apptForm.duration} onChange={e => setApptForm({...apptForm, duration: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                   </div>
                   <div>
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_status")}</label>
-                    <select value={apptForm.status} onChange={e => setApptForm({...apptForm, status: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic">
+                    <select value={apptForm.status} onChange={e => setApptForm({...apptForm, status: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm italic">
                       <option value="pending">{t("appointments.status_pending")}</option>
                       <option value="confirmed">{t("appointments.status_confirmed")}</option>
                       <option value="completed">{t("appointments.status_completed")}</option>
@@ -1332,12 +1332,12 @@ export default function UserDashboard({
                 </div>
                 <div>
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("appointments.form_notes")}</label>
-                  <textarea value={apptForm.notes} onChange={e => setApptForm({...apptForm, notes: e.target.value})} placeholder={t("appointments.form_notes_placeholder")} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-sm" />
+                  <textarea value={apptForm.notes} onChange={e => setApptForm({...apptForm, notes: e.target.value})} placeholder={t("appointments.form_notes_placeholder")} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-20 mt-1 text-xs md:text-sm" />
                 </div>
                 <button
                   onClick={handleSaveAppt}
                   disabled={apptSaving || !apptForm.customerName || !apptForm.date || !apptForm.time}
-                  className="w-full py-4 bg-red-600 text-white rounded-2xl font-black italic text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 md:py-4 bg-red-600 text-white rounded-xl md:rounded-2xl font-black italic text-xs md:text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {apptSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {editingApptId ? t("appointments.form_save") : t("appointments.form_create")}
@@ -1363,7 +1363,7 @@ export default function UserDashboard({
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="w-full max-w-lg bg-white rounded-[2.5rem] p-8 shadow-4xl relative max-h-[85vh] overflow-y-auto"
+              className="w-full max-w-lg bg-white rounded-[2.5rem] p-5 md:p-8 shadow-4xl relative max-h-[85vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <button
@@ -1373,11 +1373,11 @@ export default function UserDashboard({
                 <X className="w-5 h-5 text-zinc-400" />
               </button>
 
-              <div className="text-center mb-8">
-                <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Zap className="w-7 h-7 text-red-600" />
+              <div className="text-center mb-5 md:mb-8">
+                <div className="w-10 h-10 md:w-14 md:h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Zap className="w-5 h-5 md:w-7 md:h-7 text-red-600" />
                 </div>
-                <h3 className="text-xl font-black italic text-zinc-950 uppercase tracking-tighter">
+                <h3 className="text-lg md:text-xl font-black italic text-zinc-950 uppercase tracking-tighter">
                   {t("user.update_plan") || "Actualizar Plan"}
                 </h3>
                 <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1 italic">
@@ -1385,7 +1385,7 @@ export default function UserDashboard({
                 </p>
               </div>
 
-              <div className="space-y-3 mb-6">
+              <div className="space-y-2 md:space-y-3 mb-4 md:mb-6">
                 {[
                   { id: "starter", name: "Starter", priceUsd: 29, desc: "Perfecto para emprender" },
                   { id: "business", name: "Business", priceUsd: 79, desc: "La más completa", popular: true },
@@ -1475,7 +1475,7 @@ export default function UserDashboard({
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-white rounded-[2rem] p-6 md:p-8 max-w-sm w-full shadow-2xl border border-zinc-100 space-y-5"
+              className="bg-white rounded-[2rem] p-4 md:p-6 max-w-sm w-full shadow-2xl border border-zinc-100 space-y-3 md:space-y-5"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-center">
@@ -1484,7 +1484,7 @@ export default function UserDashboard({
                 </div>
               </div>
               <div className="text-center space-y-2">
-                <h3 className="text-lg font-black italic text-zinc-950 uppercase">{t("user.cancel_plan") || "Cancelar Plan"}</h3>
+                <h3 className="text-base md:text-lg font-black italic text-zinc-950 uppercase">{t("user.cancel_plan") || "Cancelar Plan"}</h3>
                 <p className="text-xs font-bold text-zinc-400 italic">{t("user.cancel_plan_confirm") || "Se cancelará al final del periodo de facturación. No se realiza reembolso."}</p>
               </div>
               <div className="flex gap-2">

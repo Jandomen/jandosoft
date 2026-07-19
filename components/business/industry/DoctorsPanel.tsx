@@ -48,7 +48,7 @@ export default function DoctorsPanel({ storeId, onSaveStore, store }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {items.map(item => (
           <div key={item.id} className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-zinc-100 shadow-sm p-5 md:p-6 space-y-4 hover:shadow-lg hover:border-zinc-200 transition-all group">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-2 md:gap-3">
               <div className="min-w-0 flex-1">
                 <h4 className="font-black italic text-zinc-950 text-sm md:text-base leading-tight truncate">{item.name}</h4>
                 <span className="text-[9px] font-bold text-zinc-400 uppercase italic">{item.specialty || "—"}</span>
@@ -78,31 +78,31 @@ export default function DoctorsPanel({ storeId, onSaveStore, store }: Props) {
       <AnimatePresence>
         {showModal && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4" onClick={() => { setShowModal(false); setEditing(null); }}>
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
               <button onClick={() => { setShowModal(false); setEditing(null); }} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
-              <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editing ? t("industry.doctors.edit_title") : t("industry.doctors.new_title")}</h3>
+              <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editing ? t("industry.doctors.edit_title") : t("industry.doctors.new_title")}</h3>
               <div className="space-y-3 md:space-y-4">
-                <input type="text" placeholder={t("industry.doctors.name_placeholder")} value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                <div className="grid grid-cols-2 gap-3">
-                  <input type="text" placeholder={t("industry.doctors.specialty_placeholder")} value={form.specialty} onChange={e => setForm({...form, specialty: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                  <input type="text" placeholder={t("industry.doctors.phone_placeholder")} value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                <input type="text" placeholder={t("industry.doctors.name_placeholder")} value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
+                  <input type="text" placeholder={t("industry.doctors.specialty_placeholder")} value={form.specialty} onChange={e => setForm({...form, specialty: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
+                  <input type="text" placeholder={t("industry.doctors.phone_placeholder")} value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                 </div>
-                <input type="email" placeholder={t("industry.doctors.email_placeholder")} value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                <input type="text" placeholder={t("industry.doctors.schedule_placeholder")} value={form.schedule} onChange={e => setForm({...form, schedule: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                <div className="grid grid-cols-2 gap-3">
+                <input type="email" placeholder={t("industry.doctors.email_placeholder")} value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
+                <input type="text" placeholder={t("industry.doctors.schedule_placeholder")} value={form.schedule} onChange={e => setForm({...form, schedule: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.doctors.license_label")}</label>
-                    <input type="text" placeholder={t("industry.doctors.license_placeholder")} value={form.licenseNumber} onChange={e => setForm({...form, licenseNumber: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    <input type="text" placeholder={t("industry.doctors.license_placeholder")} value={form.licenseNumber} onChange={e => setForm({...form, licenseNumber: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.doctors.department_label")}</label>
-                    <input type="text" placeholder={t("industry.doctors.department_placeholder")} value={form.department} onChange={e => setForm({...form, department: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    <input type="text" placeholder={t("industry.doctors.department_placeholder")} value={form.department} onChange={e => setForm({...form, department: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.doctors.fee_label")}</label>
-                    <input type="number" placeholder="0" value={form.consultationFee} onChange={e => setForm({...form, consultationFee: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    <input type="number" placeholder="0" value={form.consultationFee} onChange={e => setForm({...form, consultationFee: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                   </div>
                   <div className="space-y-1.5 flex items-end pb-3">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -111,9 +111,9 @@ export default function DoctorsPanel({ storeId, onSaveStore, store }: Props) {
                     </label>
                   </div>
                 </div>
-                <textarea placeholder={t("industry.doctors.bio_placeholder")} value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} rows={3} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm resize-none" />
-                <input type="text" placeholder={t("industry.doctors.image_url_placeholder")} value={form.imageUrl} onChange={e => setForm({...form, imageUrl: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                <button onClick={addItem} disabled={!form.name} className="w-full py-5 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
+                <textarea placeholder={t("industry.doctors.bio_placeholder")} value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} rows={3} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm resize-none" />
+                <input type="text" placeholder={t("industry.doctors.image_url_placeholder")} value={form.imageUrl} onChange={e => setForm({...form, imageUrl: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
+                <button onClick={addItem} disabled={!form.name} className="w-full py-3 md:py-4 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
                   {editing ? t("industry.update") : t("industry.save")}
                 </button>
               </div>

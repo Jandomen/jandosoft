@@ -233,43 +233,43 @@ export default function BarbersPanel({ storeId }: Props) {
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
               onClick={e => e.stopPropagation()}
               className="bg-white rounded-[2rem] w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
-              <div className="flex items-center justify-between p-5 border-b border-zinc-100">
-                <h4 className="text-sm font-black italic uppercase tracking-tighter">{editingBarber ? t("barbershop.edit_barber") : t("barbershop.new_barber")}</h4>
+              <div className="flex items-center justify-between p-4 md:p-5 border-b border-zinc-100">
+                <h4 className="text-xs md:text-sm font-black italic uppercase tracking-tighter">{editingBarber ? t("barbershop.edit_barber") : t("barbershop.new_barber")}</h4>
                 <button onClick={() => setShowModal(false)} className="p-1 hover:bg-zinc-50 rounded-lg"><X className="w-4 h-4 text-zinc-400" /></button>
               </div>
-              <div className="p-5 space-y-4">
+              <div className="p-4 md:p-5 space-y-2.5 md:space-y-4">
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.barber_name")}</label>
                   <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
+                    className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.phone")}</label>
                     <input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
-                      className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
+                      className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.email")}</label>
                     <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-                      className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
+                      className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.photo_url")}</label>
                   <input type="text" value={form.photoUrl} onChange={e => setForm({ ...form, photoUrl: e.target.value })}
-                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
+                    className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.specialties")}</label>
                   <input type="text" value={form.specialties} onChange={e => setForm({ ...form, specialties: e.target.value })}
                     placeholder={t("barbershop.specialties_placeholder")}
-                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
+                    className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.bio")}</label>
                   <textarea value={form.bio} rows={2} onChange={e => setForm({ ...form, bio: e.target.value })}
-                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all resize-none" />
+                    className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all resize-none" />
                 </div>
 
                 <div className="space-y-2">
@@ -300,7 +300,7 @@ export default function BarbersPanel({ storeId }: Props) {
                 </div>
 
                 <motion.button whileTap={{ scale: 0.97 }} onClick={saveBarber} disabled={!form.name || !form.phone}
-                  className="w-full py-4 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
+                  className="w-full py-3 md:py-4 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
                   {t("barbershop.save")}
                 </motion.button>
               </div>

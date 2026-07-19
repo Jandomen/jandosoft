@@ -308,13 +308,13 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, sto
       <AnimatePresence>
         {showForm && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => { setShowForm(false); setEditingCampaign(null); }}>
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-lg bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-lg bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
               <button onClick={() => { setShowForm(false); setEditingCampaign(null); }} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
-              <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editingCampaign ? t("campaigns.form_edit") : t("campaigns.form_new")}</h3>
+              <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editingCampaign ? t("campaigns.form_edit") : t("campaigns.form_new")}</h3>
               <div className="space-y-3 md:space-y-5 max-h-[70vh] overflow-y-auto pr-1 md:pr-2">
                 <div>
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("campaigns.form_name_label")}</label>
-                  <input type="text" placeholder={t("campaigns.form_name_placeholder")} value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                  <input type="text" placeholder={t("campaigns.form_name_placeholder")} value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -331,7 +331,7 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, sto
                   </div>
                   <div>
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("campaigns.form_audience_label")}</label>
-                    <select value={form.audience} onChange={e => setForm({...form, audience: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic text-sm">
+                    <select value={form.audience} onChange={e => setForm({...form, audience: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm italic">
                       <option value="all">{t("campaigns.form_audience_all")}</option>
                       <option value="active">{t("campaigns.form_audience_active")}</option>
                       <option value="new">{t("campaigns.form_audience_new")}</option>
@@ -342,12 +342,12 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, sto
 
                 <div>
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("campaigns.form_subject_label")}</label>
-                  <input type="text" placeholder={form.type === "email" ? t("campaigns.form_subject_email_placeholder") : t("campaigns.form_subject_sms_placeholder")} value={form.subject} onChange={e => setForm({...form, subject: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                  <input type="text" placeholder={form.type === "email" ? t("campaigns.form_subject_email_placeholder") : t("campaigns.form_subject_sms_placeholder")} value={form.subject} onChange={e => setForm({...form, subject: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                 </div>
 
                 <div>
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("campaigns.form_message_label")}</label>
-                  <textarea placeholder={t("campaigns.form_message_placeholder")} value={form.body} onChange={e => setForm({...form, body: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-32 mt-1 text-sm" />
+                  <textarea placeholder={t("campaigns.form_message_placeholder")} value={form.body} onChange={e => setForm({...form, body: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-32 mt-1 text-xs md:text-sm" />
                   <p className="text-[8px] font-bold text-zinc-400 italic mt-1 ml-1">{t("campaigns.characters").replace("{n}", String(form.body.length))}{form.type === "sms" ? t("campaigns.sms_count").replace("{n}", String(Math.ceil(form.body.length / 160))) : ""}</p>
                 </div>
 
@@ -362,11 +362,11 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, sto
                     </button>
                   </div>
                   {form.schedule === "scheduled" && (
-                    <input type="datetime-local" value={form.scheduledAt} onChange={e => setForm({...form, scheduledAt: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-2 text-sm" />
+                    <input type="datetime-local" value={form.scheduledAt} onChange={e => setForm({...form, scheduledAt: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-2 text-sm" />
                   )}
                 </div>
 
-                <button onClick={save} disabled={!form.name || !form.subject || !form.body || (form.schedule === "scheduled" && !form.scheduledAt)} className="w-full py-4 md:py-5 bg-red-600 text-white rounded-2xl font-black italic text-sm md:text-base hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2">
+                <button onClick={save} disabled={!form.name || !form.subject || !form.body || (form.schedule === "scheduled" && !form.scheduledAt)} className="w-full py-3 md:py-4 bg-red-600 text-white rounded-2xl font-black italic text-sm md:text-base hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2">
                   {editingCampaign ? t("campaigns.form_submit_update") : form.schedule === "scheduled" ? t("campaigns.form_submit_schedule") : t("campaigns.form_submit_draft")}
                 </button>
               </div>
@@ -379,26 +379,26 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, sto
       <AnimatePresence>
         {showQuickEmail && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setShowQuickEmail(false)}>
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] p-6 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] p-4 md:p-6 shadow-4xl relative" onClick={e => e.stopPropagation()}>
               <button onClick={() => setShowQuickEmail(false)} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 text-zinc-400" /></button>
               <div className="flex items-center gap-3 mb-5">
                 <div className="p-2.5 bg-red-50 rounded-xl"><Mail className="w-5 h-5 text-red-600" /></div>
-                <h3 className="text-lg font-black italic text-zinc-950 uppercase tracking-tighter">Correo rápido</h3>
+                <h3 className="text-base md:text-lg font-black italic text-zinc-950 uppercase tracking-tighter">Correo rápido</h3>
               </div>
               <div className="space-y-4">
                 <div>
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Para</label>
-                  <input type="email" placeholder="correo@ejemplo.com" value={quickEmail.to} onChange={e => setQuickEmail({...quickEmail, to: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                  <input type="email" placeholder="correo@ejemplo.com" value={quickEmail.to} onChange={e => setQuickEmail({...quickEmail, to: e.target.value})} className="w-full bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                 </div>
                 <div>
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Asunto</label>
-                  <input type="text" placeholder="Asunto del correo" value={quickEmail.subject} onChange={e => setQuickEmail({...quickEmail, subject: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                  <input type="text" placeholder="Asunto del correo" value={quickEmail.subject} onChange={e => setQuickEmail({...quickEmail, subject: e.target.value})} className="w-full bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                 </div>
                 <div>
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Mensaje</label>
-                  <textarea placeholder="Escribe tu mensaje..." value={quickEmail.body} onChange={e => setQuickEmail({...quickEmail, body: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-28 mt-1 text-sm" />
+                  <textarea placeholder="Escribe tu mensaje..." value={quickEmail.body} onChange={e => setQuickEmail({...quickEmail, body: e.target.value})} className="w-full bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-28 mt-1 text-xs md:text-sm" />
                 </div>
-                <button onClick={sendQuickEmail} disabled={!quickEmail.to || !quickEmail.subject || !quickEmail.body || sendingQuick} className="w-full py-3.5 bg-red-600 text-white rounded-2xl font-black italic text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2">
+                <button onClick={sendQuickEmail} disabled={!quickEmail.to || !quickEmail.subject || !quickEmail.body || sendingQuick} className="w-full py-2.5 md:py-3.5 bg-red-600 text-white rounded-2xl font-black italic text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2">
                   {sendingQuick ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {sendingQuick ? "Enviando..." : "Enviar correo"}
                 </button>
               </div>

@@ -186,53 +186,53 @@ export default function BarberHistoryPanel({ storeId }: Props) {
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
               onClick={e => e.stopPropagation()}
               className="bg-white rounded-[2rem] w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
-              <div className="flex items-center justify-between p-5 border-b border-zinc-100">
-                <h4 className="text-sm font-black italic uppercase tracking-tighter">{t("barbershop.add_entry")}</h4>
+              <div className="flex items-center justify-between p-4 md:p-5 border-b border-zinc-100">
+                <h4 className="text-xs md:text-sm font-black italic uppercase tracking-tighter">{t("barbershop.add_entry")}</h4>
                 <button onClick={() => setShowModal(false)} className="p-1 hover:bg-zinc-50 rounded-lg"><X className="w-4 h-4 text-zinc-400" /></button>
               </div>
-              <div className="p-5 space-y-4">
+              <div className="p-4 md:p-5 space-y-2.5 md:space-y-4">
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.barber")}</label>
                   <select value={form.barberId} onChange={e => setForm({ ...form, barberId: e.target.value })}
-                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all">
+                    className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all">
                     <option value="">{t("barbershop.select_barber")}</option>
                     {barbers.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.customer_name")}</label>
                     <input type="text" value={form.customerName} onChange={e => setForm({ ...form, customerName: e.target.value })}
-                      className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
+                      className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.customer_phone")}</label>
                     <input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
-                      className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
+                      className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.service")}</label>
                   <input type="text" value={form.service} onChange={e => setForm({ ...form, service: e.target.value })}
-                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
+                    className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2 md:gap-3">
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.price")}</label>
                     <input type="number" min="0" step="0.01" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })}
-                      className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
+                      className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.duration")}</label>
                     <div className="flex items-center gap-1">
                       <input type="number" min="0" value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })}
-                        className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
+                        className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
                     </div>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.rating")}</label>
                     <select value={form.rating} onChange={e => setForm({ ...form, rating: e.target.value })}
-                      className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all">
+                      className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all">
                       {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} ★</option>)}
                     </select>
                   </div>
@@ -240,16 +240,16 @@ export default function BarberHistoryPanel({ storeId }: Props) {
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.date")}</label>
                   <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
-                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
+                    className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("barbershop.notes")}</label>
                   <textarea value={form.notes} rows={2} onChange={e => setForm({ ...form, notes: e.target.value })}
-                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all resize-none" />
+                    className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-xl border border-zinc-100 outline-none text-xs md:text-sm font-medium focus:bg-white focus:border-red-200 transition-all resize-none" />
                 </div>
                 <motion.button whileTap={{ scale: 0.97 }} onClick={addEntry}
                   disabled={!form.barberId || !form.customerName || !form.service}
-                  className="w-full py-4 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
+                  className="w-full py-3 md:py-4 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
                   {t("barbershop.save")}
                 </motion.button>
               </div>

@@ -49,7 +49,7 @@ export default function DocumentsPanel({ storeId, onSaveStore, store }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {items.map(item => (
           <div key={item.id} className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-zinc-100 shadow-sm p-5 md:p-6 space-y-4 hover:shadow-lg hover:border-zinc-200 transition-all group">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-2 md:gap-3">
               <div className="min-w-0 flex-1">
                 <h4 className="font-black italic text-zinc-950 text-sm md:text-base leading-tight truncate flex items-center gap-2">
                   <FileText className="w-4 h-4 text-zinc-400 shrink-0" /> {item.name}
@@ -78,45 +78,45 @@ export default function DocumentsPanel({ storeId, onSaveStore, store }: Props) {
       <AnimatePresence>
         {showModal && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4" onClick={() => { setShowModal(false); setEditing(null); }}>
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative" onClick={e => e.stopPropagation()}>
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-4 md:p-8 shadow-4xl relative" onClick={e => e.stopPropagation()}>
               <button onClick={() => { setShowModal(false); setEditing(null); }} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 hover:bg-zinc-50 rounded-xl"><X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" /></button>
-              <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editing ? t("industry.documents.edit_title") : t("industry.documents.new_title")}</h3>
+              <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 mb-4 md:mb-6 uppercase tracking-tighter">{editing ? t("industry.documents.edit_title") : t("industry.documents.new_title")}</h3>
               <div className="space-y-3 md:space-y-4">
-                <input type="text" placeholder={t("industry.documents.name_placeholder")} value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
-                <input type="text" placeholder={t("industry.documents.url_placeholder")} value={form.fileUrl} onChange={e => setForm({...form, fileUrl: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                <input type="text" placeholder={t("industry.documents.name_placeholder")} value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
+                <input type="text" placeholder={t("industry.documents.url_placeholder")} value={form.fileUrl} onChange={e => setForm({...form, fileUrl: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.documents.type_label")}</label>
-                  <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm">
+                  <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm">
                     {TYPES.map(t => <option key={t}>{t}</option>)}
                   </select>
                 </div>
-                <textarea placeholder={t("industry.documents.desc_placeholder")} value={form.desc} onChange={e => setForm({...form, desc: e.target.value})} rows={2} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm resize-none" />
-                <div className="grid grid-cols-2 gap-3">
+                <textarea placeholder={t("industry.documents.desc_placeholder")} value={form.desc} onChange={e => setForm({...form, desc: e.target.value})} rows={2} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm resize-none" />
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.documents.version_label")}</label>
-                    <input type="text" placeholder="1.0" value={form.version} onChange={e => setForm({...form, version: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    <input type="text" placeholder="1.0" value={form.version} onChange={e => setForm({...form, version: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.documents.size_label")}</label>
-                    <input type="number" placeholder="0" value={form.size} onChange={e => setForm({...form, size: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    <input type="number" placeholder="0" value={form.size} onChange={e => setForm({...form, size: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.documents.upload_date_label")}</label>
-                    <input type="date" value={form.uploadDate} onChange={e => setForm({...form, uploadDate: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    <input type="date" value={form.uploadDate} onChange={e => setForm({...form, uploadDate: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("industry.documents.expiry_label")}</label>
-                    <input type="date" value={form.expiryDate} onChange={e => setForm({...form, expiryDate: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                    <input type="date" value={form.expiryDate} onChange={e => setForm({...form, expiryDate: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                   </div>
                 </div>
-                <input type="text" placeholder={t("industry.documents.tags_placeholder")} value={form.tags} onChange={e => setForm({...form, tags: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-sm" />
+                <input type="text" placeholder={t("industry.documents.tags_placeholder")} value={form.tags} onChange={e => setForm({...form, tags: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all text-xs md:text-sm" />
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.signed} onChange={e => setForm({...form, signed: e.target.checked})} className="w-4 h-4 rounded border-zinc-300 text-red-600 focus:ring-red-500" />
                   <span className="text-[9px] font-black text-zinc-400 uppercase italic tracking-widest">{t("industry.documents.signed_label")}</span>
                 </label>
-                <button onClick={addItem} disabled={!form.name || !form.fileUrl} className="w-full py-5 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
+                <button onClick={addItem} disabled={!form.name || !form.fileUrl} className="w-full py-3 md:py-4 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
                   {editing ? t("industry.update") : t("industry.save")}
                 </button>
               </div>

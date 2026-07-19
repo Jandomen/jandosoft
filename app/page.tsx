@@ -156,22 +156,22 @@ function WebsitesContent({ userStores, user, onSelectStore, onCreateStore, onNav
 
       <AnimatePresence>
         {showForm && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setShowForm(false)}>
-            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-2xl p-6 md:p-8 shadow-xl relative" onClick={e => e.stopPropagation()}>
-              <button onClick={() => setShowForm(false)} className="absolute top-4 right-4 p-1.5 hover:bg-zinc-50 rounded-lg"><X className="w-4 h-4 text-zinc-400" /></button>
-              <h3 className="text-lg md:text-xl font-bold text-zinc-950 mb-6">{t("user.new_store_title")}</h3>
-              <div className="space-y-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 md:p-6" onClick={() => setShowForm(false)}>
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="w-full max-w-md bg-white rounded-2xl p-4 md:p-8 shadow-xl relative" onClick={e => e.stopPropagation()}>
+              <button onClick={() => setShowForm(false)} className="absolute top-3 md:top-4 right-3 md:right-4 p-1.5 hover:bg-zinc-50 rounded-lg"><X className="w-4 h-4 text-zinc-400" /></button>
+              <h3 className="text-base md:text-xl font-bold text-zinc-950 mb-4 md:mb-6">{t("user.new_store_title")}</h3>
+              <div className="space-y-2.5 md:space-y-4">
                 <div>
-                  <label className="text-xs font-medium text-zinc-400 mb-1 block">Nombre</label>
-                  <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Ej. Mi Empresa" className="w-full bg-zinc-50 p-3 rounded-lg border border-zinc-100 outline-none text-sm focus:bg-white focus:border-red-200 transition-all" />
+                  <label className="text-[11px] md:text-xs font-medium text-zinc-400 mb-1 block">Nombre</label>
+                  <input type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Ej. Mi Empresa" className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-lg border border-zinc-100 outline-none text-xs md:text-sm focus:bg-white focus:border-red-200 transition-all" />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-zinc-400 mb-1 block">Descripción</label>
-                  <textarea value={form.desc} onChange={e => setForm({...form, desc: e.target.value})} placeholder="Describe tu sitio..." className="w-full bg-zinc-50 p-3 rounded-lg border border-zinc-100 outline-none text-sm focus:bg-white focus:border-red-200 transition-all resize-none h-24" />
+                  <label className="text-[11px] md:text-xs font-medium text-zinc-400 mb-1 block">Descripción</label>
+                  <textarea value={form.desc} onChange={e => setForm({...form, desc: e.target.value})} placeholder="Describe tu sitio..." className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-lg border border-zinc-100 outline-none text-xs md:text-sm focus:bg-white focus:border-red-200 transition-all resize-none h-16 md:h-24" />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-zinc-400 mb-1 block">Tipo</label>
-                  <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-lg border border-zinc-100 outline-none text-sm focus:bg-white focus:border-red-200 transition-all">
+                  <label className="text-[11px] md:text-xs font-medium text-zinc-400 mb-1 block">Tipo</label>
+                  <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3 rounded-lg border border-zinc-100 outline-none text-xs md:text-sm focus:bg-white focus:border-red-200 transition-all">
                     <option value="tienda">Empresa</option>
                     <option value="blog">Blog</option>
                     <option value="portafolio">Portafolio</option>
@@ -186,7 +186,7 @@ function WebsitesContent({ userStores, user, onSelectStore, onCreateStore, onNav
                   if (onCreateStore) await onCreateStore(storeData);
                   setShowForm(false);
                   setForm({ name: "", desc: "", type: "tienda" });
-                }} disabled={!form.name.trim()} className="w-full py-3 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-all shadow-sm disabled:opacity-50">
+                }} disabled={!form.name.trim()} className="w-full py-2.5 md:py-3 bg-red-600 text-white rounded-lg text-xs md:text-sm font-semibold hover:bg-red-700 transition-all shadow-sm disabled:opacity-50">
                   CREAR SITIO
                 </button>
               </div>
