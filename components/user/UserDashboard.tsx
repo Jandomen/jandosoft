@@ -1169,27 +1169,27 @@ export default function UserDashboard({
               className="w-full max-w-md bg-white rounded-t-[2rem] md:rounded-[2rem] shadow-4xl relative max-h-[90vh] flex flex-col"
               onClick={e => e.stopPropagation()}
             >
-              <div className="sticky top-0 z-10 bg-white rounded-t-[2rem] md:rounded-t-[2rem] px-5 pt-5 pb-3 border-b border-zinc-50">
-                <button onClick={() => setShowCreateStore(false)} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl z-20">
+              <div className="sticky top-0 z-10 bg-white rounded-t-[2rem] md:rounded-t-[2rem] px-4 md:px-5 pt-4 md:pt-5 pb-2 md:pb-3 border-b border-zinc-50">
+                <button onClick={() => setShowCreateStore(false)} className="absolute top-3 md:top-4 right-3 md:right-4 p-2 hover:bg-zinc-50 rounded-xl z-20">
                   <X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" />
                 </button>
-                <h3 className="text-lg md:text-xl font-black italic text-zinc-950 uppercase tracking-tighter pr-10">
+                <h3 className="text-base md:text-xl font-black italic text-zinc-950 uppercase tracking-tighter pr-10">
                   {editingStoreId ? t("biz.edit_store") : t("user.new_store_title")}
                 </h3>
               </div>
-              <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
+              <div className="overflow-y-auto flex-1 px-4 md:px-5 py-3 md:py-4 space-y-2 md:space-y-3">
                 <div>
-                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_edit_name")}</label>
-                  <input data-tour="form_name" type="text" value={storeForm.name} onChange={e => setStoreForm({...storeForm, name: e.target.value})} placeholder={t("user.store_name_placeholder")} className="w-full bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                  <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_edit_name")}</label>
+                  <input data-tour="form_name" type="text" value={storeForm.name} onChange={e => setStoreForm({...storeForm, name: e.target.value})} placeholder={t("user.store_name_placeholder")} className="w-full bg-zinc-50 p-2 md:p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                 </div>
                 <div>
-                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_edit_desc")}</label>
-                  <textarea data-tour="form_desc" value={storeForm.desc} onChange={e => setStoreForm({...storeForm, desc: e.target.value})} placeholder={t("user.desc_placeholder")} className="w-full bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-16 mt-1 text-sm" />
+                  <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_edit_desc")}</label>
+                  <textarea data-tour="form_desc" value={storeForm.desc} onChange={e => setStoreForm({...storeForm, desc: e.target.value})} placeholder={t("user.desc_placeholder")} className="w-full bg-zinc-50 p-2 md:p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-12 md:h-16 mt-1 text-xs md:text-sm" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 md:gap-3">
                   <div>
-                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_field_industry")}</label>
-                    <select data-tour="form_industry" value={storeForm.industry} onChange={e => setStoreForm({...storeForm, industry: e.target.value})} className="w-full bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic">
+                    <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_field_industry")}</label>
+                    <select data-tour="form_industry" value={storeForm.industry} onChange={e => setStoreForm({...storeForm, industry: e.target.value})} className="w-full bg-zinc-50 p-2 md:p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm italic">
                       <option value="tecnologia">{t("biz.industry_technology")}</option>
                       <option value="comercio">{t("biz.industry_commerce")}</option>
                       <option value="servicios">{t("biz.industry_services")}</option>
@@ -1199,8 +1199,8 @@ export default function UserDashboard({
                     </select>
                   </div>
                   <div>
-                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_field_type")}</label>
-                    <select data-tour="form_type" value={storeForm.type} onChange={e => setStoreForm({...storeForm, type: e.target.value})} className="w-full bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic">
+                    <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_field_type")}</label>
+                    <select data-tour="form_type" value={storeForm.type} onChange={e => setStoreForm({...storeForm, type: e.target.value})} className="w-full bg-zinc-50 p-2 md:p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm italic">
                       <option value="" disabled>{t("user.select_type")}</option>
                       <option value="general">{t("user.store_type_general")}</option>
                       <option value="ventas">{t("user.store_type_sales")}</option>
@@ -1213,8 +1213,8 @@ export default function UserDashboard({
                   </div>
                 </div>
                 <div>
-                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">MÓDULOS</label>
-                  <div className="flex flex-wrap gap-1.5 mt-1">
+                  <label className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">MÓDULOS</label>
+                  <div className="flex flex-wrap gap-1 md:gap-1.5 mt-1">
                     {["services", "documents", "inventory", "education"].map((mod) => {
                       const labels: Record<string, string> = {
                         services: "Servicios",
@@ -1233,7 +1233,7 @@ export default function UserDashboard({
                               : [...storeForm.modules, mod];
                             setStoreForm({...storeForm, modules: next.length ? next : ["services"]});
                           }}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold italic transition-all ${
+                          className={`px-2 md:px-2.5 py-1 rounded-lg text-[9px] md:text-[10px] font-bold italic transition-all ${
                             selected
                               ? "bg-red-600 text-white shadow-md"
                               : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
@@ -1247,12 +1247,12 @@ export default function UserDashboard({
                   <p className="text-[8px] text-zinc-300 italic mt-1 ml-1">Define qué módulos usa tu negocio.</p>
                 </div>
               </div>
-              <div className="sticky bottom-0 bg-white px-5 pb-5 pt-3 border-t border-zinc-50">
+              <div className="sticky bottom-0 bg-white px-4 md:px-5 pb-4 md:pb-5 pt-2 md:pt-3 border-t border-zinc-50">
                 <button
                   data-tour="form_submit"
                   onClick={handleCreateStore}
                   disabled={!storeForm.name || !storeForm.type}
-                  className="w-full py-3 bg-red-600 text-white rounded-xl font-black italic text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-2.5 md:py-3 bg-red-600 text-white rounded-xl font-black italic text-xs md:text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {editingStoreId ? t("biz.config_btn_save") : t("user.create")}
                 </button>
