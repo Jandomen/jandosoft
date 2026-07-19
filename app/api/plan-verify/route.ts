@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       const subId = session.subscription as string;
       try {
         const sub = await stripe.subscriptions.retrieve(subId) as any;
-        const periodEnd = new Date(sub.current_period_end * 1000);
+        const periodEnd = sub.current_period_end ? new Date(sub.current_period_end * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
         updateData.subscriptionExpiry = periodEnd;
         updateData.expiresAt = periodEnd;
         updateData.stripeSubscriptionId = subId;

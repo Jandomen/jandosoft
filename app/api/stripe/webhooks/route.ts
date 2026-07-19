@@ -81,12 +81,20 @@ async function updateUserSubscription(
   const plan = config.plans.find((p) => p.id === planId);
   const planType = plan?.id || "starter";
 
+  const safePeriodEnd = periodEnd instanceof Date && !isNaN(periodEnd.getTime())
+    ? periodEnd
+    : (() => {
+        const fallback = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        console.log(`[Webhook] Invalid periodEnd for sub=${subscriptionId} plan=${planId}. Using fallback: ${fallback.toISOString()}. Raw: ${periodEnd}`);
+        return fallback;
+      })();
+
   const updateData = {
     subscription: planType,
     plan: planType,
     planStatus: status,
-    subscriptionExpiry: periodEnd,
-    expiresAt: periodEnd,
+    subscriptionExpiry: safePeriodEnd,
+    expiresAt: safePeriodEnd,
     stripeSubscriptionId: subscriptionId,
     stripeCustomerId: customerId,
     customerId: customerId,
@@ -209,7 +217,13 @@ export async function POST(req: NextRequest) {
             }
 
             const sub = await stripe.subscriptions.retrieve(subscriptionId) as any;
-            const periodEnd = new Date(sub.current_period_end * 1000);
+            const rawPeriodEnd = sub.current_period_end;
+            const periodEnd = rawPeriodEnd && !isNaN(rawPeriodEnd)
+              ? new Date(rawPeriodEnd * 1000)
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            if (!rawPeriodEnd || isNaN(rawPeriodEnd)) {
+              console.warn("[Webhook] checkout.session.completed: current_period_end missing, using 30-day fallback");
+            }
             const status = sub.status;
             const billingInterval = sub.items?.data?.[0]?.plan?.interval || "month";
 
@@ -344,7 +358,13 @@ export async function POST(req: NextRequest) {
           const planId = subMetadata.planId;
           const subscriptionId = sub.id;
           const customerId = sub.customer as string;
-          const periodEnd = new Date(sub.current_period_end * 1000);
+          const rawPeriodEnd2 = sub.current_period_end;
+          const periodEnd = rawPeriodEnd2 && !isNaN(rawPeriodEnd2)
+            ? new Date(rawPeriodEnd2 * 1000)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          if (!rawPeriodEnd2 || isNaN(rawPeriodEnd2)) {
+            console.warn("[Webhook] subscription.created/updated: current_period_end missing, using 30-day fallback");
+          }
           const status = sub.status;
           const billingInterval = sub.items?.data?.[0]?.plan?.interval || "month";
 
@@ -388,7 +408,13 @@ export async function POST(req: NextRequest) {
           const customerEmail = subMetadata.customerEmail || null;
           const planId = subMetadata.planId;
           const customerId = subscription.customer as string;
-          const periodEnd = new Date(subscription.current_period_end * 1000);
+          const rawPeriodEnd3 = subscription.current_period_end;
+          const periodEnd = rawPeriodEnd3 && !isNaN(rawPeriodEnd3)
+            ? new Date(rawPeriodEnd3 * 1000)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          if (!rawPeriodEnd3 || isNaN(rawPeriodEnd3)) {
+            console.warn("[Webhook] invoice.paid: current_period_end missing, using 30-day fallback");
+          }
           const status = subscription.status;
           const billingInterval = subscription.items?.data?.[0]?.plan?.interval || "month";
 
