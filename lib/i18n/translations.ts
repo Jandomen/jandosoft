@@ -1551,6 +1551,11 @@ const translations: Record<Language, TranslationMap> = {
     "profile.delete_success_toast": "Cuenta eliminada. Gracias por usar Jandosoft.",
     "profile.delete_error": "Error al eliminar la cuenta. Intenta de nuevo.",
     "profile.delete_confirm_password": "Ingresa tu contraseña para eliminar la cuenta",
+    "profile.preferences": "Preferencias",
+    "profile.language": "Idioma",
+    "profile.theme": "Tema",
+    "profile.light_mode": "Modo claro",
+    "profile.dark_mode": "Modo oscuro",
 
     // Barbershop module
     "barbershop.barbers": "Barberos",
@@ -3715,6 +3720,11 @@ const translations: Record<Language, TranslationMap> = {
     "profile.delete_success_toast": "Account deleted. Thank you for using Jandosoft.",
     "profile.delete_error": "Error deleting account. Please try again.",
     "profile.delete_confirm_password": "Enter your password to delete your account",
+    "profile.preferences": "Preferences",
+    "profile.language": "Language",
+    "profile.theme": "Theme",
+    "profile.light_mode": "Light mode",
+    "profile.dark_mode": "Dark mode",
 
     // Barbershop module
     "barbershop.barbers": "Barbers",
@@ -5867,6 +5877,11 @@ const translations: Record<Language, TranslationMap> = {
     "profile.delete_success_toast": "Compte supprimé. Merci d'avoir utilisé Jandosoft.",
     "profile.delete_error": "Erreur lors de la suppression. Réessayez.",
     "profile.delete_confirm_password": "Entrez votre mot de passe pour supprimer le compte",
+    "profile.preferences": "Préférences",
+    "profile.language": "Langue",
+    "profile.theme": "Thème",
+    "profile.light_mode": "Mode clair",
+    "profile.dark_mode": "Mode sombre",
 
     // Module barberie
     "barbershop.barbers": "Barbiers",
@@ -7910,6 +7925,11 @@ const translations: Record<Language, TranslationMap> = {
     "profile.delete_success_toast": "账户已删除。感谢您使用Jandosoft。",
     "profile.delete_error": "删除账户时出错。请重试。",
     "profile.delete_confirm_password": "请输入您的密码以删除账户",
+    "profile.preferences": "偏好设置",
+    "profile.language": "语言",
+    "profile.theme": "主题",
+    "profile.light_mode": "浅色模式",
+    "profile.dark_mode": "深色模式",
 
     // 理发店模块
     "barbershop.barbers": "理发师",
@@ -9953,6 +9973,11 @@ const translations: Record<Language, TranslationMap> = {
     "profile.delete_success_toast": "खाता हटा दिया गया। Jandosoft का उपयोग करने के लिए धन्यवाद।",
     "profile.delete_error": "खाता हटाने में त्रुटि। कृपया पुनः प्रयास करें।",
     "profile.delete_confirm_password": "खाता हटाने के लिए अपना पासवर्ड दर्ज करें",
+    "profile.preferences": "प्राथमिकताएँ",
+    "profile.language": "भाषा",
+    "profile.theme": "थीम",
+    "profile.light_mode": "लाइट मोड",
+    "profile.dark_mode": "डार्क मोड",
 
     // बारबरशॉप मॉड्यूल
     "barbershop.barbers": "नाई",
@@ -11992,6 +12017,11 @@ const translations: Record<Language, TranslationMap> = {
     "profile.delete_success_toast": "계정이 삭제되었습니다. Jandosoft를 이용해 주셔서 감사합니다.",
     "profile.delete_error": "계정 삭제 중 오류가 발생했습니다. 다시 시도해 주세요.",
     "profile.delete_confirm_password": "계정을 삭제하려면 비밀번호를 입력하세요",
+    "profile.preferences": "환경설정",
+    "profile.language": "언어",
+    "profile.theme": "테마",
+    "profile.light_mode": "라이트 모드",
+    "profile.dark_mode": "다크 모드",
 
     // 미용실 모듈
     "barbershop.barbers": "이발사",
@@ -14031,6 +14061,11 @@ const translations: Record<Language, TranslationMap> = {
     "profile.delete_success_toast": "アカウントが削除されました。Jandosoftをご利用いただきありがとうございました。",
     "profile.delete_error": "アカウント削除中にエラーが発生しました。もう一度お試しください。",
     "profile.delete_confirm_password": "アカウントを削除するにはパスワードを入力してください",
+    "profile.preferences": "設定",
+    "profile.language": "言語",
+    "profile.theme": "テーマ",
+    "profile.light_mode": "ライトモード",
+    "profile.dark_mode": "ダークモード",
 
     // バーバーショップモジュール
     "barbershop.barbers": "バーバー",
@@ -16070,6 +16105,11 @@ const translations: Record<Language, TranslationMap> = {
     "profile.delete_success_toast": "Account eliminato. Grazie per aver usato Jandosoft.",
     "profile.delete_error": "Errore nell'eliminazione dell'account. Riprova.",
     "profile.delete_confirm_password": "Inserisci la password per eliminare l'account",
+    "profile.preferences": "Preferenze",
+    "profile.language": "Lingua",
+    "profile.theme": "Tema",
+    "profile.light_mode": "Modalità chiara",
+    "profile.dark_mode": "Modalità scura",
 
     // Modulo barbiere
     "barbershop.barbers": "Barbieri",
@@ -18108,6 +18148,11 @@ const translations: Record<Language, TranslationMap> = {
     "profile.delete_success_toast": "Conta excluída. Obrigado por usar Jandosoft.",
     "profile.delete_error": "Erro ao excluir conta. Tente novamente.",
     "profile.delete_confirm_password": "Digite sua senha para excluir a conta",
+    "profile.preferences": "Preferências",
+    "profile.language": "Idioma",
+    "profile.theme": "Tema",
+    "profile.light_mode": "Modo claro",
+    "profile.dark_mode": "Modo escuro",
 
     // Módulo barbearia
     "barbershop.barbers": "Barbeiros",
@@ -20146,6 +20191,11 @@ const translations: Record<Language, TranslationMap> = {
     "profile.delete_success_toast": "Аккаунт удалён. Спасибо за использование Jandosoft.",
     "profile.delete_error": "Ошибка при удалении аккаунта. Попробуйте снова.",
     "profile.delete_confirm_password": "Введите пароль для удаления аккаунта",
+    "profile.preferences": "Настройки",
+    "profile.language": "Язык",
+    "profile.theme": "Тема",
+    "profile.light_mode": "Светлая тема",
+    "profile.dark_mode": "Тёмная тема",
 
     // Модуль барбершопа
     "barbershop.barbers": "Барберы",

@@ -37,8 +37,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { generateInvoicePDF } from "@/lib/pdf-utils";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
-import { LanguageCarousel } from "@/components/ui/LanguageCarousel";
-import { useTheme } from "@/components/public/ThemeProvider";
 import { useToast } from "@/components/ui/Toast";
 import { PLANS, FREE_PLAN } from "@/lib/plans";
 
@@ -73,7 +71,6 @@ export default function UserDashboard({
   onDeleteStore,
 }: UserDashboardProps) {
   const { t } = useLanguage();
-  const { theme, toggle } = useTheme();
   const { showToast, ToastComponent } = useToast();
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [allPlans, setAllPlans] = useState<any[]>(PLANS);
@@ -528,7 +525,8 @@ export default function UserDashboard({
 
       {/* HEADER */}
 
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 max-[400px]:gap-5 gap-6 bg-zinc-950 p-5 sm:p-8 lg:p-10 rounded-[2rem] sm:rounded-[3rem] text-white shadow-3xl relative">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 bg-zinc-950 p-4 sm:p-8 lg:p-10 rounded-[2rem] sm:rounded-[3rem] text-white shadow-3xl relative overflow-hidden">
+
 
         <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/20 rounded-full blur-[100px] -mr-32 -mt-32" />
 
@@ -586,31 +584,11 @@ export default function UserDashboard({
           </div>
         </div>
 
-        <div className="relative z-10 flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-
-          <LanguageCarousel />
-
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={toggle}
-            className="flex items-center justify-center w-10 h-10 bg-white/10 backdrop-blur-xl rounded-xl border border-white/10 hover:bg-white/20 transition-all shrink-0"
-            aria-label={theme === "dark" ? "Modo claro" : "Modo oscuro"}
-          >
-            {theme === "dark" ? (
-              <svg className="w-4 h-4 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              </svg>
-            )}
-          </motion.button>
-
+        <div className="relative z-10 flex flex-wrap gap-2 w-full lg:w-auto">
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => onNavigate("chat")}
-            className="w-full sm:w-auto px-5 py-3 bg-white text-zinc-950 rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs uppercase tracking-wide sm:tracking-widest hover:bg-red-600 hover:text-white transition-all italic shadow-2xl"
+            className="flex-1 min-w-0 px-4 py-2.5 bg-white text-zinc-950 rounded-2xl font-black text-[10px] uppercase tracking-wide sm:tracking-widest hover:bg-red-600 hover:text-white transition-all italic shadow-2xl text-center"
           >
             {t("user.ai_support")}
           </motion.button>
@@ -619,19 +597,19 @@ export default function UserDashboard({
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => onNavigate("pricing")}
-              className="w-full sm:w-auto px-5 py-3 bg-red-600 text-white rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs uppercase tracking-wide sm:tracking-widest hover:bg-red-700 transition-all italic shadow-2xl flex items-center justify-center gap-2"
+              className="flex-1 min-w-0 px-4 py-2.5 bg-red-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-wide sm:tracking-widest hover:bg-red-700 transition-all italic shadow-2xl flex items-center justify-center gap-1.5"
             >
-              <Zap className="w-3 h-3" />
-              {isExpired ? (t("user.reactivate_plan") || "REACTIVAR PLAN") : (t("user.get_plan") || "OBTENER PLAN")}
+              <Zap className="w-3 h-3 shrink-0" />
+              {isExpired ? (t("user.reactivate_plan") || "REACTIVAR") : (t("user.get_plan") || "OBTENER PLAN")}
             </motion.button>
           )}
           {hasPaidPlan && (
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => onNavigate("profile")}
-              className="w-full sm:w-auto px-5 py-3 bg-white/20 backdrop-blur-xl text-white border border-white/20 rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs uppercase tracking-wide sm:tracking-widest hover:bg-white hover:text-zinc-950 transition-all italic shadow-2xl flex items-center justify-center gap-2"
+              className="flex-1 min-w-0 px-4 py-2.5 bg-white/20 backdrop-blur-xl text-white border border-white/20 rounded-2xl font-black text-[10px] uppercase tracking-wide sm:tracking-widest hover:bg-white hover:text-zinc-950 transition-all italic shadow-2xl flex items-center justify-center gap-1.5"
             >
-              <Zap className="w-3 h-3" />
+              <Zap className="w-3 h-3 shrink-0" />
               {t("user.update_plan") || "Mi Plan"}
             </motion.button>
           )}

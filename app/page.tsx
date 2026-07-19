@@ -66,7 +66,6 @@ import UserProfilePanel from "@/components/user/UserProfilePanel";
 import { Toast, useToast } from "@/components/ui/Toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn, slugify } from "@/lib/utils";
-import { useTheme } from "@/components/public/ThemeProvider";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 import { getPlanLimits, getPlanLabel } from "@/lib/plans";
@@ -309,7 +308,6 @@ interface Session {
 
 export default function Page() {
   const { t } = useLanguage();
-  const { theme, toggle: toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [businessSection, setBusinessSection] = useState<string>("overview");
   const [isLogged, setIsLogged] = useState(false);
@@ -771,15 +769,17 @@ export default function Page() {
          </div>
       </aside>
 
-      {/* Mobile bottom navigation — hidden when user has active paid plan */}
-          <nav className={cn("md:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 safe-area-bottom transition-all duration-300", _hasActivePaidPlan && "translate-y-full opacity-0 pointer-events-none")}>
+      {/* Mobile bottom navigation */}
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 safe-area-bottom">
             <div className="flex items-center justify-around h-16 px-2">
               {isLogged ? (
                 <>
                   <MobileNavItem icon={<LayoutDashboard className="w-5 h-5" />} label={t("nav.mystores")} active={activeTab === "dashboard"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("dashboard"); }} dataTour="create_store" />
                   <MobileNavItem icon={<Package className="w-5 h-5" />} label={t("nav.products")} active={activeTab === "business" && businessSection === "products"} onClick={() => { setMobileDrawerOpen(false); if (activeStoreId) { setBusinessSection("products"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
                   <MobileNavItem icon={<Bot className="w-5 h-5" />} label={t("nav.chat")} active={activeTab === "chat"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("chat"); }} dataTour="chat" />
-                  <MobileNavItem icon={<CreditCard className="w-5 h-5" />} label={user.subscription ? (t("nav.update_plan") || "Actualizar") : t("nav.plans")} active={activeTab === "pricing"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("pricing"); }} />
+                  {!_hasActivePaidPlan && (
+                    <MobileNavItem icon={<CreditCard className="w-5 h-5" />} label={user.subscription ? (t("nav.update_plan") || "Actualizar") : t("nav.plans")} active={activeTab === "pricing"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("pricing"); }} />
+                  )}
                   <MobileNavItem icon={<Menu className="w-5 h-5" />} label={t("nav.menu")} active={mobileDrawerOpen} onClick={() => setMobileDrawerOpen(true)} />
                 </>
               ) : (
@@ -815,21 +815,6 @@ export default function Page() {
                 <div className="flex items-center justify-between px-2 h-14 border-b border-zinc-100 shrink-0 overflow-hidden">
                   <span className="text-[10px] font-wallpoet tracking-[0.1em] text-red-600 truncate mr-1.5 min-w-0">JANDOSOFT</span>
                   <div className="flex items-center gap-1 shrink-0">
-                    <LanguageCarousel />
-                    <button
-                      onClick={toggleTheme}
-                      className="w-8 h-8 rounded-lg bg-zinc-50 hover:bg-zinc-100 flex items-center justify-center"
-                    >
-                      {theme === "dark" ? (
-                        <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                      ) : (
-                        <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                        </svg>
-                      )}
-                    </button>
                     {isLogged && (
                       <button
                         onClick={() => { setTourTrigger(n => n + 1); setMobileDrawerOpen(false); }}
@@ -909,7 +894,7 @@ export default function Page() {
         )}
       </AnimatePresence>
 
-      <main className={cn("flex-1 bg-zinc-50 relative flex flex-col overflow-hidden", _hasActivePaidPlan ? "pb-4 md:pb-0" : "pb-20 md:pb-0")}>
+      <main className="flex-1 bg-zinc-50 relative flex flex-col overflow-hidden pb-20 md:pb-0">
           <HeaderNav activeTab={activeTab} isLogged={isLogged} setActiveTab={setActiveTab} setShowLogin={setShowLogin} setMobileDrawerOpen={setMobileDrawerOpen} token={token} onRestartTour={() => setTourTrigger(n => n + 1)} onNavigateNotification={(section) => { if (activeStoreId) { setBusinessSection(section); setActiveTab("business"); } else showToast(t("status.select_store_first") || "Selecciona una empresa primero", "info"); }} />
 
           <div className="flex-1 overflow-y-auto p-4 max-[400px]:p-2.5 max-[340px]:p-1.5 md:p-8 relative">
@@ -1079,9 +1064,6 @@ function HeaderNav({ activeTab, isLogged, setActiveTab, setShowLogin, setMobileD
   activeTab: TabType; isLogged: boolean; setActiveTab: React.Dispatch<React.SetStateAction<TabType>>; setShowLogin: (v: boolean) => void; setMobileDrawerOpen: (v: boolean) => void; token: string | null; onRestartTour: () => void; onNavigateNotification?: (section: string) => void;
 }) {
   const { t } = useLanguage();
-  const { theme, toggle: toggleTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
   return (
     <header className="h-16 md:h-20 w-full bg-white/90 backdrop-blur-xl border-b border-zinc-100 flex items-center justify-between px-4 md:px-10 z-40">
       <div className="flex items-center gap-2 md:gap-4">
@@ -1089,22 +1071,6 @@ function HeaderNav({ activeTab, isLogged, setActiveTab, setShowLogin, setMobileD
         <div className="h-5 w-px bg-zinc-200 hidden md:block" />
       </div>
       <div className="flex items-center gap-2 md:gap-4">
-        <LanguageCarousel />
-        <button
-          onClick={toggleTheme}
-          className="w-8 h-8 rounded-lg bg-zinc-50 hover:bg-zinc-100 flex items-center justify-center transition-all"
-          aria-label={mounted ? (theme === "dark" ? "Modo claro" : "Modo oscuro") : "Modo oscuro"}
-        >
-          {mounted && theme === "dark" ? (
-            <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          ) : (
-            <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-            </svg>
-          )}
-        </button>
         {isLogged && (
           <>
             <button

@@ -17,9 +17,12 @@ import {
   CreditCard,
   AlertCircle,
   Crown,
+  Settings,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { useTheme } from "@/components/public/ThemeProvider";
+import { LanguageCarousel } from "@/components/ui/LanguageCarousel";
 import { PLANS } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +49,9 @@ export default function UserProfilePanel({
   onNavigateToPricing,
 }: UserProfilePanelProps) {
   const { t } = useLanguage();
+  const { theme, toggle: toggleTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const [name, setName] = useState(user.name || "");
   const [saving, setSaving] = useState(false);
@@ -470,6 +476,42 @@ export default function UserProfilePanel({
             )}
             {t("profile.change_password")}
           </motion.button>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 p-6 md:p-8 space-y-6">
+        <h3 className="text-sm font-semibold text-zinc-950 dark:text-white tracking-tight flex items-center gap-2">
+          <Settings className="w-4 h-4 text-red-500 dark:text-red-400" />
+          {t("profile.preferences") || "Preferencias"}
+        </h3>
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 mb-2">{t("profile.language") || "Idioma"}</p>
+            <LanguageCarousel />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 mb-2">{t("profile.theme") || "Tema"}</p>
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-3 px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-xl text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-all w-full"
+            >
+              {mounted && theme === "dark" ? (
+                <>
+                  <svg className="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  {t("profile.light_mode") || "Modo claro"}
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 text-zinc-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                  {t("profile.dark_mode") || "Modo oscuro"}
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
