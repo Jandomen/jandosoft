@@ -205,7 +205,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
 
   useEffect(() => {
     if (isBought && selectedPlan) {
-      const plan = plans.find((p) => p.id === selectedPlan);
+      const plan = plans.find((p) => p.id === selectedPlan) || PLANS.find((p) => p.id === selectedPlan);
       if (!plan) return;
       const transaction = {
         id: Math.random().toString(36).slice(2, 10).toUpperCase(),
@@ -219,7 +219,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
       };
       onPaymentSuccess(transaction);
     }
-  }, [isBought]);
+  }, [isBought, plans]);
 
   if (isBought) {
     return (
@@ -228,7 +228,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-8 shadow-xl shadow-emerald-50"><CheckCircle2 className="w-12 h-12" /></motion.div>
         <h3 className="max-[400px]:text-2xl text-4xl font-black mb-4 text-zinc-950 uppercase tracking-tighter italic">{t("plans.success_title")}</h3>
         <p className="text-zinc-500 mb-10 max-[400px]:text-sm text-lg font-medium leading-relaxed max-w-sm font-black italic">
-          {t("plans.success_desc").replace("{plan}", (() => { const p = plans.find((pp) => pp.id === selectedPlan); return p ? t(p.nameKey ?? p.name) : (selectedPlan ?? ""); })())}
+          {t("plans.success_desc").replace("{plan}", (() => { const p = plans.find((pp) => pp.id === selectedPlan) || PLANS.find((pp) => pp.id === selectedPlan); return p ? t(p.nameKey ?? p.name) : "tu plan"; })())}
         </p>
         <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setIsBought(false); setSelectedPlan(null); onLoginRequest?.(); }} className="max-[400px]:px-8 max-[400px]:py-4 max-[400px]:text-base px-12 py-5 bg-red-600 text-white rounded-2xl font-black text-xl hover:bg-red-700 transition-all shadow-2xl shadow-red-200 uppercase tracking-widest italic">
           {t("plans.continue")}
