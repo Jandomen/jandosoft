@@ -1340,7 +1340,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                             <tbody>
                                {allPayments.map((p: any) => {
                                   const status = p.status || p.paymentStatus || "unknown";
-                                  const statusColor = status === "completed" || status === "finished" || status === "confirmed"
+                                  const statusColor = status === "completed" || status === "finished" || status === "confirmed" || status === "succeeded"
                                     ? "bg-emerald-50 text-emerald-600"
                                     : status === "pending" || status === "waiting" || status === "confirming"
                                     ? "bg-amber-50 text-amber-600"
@@ -2508,7 +2508,7 @@ function UserPaymentsContent({ email }: { email: string }) {
     <div className="space-y-2">
       {payments.map((p: any) => {
         const status = p.status || p.paymentStatus || "unknown";
-        const statusColor = status === "completed" || status === "finished" || status === "confirmed" ? "bg-emerald-50 text-emerald-600" : status === "pending" || status === "waiting" || status === "confirming" ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600";
+        const statusColor = status === "completed" || status === "finished" || status === "confirmed" || status === "succeeded" ? "bg-emerald-50 text-emerald-600" : status === "pending" || status === "waiting" || status === "confirming" ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600";
         return (
           <div key={p._id} className="flex items-center justify-between gap-3 p-3 md:p-4 bg-zinc-50 rounded-xl">
             <div className="space-y-1">

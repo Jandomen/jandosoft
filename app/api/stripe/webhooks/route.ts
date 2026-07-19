@@ -285,6 +285,28 @@ export async function POST(req: NextRequest) {
             }
 
             console.log(`[Webhook] Duration plan activated: ${planId} (${durationDays}d) -> ${result ? "OK" : "NOT FOUND"} user=${userId || customerEmail}`);
+
+            try {
+              const amount = (session.amount_total || 0) / 100;
+              await Payment.create({
+                customerEmail: customerEmail || "",
+                customerName: "",
+                amount,
+                currency: session.currency || "mxn",
+                platformFee: 0,
+                netAmount: amount,
+                stripePaymentIntentId: piId || "",
+                externalId: session.id || "",
+                status: "succeeded",
+                description: `Plan ${plan?.name || planId} - ${durationDays} días`,
+                type: "plan_one_time",
+                planId: planId || "",
+                storeName: "",
+                ownerEmail: "",
+              });
+            } catch (e) {
+              console.error("[Webhook] Failed to create payment record for one-time plan:", e);
+            }
           } else if (metadata.type === "appointment_payment" && metadata.appointmentId) {
             if (piId) {
               const amount = (session.amount_total || 0) / 100;
@@ -424,6 +446,30 @@ export async function POST(req: NextRequest) {
               userId, customerEmail, planId || "starter",
               subId, customerId, status, periodEnd, billingInterval
             );
+
+            try {
+              const amount = (invoice.amount_paid || 0) / 100;
+              const planConfig2 = await getPlanConfig();
+              const planDef2 = planConfig2.plans.find((p: any) => p.id === planId) || PLANS.find((p) => p.id === planId);
+              await Payment.create({
+                customerEmail: customerEmail || "",
+                customerName: "",
+                amount,
+                currency: invoice.currency || "mxn",
+                platformFee: 0,
+                netAmount: amount,
+                stripePaymentIntentId: invoice.payment_intent as string || "",
+                externalId: invoice.id || "",
+                status: "succeeded",
+                description: `Plan ${planDef2?.name || planId} - Renovación`,
+                type: "subscription_renewal",
+                planId: planId || "",
+                storeName: "",
+                ownerEmail: "",
+              });
+            } catch (e) {
+              console.error("[Webhook] Failed to create payment record for renewal:", e);
+            }
           } else {
             // Fallback: look up by subscription field
             const updateData = {

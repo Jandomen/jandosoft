@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IPayment extends Document {
-  storeId: mongoose.Types.ObjectId;
+  storeId?: mongoose.Types.ObjectId;
   storeName: string;
   ownerEmail: string;
   customerEmail: string;
@@ -16,6 +16,8 @@ export interface IPayment extends Document {
   externalId: string;
   status: string;
   description: string;
+  type?: string;
+  planId?: string;
   createdAt: Date;
   organizationId?: mongoose.Types.ObjectId;
   appointmentId?: mongoose.Types.ObjectId;
@@ -24,7 +26,7 @@ export interface IPayment extends Document {
 }
 
 const PaymentSchema = new Schema<IPayment>({
-  storeId: { type: Schema.Types.ObjectId, ref: "Store", required: true, index: true },
+  storeId: { type: Schema.Types.ObjectId, ref: "Store", required: false, index: true },
   storeName: { type: String, default: "" },
   ownerEmail: { type: String, default: "", index: true },
   customerEmail: { type: String, default: "" },
@@ -39,6 +41,8 @@ const PaymentSchema = new Schema<IPayment>({
   externalId: { type: String, default: "" },
   status: { type: String, default: "pending" },
   description: { type: String, default: "" },
+  type: { type: String, default: "store" },
+  planId: { type: String, default: "" },
   appointmentId: { type: Schema.Types.ObjectId, ref: "Appointment" },
   createdAt: { type: Date, default: Date.now },
   receiptNumber: { type: String, default: "" },

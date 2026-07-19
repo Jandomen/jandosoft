@@ -23,7 +23,11 @@ export async function GET(req: NextRequest) {
     if (ownerEmail) filter.ownerEmail = ownerEmail;
     if (customerEmail) filter.customerEmail = customerEmail;
     if (status && status !== "all") {
-      filter.status = status;
+      if (status === "completed") {
+        filter.status = { $in: ["completed", "succeeded"] };
+      } else {
+        filter.status = status;
+      }
     }
     if (search) {
       filter.$or = [
@@ -76,7 +80,7 @@ export async function GET(req: NextRequest) {
     const paginatedPayments = allPayments.slice((page - 1) * limit, page * limit);
 
     const totalRevenue = allPayments
-      .filter((p: any) => p.status === "completed" || p.paymentStatus === "finished" || p.paymentStatus === "confirmed")
+      .filter((p: any) => p.status === "completed" || p.status === "succeeded" || p.paymentStatus === "finished" || p.paymentStatus === "confirmed")
       .reduce((sum: number, p: any) => sum + (p.displayAmount || 0), 0);
 
     return NextResponse.json({
