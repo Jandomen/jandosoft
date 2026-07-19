@@ -34,16 +34,25 @@ async function ensureWallpoetFont(doc: jsPDF) {
 
 async function addBrandHeader(doc: jsPDF) {
   doc.setFillColor(255, 0, 0);
-  doc.rect(0, 0, 210, 40, "F");
+  doc.rect(0, 0, 210, 42, "F");
+
+  doc.setFillColor(220, 0, 0);
+  doc.rect(0, 38, 210, 4, "F");
+
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
+  doc.setFontSize(26);
   await ensureWallpoetFont(doc);
   if (wallpoetLoaded) {
     doc.setFont("Wallpoet", "normal");
   } else {
     doc.setFont("helvetica", "bold");
   }
-  doc.text("JANDOSOFT", 20, 25);
+  doc.text("JANDOSOFT", 20, 26);
+
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(255, 200, 200);
+  doc.text("Enterprise Platform", 20, 34);
 }
 
 async function addBrandFooter(doc: jsPDF, y: number) {
@@ -73,71 +82,129 @@ export async function generatePaymentReceiptPDF(transaction: {
   const doc = new jsPDF();
   await addBrandHeader(doc);
 
-  doc.setFontSize(16);
-  doc.setTextColor(255, 0, 0);
+  doc.setFontSize(14);
+  doc.setTextColor(30, 30, 30);
   await ensureWallpoetFont(doc);
   if (wallpoetLoaded) {
     doc.setFont("Wallpoet", "normal");
   } else {
     doc.setFont("helvetica", "bold");
   }
-  doc.text("RECIBO DE PAGO", 150, 25);
+  doc.text("RECIBO DE PAGO", 20, 52);
 
-  const yStart = 55;
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(10);
+  doc.setDrawColor(255, 0, 0);
+  doc.setLineWidth(0.8);
+  doc.line(20, 56, 100, 56);
 
-  let y = yStart;
-  const leftX = 20;
+  const now = new Date();
+  const fullDate = transaction.date
+    ? transaction.date
+    : now.toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" });
+  const fullTime = now.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-  const emit = (label: string, value: string, x: number, row: number) => {
-    doc.setFont("helvetica", "bold");
-    doc.text(label, x, row);
-    doc.setFont("helvetica", "normal");
-    const vX = x + doc.getTextWidth(label) + 3;
-    doc.text(value, vX, row);
-    return row + 8;
-  };
+  const infoBoxY = 65;
+  doc.setFillColor(248, 248, 250);
+  doc.roundedRect(20, infoBoxY, 170, 48, 3, 3, "F");
 
-  y = emit("Recibo:", transaction.receiptNumber || transaction.paymentId || "N/A", leftX, y);
-  y = emit("Fecha:", transaction.date || new Date().toLocaleDateString(), leftX, y);
-  y = emit("Cliente:", transaction.customerName || transaction.customerEmail, leftX, y);
-  y = emit("Email:", transaction.customerEmail, leftX, y);
+  doc.setFontSize(9);
+  doc.setTextColor(130, 130, 140);
+  doc.setFont("helvetica", "normal");
+
+  doc.text("RECIBO #", 28, infoBoxY + 10);
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("helvetica", "bold");
+  doc.text(transaction.receiptNumber || transaction.paymentId || "N/A", 60, infoBoxY + 10);
+
+  doc.setTextColor(130, 130, 140);
+  doc.setFont("helvetica", "normal");
+  doc.text("FECHA", 28, infoBoxY + 20);
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("helvetica", "bold");
+  doc.text(fullDate, 60, infoBoxY + 20);
+
+  doc.setTextColor(130, 130, 140);
+  doc.setFont("helvetica", "normal");
+  doc.text("HORA", 120, infoBoxY + 20);
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("helvetica", "bold");
+  doc.text(fullTime, 138, infoBoxY + 20);
+
+  doc.setTextColor(130, 130, 140);
+  doc.setFont("helvetica", "normal");
+  doc.text("CLIENTE", 28, infoBoxY + 30);
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("helvetica", "bold");
+  doc.text(transaction.customerName || transaction.customerEmail || "N/A", 60, infoBoxY + 30);
+
+  doc.setTextColor(130, 130, 140);
+  doc.setFont("helvetica", "normal");
+  doc.text("EMAIL", 28, infoBoxY + 40);
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("helvetica", "bold");
+  const emailText = transaction.customerEmail || "N/A";
+  doc.text(emailText.length > 40 ? emailText.slice(0, 38) + "..." : emailText, 60, infoBoxY + 40);
+
   if (transaction.storeName) {
-    y = emit("Empresa:", transaction.storeName, leftX, y);
+    doc.setTextColor(130, 130, 140);
+    doc.setFont("helvetica", "normal");
+    doc.text("EMPRESA", 120, infoBoxY + 30);
+    doc.setTextColor(30, 30, 30);
+    doc.setFont("helvetica", "bold");
+    doc.text(transaction.storeName, 150, infoBoxY + 30);
   }
 
-  y += 10;
-
-  doc.setFillColor(244, 244, 245);
-  doc.rect(20, y - 5, 170, 8, "F");
+  const tableTopY = 130;
+  doc.setFillColor(255, 0, 0);
+  doc.roundedRect(20, tableTopY, 170, 10, 2, 2, "F");
+  doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
-  doc.text("Concepto", 25, y);
-  doc.text("Total", 170, y, { align: "right" });
+  doc.text("CONCEPTO", 28, tableTopY + 7);
+  doc.text("IMPORTE", 170, tableTopY + 7, { align: "right" });
 
+  doc.setTextColor(30, 30, 30);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  const rowY = y + 8;
-  doc.text(transaction.description || "Pago", 25, rowY);
-  doc.text(`${getCurrencySymbol(transaction.currency)}${transaction.amount.toFixed(2)} ${transaction.currency}`, 170, rowY, { align: "right" });
+  const rowY = tableTopY + 20;
+  doc.text(transaction.description || "Pago", 28, rowY);
 
-  const totalY = rowY + 10;
+  const symbol = getCurrencySymbol(transaction.currency);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${symbol}${transaction.amount.toFixed(2)} ${transaction.currency.toUpperCase()}`, 170, rowY, { align: "right" });
+
+  const totalY = rowY + 15;
   doc.setDrawColor(255, 0, 0);
+  doc.setLineWidth(1);
   doc.line(20, totalY, 190, totalY);
 
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("TOTAL PAGADO:", 110, totalY + 8);
+  doc.setTextColor(30, 30, 30);
+  doc.text("TOTAL PAGADO", 28, totalY + 10);
   doc.setTextColor(255, 0, 0);
-  doc.text(`${getCurrencySymbol(transaction.currency)}${transaction.amount.toFixed(2)} ${transaction.currency}`, 170, totalY + 8, { align: "right" });
+  doc.setFontSize(13);
+  doc.text(`${symbol}${transaction.amount.toFixed(2)} ${transaction.currency.toUpperCase()}`, 170, totalY + 10, { align: "right" });
 
-  doc.setTextColor(161, 161, 170);
+  const infoBottomY = totalY + 22;
+  doc.setFillColor(248, 248, 250);
+  doc.roundedRect(20, infoBottomY, 170, 16, 3, 3, "F");
+
+  doc.setTextColor(130, 130, 140);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.text(`Método de pago: ${transaction.paymentMethod}`, 20, totalY + 16);
+  doc.text(`Metodo de pago: ${transaction.paymentMethod || "Tarjeta"}`, 28, infoBottomY + 6);
+  doc.text("JANDOSOFT Enterprise - Plataforma SaaS", 28, infoBottomY + 12);
 
-  await addBrandFooter(doc, 280);
+  doc.setDrawColor(220, 220, 225);
+  doc.setLineWidth(0.3);
+  doc.line(20, 270, 190, 270);
+
+  doc.setTextColor(180, 180, 185);
+  doc.setFontSize(7);
+  doc.text("Este recibo es generado automaticamente por JANDOSOFT Enterprise.", 105, 275, { align: "center" });
+  doc.text("Para soporte: soporte@jandosoft.com", 105, 279, { align: "center" });
+
+  await addBrandFooter(doc, 285);
 
   return new Uint8Array(doc.output("arraybuffer"));
 }
