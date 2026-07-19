@@ -456,15 +456,15 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
   };
 
   const renderAgentBubble = (message: string) => (
-    <div className="flex items-start gap-3 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/40 dark:to-orange-950/40 rounded-2xl p-4 border border-red-100 dark:border-red-900/30">
-      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-orange-400 flex items-center justify-center shrink-0 shadow-sm">
-          <Bot className="w-5 h-5 text-white" />
+    <div className="flex items-start gap-2 max-[400px]:gap-1.5 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/40 dark:to-orange-950/40 rounded-xl max-[400px]:rounded-lg p-3 max-[400px]:p-2 border border-red-100 dark:border-red-900/30">
+      <div className="w-7 h-7 max-[400px]:w-6 max-[400px]:h-6 rounded-lg bg-gradient-to-br from-red-500 to-orange-400 flex items-center justify-center shrink-0 shadow-sm">
+          <Bot className="w-3.5 h-3.5 max-[400px]:w-3 max-[400px]:h-3 text-white" />
         </div>
         <div>
-          <p className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-1">
+          <p className="text-[9px] max-[400px]:text-[8px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-0.5">
             {t("tour.agente_ia")}
           </p>
-        <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
+        <p className="text-xs max-[400px]:text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed">
           {message}
         </p>
       </div>
@@ -540,7 +540,7 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92 }}
         transition={{ type: "spring", stiffness: 350, damping: 30 }}
-        className="fixed z-[210] w-[400px] max-w-[calc(100vw-32px)]"
+        className="fixed z-[210] w-[320px] max-[400px]:w-[280px] max-w-[calc(100vw-24px)]"
         style={{ top: tooltipPos.top, left: tooltipPos.left }}
       >
         <div
@@ -559,32 +559,32 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
           </svg>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl dark:shadow-black/50 overflow-hidden border border-zinc-100 dark:border-zinc-800">
-          <div className="flex items-center gap-3 p-4 pb-0">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl max-[400px]:rounded-xl shadow-2xl dark:shadow-black/50 overflow-hidden border border-zinc-100 dark:border-zinc-800">
+          <div className="flex items-center gap-2 max-[400px]:gap-1.5 p-3 max-[400px]:p-2.5 pb-0">
             <motion.div
               animate={{ scale: [1, 1.08, 1] }}
               transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-              className="w-10 h-10 rounded-2xl bg-gradient-to-br from-red-500 to-orange-400 flex items-center justify-center shadow-sm"
+              className="w-8 h-8 max-[400px]:w-7 max-[400px]:h-7 rounded-xl bg-gradient-to-br from-red-500 to-orange-400 flex items-center justify-center shadow-sm shrink-0"
             >
-              <Icon className="w-5 h-5 text-white" />
+              <Icon className="w-4 h-4 max-[400px]:w-3.5 max-[400px]:h-3.5 text-white" />
             </motion.div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-base font-bold text-zinc-900 dark:text-white tracking-tight truncate">
+              <h3 className="text-sm max-[400px]:text-xs font-bold text-zinc-900 dark:text-white tracking-tight truncate">
                 {current.title}
               </h3>
             </div>
             <button
               onClick={handleSkip}
-              className="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-all shrink-0"
+              className="w-6 h-6 max-[400px]:w-5 max-[400px]:h-5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-all shrink-0"
             >
-              <X className="w-3.5 h-3.5 text-zinc-400" />
+              <X className="w-3 h-3 max-[400px]:w-2.5 max-[400px]:h-2.5 text-zinc-400" />
             </button>
           </div>
 
-          <div className="p-4 space-y-4">
+          <div className="p-3 max-[400px]:p-2.5 space-y-3 max-[400px]:space-y-2">
             {renderAgentBubble(current.agentMessage)}
 
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="text-xs max-[400px]:text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
               {current.description}
             </p>
 
@@ -592,7 +592,7 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 p-3 rounded-xl text-xs font-bold"
+                className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 p-2 max-[400px]:p-1.5 rounded-xl text-[10px] max-[400px]:text-[9px] font-bold"
               >
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 {t("tour.completed")}
@@ -600,7 +600,7 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
             )}
 
             {!targetFound && hasTarget && (
-              <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-xl p-3 text-center font-medium">
+              <p className="text-[10px] max-[400px]:text-[9px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-xl p-2 max-[400px]:p-1.5 text-center font-medium">
                 {t("tour.waiting_element")}
               </p>
             )}
@@ -611,7 +611,7 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setStep((s) => Math.min(s + 1, steps.length - 1))}
-                className="w-full py-3 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl text-xs font-bold shadow-md shadow-red-600/20 hover:from-red-700 hover:to-red-600 transition-all flex items-center justify-center gap-2"
+                className="w-full py-2.5 max-[400px]:py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl text-[11px] max-[400px]:text-[10px] font-bold shadow-md shadow-red-600/20 hover:from-red-700 hover:to-red-600 transition-all flex items-center justify-center gap-2"
               >
                 <Bot className="w-4 h-4" /> {t("tour.btn_test_ai")}
               </motion.button>
@@ -619,18 +619,18 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
 
             {renderProgressDots()}
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 max-[400px]:gap-1">
               {!isFirst ? (
                 <button
                   onClick={handlePrev}
-                  className="px-3 py-2.5 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all flex items-center gap-1 shrink-0"
+                  className="px-2.5 max-[400px]:px-2 py-2 max-[400px]:py-1.5 rounded-xl text-[11px] max-[400px]:text-[10px] font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all flex items-center gap-1 shrink-0"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" /> {t("tour.btn_back")}
                 </button>
               ) : (
                 <button
                   onClick={handleSkip}
-                  className="px-3 py-2.5 rounded-xl text-xs font-semibold text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shrink-0"
+                  className="px-2.5 max-[400px]:px-2 py-2 max-[400px]:py-1.5 rounded-xl text-[11px] max-[400px]:text-[10px] font-semibold text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shrink-0"
                 >
                   {t("tour.btn_skip")}
                 </button>
@@ -639,7 +639,7 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
               <button
                 onClick={handleNext}
                 disabled={!conditionMet && !isWelcomeStep && current.id !== "explore"}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-2 max-[400px]:py-1.5 rounded-xl text-[11px] max-[400px]:text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 ${
                   conditionMet || isWelcomeStep || current.id === "explore"
                     ? "bg-gradient-to-r from-red-600 to-red-500 text-white hover:from-red-700 hover:to-red-600 shadow-md shadow-red-600/20"
                     : "bg-zinc-200 text-zinc-400 cursor-not-allowed dark:bg-zinc-800"
