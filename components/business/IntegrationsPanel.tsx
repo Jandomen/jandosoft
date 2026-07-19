@@ -599,21 +599,21 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        <h3 className="text-2xl max-[400px]:text-xl font-black italic text-zinc-950 uppercase tracking-tighter">
+      <div className="space-y-4 md:space-y-8">
+        <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">
           <Plug className="w-6 h-6 max-[400px]:w-5 max-[400px]:h-5 inline mr-3 text-red-600" />{t("integrations.title")}
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-40 bg-zinc-50 rounded-[2rem] animate-pulse" />)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4">
+          {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-28 md:h-40 bg-zinc-50 rounded-[2rem] animate-pulse" />)}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 md:space-y-8">
       <div>
-        <h3 className="text-2xl max-[400px]:text-xl font-black italic text-zinc-950 uppercase tracking-tighter">
+        <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">
           <Plug className="w-6 h-6 max-[400px]:w-5 max-[400px]:h-5 inline mr-3 text-red-600" />{t("integrations.title")}
         </h3>
         <p className="text-xs font-medium text-zinc-400 italic -mt-1">
@@ -639,7 +639,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
               <h4 className="text-sm font-black italic text-zinc-950 uppercase tracking-tight">{cat.label}</h4>
               <span className="text-[9px] font-bold text-zinc-300 italic">({catIntegrations.length})</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4">
               {catIntegrations.map(integration => {
                 if (integration.id === "stripe") {
                   const isConnected = stripeConnectStatus?.connected;

@@ -188,11 +188,11 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, sto
     t("campaigns.status_draft");
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 md:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3 max-[400px]:gap-3 gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-2 md:gap-4">
         <div>
-          <h3 className="text-2xl max-[400px]:text-xl font-black italic text-zinc-950 uppercase tracking-tighter">
+          <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">
             <Megaphone className="w-6 h-6 max-[400px]:w-5 max-[400px]:h-5 inline mr-3 text-red-600" />{t("campaigns.title")}
             <span className="text-zinc-400 text-base max-[400px]:text-sm ml-3">{campaigns.length}</span>
           </h3>
@@ -209,26 +209,26 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, sto
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-[400px]:gap-3 gap-5">
-        <div className="bg-white p-5 max-[400px]:p-5 p-6 rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 max-[400px]:space-y-2 space-y-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-5">
+        <div className="bg-white p-3 md:p-6 rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 max-[400px]:space-y-2 space-y-3">
           <div className="p-2.5 max-[400px]:p-2.5 p-3 bg-emerald-50 rounded-xl w-fit"><Send className="w-4 h-4 max-[400px]:w-4 max-[400px]:h-4 w-5 h-5 text-emerald-600" /></div>
           <p className="text-[8px] max-[400px]:text-[8px] text-[9px] font-black text-zinc-400 uppercase italic">{t("campaigns.stat_sent")}</p>
-          <p className="text-2xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">{totalSent.toLocaleString()}</p>
+          <p className="text-xl md:text-3xl font-black italic text-zinc-950">{totalSent.toLocaleString()}</p>
         </div>
-        <div className="bg-white p-5 max-[400px]:p-5 p-6 rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 max-[400px]:space-y-2 space-y-3">
+        <div className="bg-white p-3 md:p-6 rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 max-[400px]:space-y-2 space-y-3">
           <div className="p-2.5 max-[400px]:p-2.5 p-3 bg-blue-50 rounded-xl w-fit"><Eye className="w-4 h-4 max-[400px]:w-4 max-[400px]:h-4 w-5 h-5 text-blue-600" /></div>
           <p className="text-[8px] max-[400px]:text-[8px] text-[9px] font-black text-zinc-400 uppercase italic">{t("campaigns.stat_opened")}</p>
-          <p className="text-2xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">{totalOpened.toLocaleString()}</p>
+          <p className="text-xl md:text-3xl font-black italic text-zinc-950">{totalOpened.toLocaleString()}</p>
         </div>
-        <div className="bg-white p-5 max-[400px]:p-5 p-6 rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 max-[400px]:space-y-2 space-y-3">
+        <div className="bg-white p-3 md:p-6 rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 max-[400px]:space-y-2 space-y-3">
           <div className="p-2.5 max-[400px]:p-2.5 p-3 bg-purple-50 rounded-xl w-fit"><MousePointerClick className="w-4 h-4 max-[400px]:w-4 max-[400px]:h-4 w-5 h-5 text-purple-600" /></div>
           <p className="text-[8px] max-[400px]:text-[8px] text-[9px] font-black text-zinc-400 uppercase italic">{t("campaigns.stat_clicks")}</p>
-          <p className="text-2xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">{totalClicked.toLocaleString()}</p>
+          <p className="text-xl md:text-3xl font-black italic text-zinc-950">{totalClicked.toLocaleString()}</p>
         </div>
-        <div className="bg-white p-5 max-[400px]:p-5 p-6 rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 max-[400px]:space-y-2 space-y-3">
+        <div className="bg-white p-3 md:p-6 rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 max-[400px]:space-y-2 space-y-3">
           <div className="p-2.5 max-[400px]:p-2.5 p-3 bg-amber-50 rounded-xl w-fit"><BarChart3 className="w-4 h-4 max-[400px]:w-4 max-[400px]:h-4 w-5 h-5 text-amber-600" /></div>
           <p className="text-[8px] max-[400px]:text-[8px] text-[9px] font-black text-zinc-400 uppercase italic">{t("campaigns.stat_open_rate")}</p>
-          <p className="text-2xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">{totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0}%</p>
+          <p className="text-xl md:text-3xl font-black italic text-zinc-950">{totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0}%</p>
         </div>
       </div>
 

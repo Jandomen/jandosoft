@@ -898,7 +898,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
               <div className="space-y-6 md:space-y-8">
                 <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
                   <div className="flex items-center gap-3 md:gap-4 flex-wrap">
-                    <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("biz.products_metric")} <span className="text-red-600">({totalProducts}/{maxProducts})</span></h3>
+                    <h3 className="max-[400px]:text-xl text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("biz.products_metric")} <span className="text-red-600">({totalProducts}/{maxProducts})</span></h3>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
                       <input type="text" placeholder={t("biz.search_product")} value={searchProduct} onChange={e => setSearchProduct(e.target.value)} className="w-36 md:w-44 bg-zinc-50 pl-10 pr-4 py-2.5 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-red-200 transition-all" />
@@ -1308,7 +1308,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
             {section === "orders" && (
               <div className="space-y-4 md:space-y-6">
                 <div className="flex items-center gap-3 md:gap-4 flex-wrap">
-                  <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("biz.orders_metric")} <span className="text-red-600">({orders.length})</span></h3>
+                  <h3 className="max-[400px]:text-xl text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("biz.orders_metric")} <span className="text-red-600">({orders.length})</span></h3>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
                     <input type="text" placeholder={t("biz.search_order")} value={searchOrder} onChange={e => setSearchOrder(e.target.value)} className="w-36 md:w-44 bg-zinc-50 pl-10 pr-4 py-2.5 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-red-200 transition-all" />
@@ -1352,12 +1352,12 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
             {section === "orgsettings" && (
               <>
-                <div className="space-y-6 max-[400px]:space-y-5">
-                  <h3 className="text-2xl max-[400px]:text-xl font-black italic text-zinc-950 uppercase tracking-tighter">
+                <div className="space-y-3 md:space-y-6">
+                  <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">
                     <Settings className="w-6 h-6 max-[400px]:w-5 max-[400px]:h-5 inline mr-3 text-red-600" />{t("org.title")}
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-[400px]:gap-5 gap-6">
-                    <div className="bg-white p-6 max-[400px]:p-5 rounded-[2.5rem] border border-zinc-100 shadow-sm space-y-5 max-[400px]:space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
+                    <div className="bg-white p-4 md:p-6 rounded-[2.5rem] border border-zinc-100 shadow-sm space-y-5 max-[400px]:space-y-4">
                       <div className="flex items-center gap-3">
                         <Store className="w-5 h-5 text-red-600" />
                         <p className="text-sm max-[400px]:text-xs font-black italic text-zinc-950 uppercase tracking-tighter">{t("org.company")}</p>
@@ -1417,7 +1417,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
               <div className="space-y-6 md:space-y-8">
                 <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
                   <div className="flex items-center gap-3 md:gap-4 flex-wrap">
-                    <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("knowledgebase.title")} <span className="text-red-600">({kbEntries.length})</span></h3>
+                    <h3 className="max-[400px]:text-xl text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("knowledgebase.title")} <span className="text-red-600">({kbEntries.length})</span></h3>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
                       <input type="text" placeholder={t("knowledgebase.search_placeholder")} value={searchKb} onChange={e => setSearchKb(e.target.value)} className="w-36 md:w-44 bg-zinc-50 pl-10 pr-4 py-2.5 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-red-200 transition-all" />
@@ -1459,7 +1459,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 md:gap-4">
                     {kbEntries.filter(e => !searchKb || e.title.toLowerCase().includes(searchKb.toLowerCase()) || e.content.toLowerCase().includes(searchKb.toLowerCase()) || e.category.toLowerCase().includes(searchKb.toLowerCase()) || (e.question && e.question.toLowerCase().includes(searchKb.toLowerCase()))).map((entry) => (
-                      <div key={entry.id} className="bg-white max-[400px]:p-4 rounded-[1.5rem] md:rounded-[2rem] border border-zinc-100 p-6 space-y-3 md:space-y-4 group hover:border-red-200 transition-all shadow-sm">
+                      <div key={entry.id} className="bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] border border-zinc-100 space-y-3 md:space-y-4 group hover:border-red-200 transition-all shadow-sm">
                         <div className="flex items-start justify-between gap-3 md:gap-4">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-8 h-8 md:w-10 md:h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 shrink-0">
@@ -1636,7 +1636,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
               ) : (
               <div className="space-y-6 md:space-y-8 max-w-3xl">
                 <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
-                  <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("agentconfig.title")} <span className="text-red-600">{t("agentconfig.title_suffix")}</span></h3>
+                  <h3 className="max-[400px]:text-xl text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("agentconfig.title")} <span className="text-red-600">{t("agentconfig.title_suffix")}</span></h3>
                   <motion.button whileTap={{ scale: 0.95 }} disabled={agentConfigSaving} onClick={async () => {
                     setAgentConfigSaving(true);
                     try {
@@ -1660,7 +1660,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 </div>
 
                 {agentConfigTab === "general" && (
-                  <div className="space-y-6">
+                  <div className="space-y-3 md:space-y-6">
                     {/* Información General */}
                     <div className="bg-white rounded-[2rem] border border-zinc-100 p-6 md:p-8 shadow-sm space-y-5">
                       <div className="flex items-center gap-3 pb-3 border-b border-zinc-100">
@@ -1672,9 +1672,9 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       <div>
                         <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("agentconfig.system_prompt_label")}</label>
                         <p className="text-[8px] text-zinc-300 italic ml-1 mb-2 font-medium">{t("agentconfig.system_prompt_desc")}</p>
-                        <textarea value={agentConfig.systemPrompt} onChange={e => setAgentConfig(c => ({...c, systemPrompt: e.target.value}))} placeholder={t("agentconfig.system_prompt_placeholder")} className="w-full bg-zinc-50 p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-40 text-sm" />
+                        <textarea value={agentConfig.systemPrompt} onChange={e => setAgentConfig(c => ({...c, systemPrompt: e.target.value}))} placeholder={t("agentconfig.system_prompt_placeholder")} className="w-full bg-zinc-50 p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-28 md:h-40 text-sm" />
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5">
                         <div>
                           <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("agentconfig.temperature_label")}</label>
                           <p className="text-[8px] text-zinc-300 italic ml-1 mb-2 font-medium">{t("agentconfig.temperature_desc")}</p>
@@ -1706,7 +1706,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       <div>
                         <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("agentconfig.logo_label")}</label>
                         <p className="text-[8px] text-zinc-300 italic ml-1 mb-2 font-medium">{t("agentconfig.logo_desc")}</p>
-                        <div className="flex items-start gap-4">
+                        <div className="flex items-start gap-3 md:gap-4">
                           <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl border-2 border-dashed border-zinc-200 flex items-center justify-center overflow-hidden shrink-0 bg-zinc-50">
                             {agentConfig.logo ? (
                               <img src={agentConfig.logo} alt="Logo" className="w-full h-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
@@ -1735,7 +1735,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       </div>
                       <div>
                         <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest mb-3 block">{t("agentconfig.colors")}</label>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
                           <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
                             <input type="color" value={agentConfig.primaryColor} onChange={e => setAgentConfig(c => ({...c, primaryColor: e.target.value}))} className="w-10 h-10 rounded-xl border-2 border-zinc-200 cursor-pointer shrink-0" />
                             <div className="min-w-0">
@@ -1792,7 +1792,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
             {section === "agentinstall" && (
               <div className="space-y-6 md:space-y-8 max-w-3xl">
                 <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
-                  <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("agentinstall.title")} <span className="text-red-600">{t("agentinstall.title_suffix")}</span></h3>
+                  <h3 className="max-[400px]:text-xl text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("agentinstall.title")} <span className="text-red-600">{t("agentinstall.title_suffix")}</span></h3>
                   <a href={`${window.location.origin}/s/${(userStore as any)?.slug || ""}`} target="_blank" rel="noopener noreferrer" className="px-5 md:px-6 py-2.5 md:py-3 bg-red-600 text-white rounded-2xl font-black text-[10px] md:text-xs italic hover:bg-red-700 transition-all shadow-xl inline-flex items-center gap-2">
                     <ExternalLink className="w-3.5 h-3.5 md:w-4 md:h-4" /> {t("agentinstall.view_store")}
                   </a>
@@ -2110,7 +2110,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
               ) : (
               <div className="space-y-6 md:space-y-8">
                 <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
-                  <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("smartforms.title")} <span className="text-red-600">{t("smartforms.title_suffix")}</span></h3>
+                  <h3 className="max-[400px]:text-xl text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("smartforms.title")} <span className="text-red-600">{t("smartforms.title_suffix")}</span></h3>
                   <motion.button whileTap={{ scale: 0.95 }} onClick={() => {
                     setEditingSmartForm(null);
                     setSmartFormName("");
@@ -2129,7 +2129,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 md:gap-4">
                     {smartForms.map(form => (
-                      <div key={form.id} className="bg-white max-[400px]:p-4 p-6 rounded-[1.5rem] md:rounded-[2rem] border border-zinc-100 space-y-3 md:space-y-4 group hover:border-red-200 transition-all shadow-sm">
+                      <div key={form.id} className="bg-white p-4 md:p-6 rounded-xl md:rounded-[2rem] border border-zinc-100 space-y-3 md:space-y-4 group hover:border-red-200 transition-all shadow-sm">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-8 h-8 md:w-10 md:h-10 bg-violet-50 rounded-xl flex items-center justify-center text-violet-600 shrink-0">
@@ -2502,7 +2502,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <>
                 <div className="flex items-center justify-between flex-wrap gap-3 md:gap-4">
                   <div className="flex items-center gap-3 md:gap-4 flex-wrap">
-                    <h3 className="max-[400px]:text-xl text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("automations.title")} <span className="text-red-600">({automations.filter(a => a.enabled).length}/{automations.length})</span></h3>
+                    <h3 className="max-[400px]:text-xl text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("automations.title")} <span className="text-red-600">({automations.filter(a => a.enabled).length}/{automations.length})</span></h3>
                     <span className="text-[9px] font-black text-zinc-400 italic">{automations.length}/{maxAutomations} {t("automations.used")}</span>
                   </div>
                   <motion.button whileTap={{ scale: 0.95 }} onClick={() => {
@@ -3075,7 +3075,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
         {showUpgradeModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowUpgradeModal(false)}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} onClick={e => e.stopPropagation()}
-              className="bg-white rounded-[2rem] p-8 max-w-md w-full text-center space-y-6 shadow-2xl">
+              className="bg-white rounded-[2rem] p-5 md:p-8 max-w-md w-full text-center space-y-3 md:space-y-6 shadow-2xl">
               <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto">
                 <TrendingUp className="w-8 h-8 text-amber-600" />
               </div>
@@ -3169,7 +3169,7 @@ function SideBtn({ icon, label, active, onClick, badge }: { icon: any; label: st
 
 function FreePlanBlock({ feature, plan, price, onUpgrade, expired }: { feature: string; plan: string; price: number; onUpgrade?: () => void; expired?: boolean }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 md:py-24 text-center space-y-6">
+    <div className="flex flex-col items-center justify-center py-16 md:py-24 text-center space-y-3 md:space-y-6">
       <div className={cn("w-20 h-20 rounded-3xl flex items-center justify-center", expired ? "bg-red-50" : "bg-amber-50")}>
         <TrendingUp className={cn("w-10 h-10", expired ? "text-red-500" : "text-amber-500")} />
       </div>

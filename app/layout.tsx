@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Wallpoet } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono, Wallpoet } from "next/font/google";
 import "./globals.css";
 import { verifyEmailConfig } from "@/lib/email-verify";
 import { Providers } from "./Providers";
@@ -8,8 +8,8 @@ if (process.env.NODE_ENV !== "production") {
   verifyEmailConfig();
 }
 
-const inter = Inter({
-  variable: "--font-inter",
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
 });
 
@@ -45,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="es" className="scroll-smooth">
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} ${wallpoet.variable} antialiased selection:bg-brand/20`}
+        className={`${plusJakarta.variable} ${jetbrainsMono.variable} ${wallpoet.variable} antialiased selection:bg-brand/20`}
       >
         <Providers>
           {children}

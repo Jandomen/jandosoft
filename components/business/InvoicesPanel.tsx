@@ -80,19 +80,19 @@ export default function InvoicesPanel({ storeId, userEmail }: { storeId: string 
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        <h3 className="text-2xl max-[400px]:text-xl font-black italic text-zinc-950 uppercase tracking-tighter"><FileText className="w-6 h-6 max-[400px]:w-5 max-[400px]:h-5 inline mr-3 text-red-600" />{t("invoices.title")}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-[400px]:gap-4 gap-5">
-          {[1, 2, 3].map(i => <div key={i} className="h-28 max-[400px]:h-28 h-32 bg-zinc-50 rounded-[2rem] animate-pulse" />)}
+      <div className="space-y-4 md:space-y-8">
+        <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter"><FileText className="w-6 h-6 max-[400px]:w-5 max-[400px]:h-5 inline mr-3 text-red-600" />{t("invoices.title")}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-5">
+          {[1, 2, 3].map(i => <div key={i} className="h-20 md:h-32 bg-zinc-50 rounded-[2rem] animate-pulse" />)}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between flex-wrap gap-3 max-[400px]:gap-3 gap-4">
-        <h3 className="text-2xl max-[400px]:text-xl font-black italic text-zinc-950 uppercase tracking-tighter">
+    <div className="space-y-4 md:space-y-8">
+      <div className="flex items-center justify-between flex-wrap gap-2 md:gap-4">
+        <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">
           <FileText className="w-6 h-6 max-[400px]:w-5 max-[400px]:h-5 inline mr-3 text-red-600" />{t("invoices.title")}
           <span className="text-zinc-400 text-base max-[400px]:text-sm ml-3">{invoices.length}</span>
         </h3>
@@ -107,18 +107,18 @@ export default function InvoicesPanel({ storeId, userEmail }: { storeId: string 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-[400px]:gap-4 gap-5">
-        <div className="bg-white p-5 max-[400px]:p-5 p-6 rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 max-[400px]:space-y-2 space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-5">
+        <div className="bg-white p-3 md:p-6 rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 max-[400px]:space-y-2 space-y-3">
           <div className="p-2.5 max-[400px]:p-2.5 p-3 bg-red-50 rounded-xl w-fit"><FileText className="w-4 h-4 max-[400px]:w-4 max-[400px]:h-4 w-5 h-5 text-red-600" /></div>
           <p className="text-[8px] max-[400px]:text-[8px] text-[9px] font-black text-zinc-400 uppercase italic">{t("invoices.total_label")}</p>
-          <p className="text-2xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">{invoices.length}</p>
+          <p className="text-xl md:text-3xl font-black italic text-zinc-950">{invoices.length}</p>
         </div>
-        <div className="bg-white p-5 max-[400px]:p-5 p-6 rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 max-[400px]:space-y-2 space-y-3">
+        <div className="bg-white p-3 md:p-6 rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 max-[400px]:space-y-2 space-y-3">
           <div className="p-2.5 max-[400px]:p-2.5 p-3 bg-emerald-50 rounded-xl w-fit"><DollarSign className="w-4 h-4 max-[400px]:w-4 max-[400px]:h-4 w-5 h-5 text-emerald-600" /></div>
           <p className="text-[8px] max-[400px]:text-[8px] text-[9px] font-black text-zinc-400 uppercase italic">{t("invoices.billed_label")}</p>
-          <p className="text-2xl max-[400px]:text-2xl text-3xl font-black italic text-zinc-950">${totalAmount.toFixed(2)}</p>
+          <p className="text-xl md:text-3xl font-black italic text-zinc-950">${totalAmount.toFixed(2)}</p>
         </div>
-        <div className="bg-white p-5 max-[400px]:p-5 p-6 rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 max-[400px]:space-y-2 space-y-3">
+        <div className="bg-white p-3 md:p-6 rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 max-[400px]:space-y-2 space-y-3">
           <div className="p-2.5 max-[400px]:p-2.5 p-3 bg-blue-50 rounded-xl w-fit"><Calendar className="w-4 h-4 max-[400px]:w-4 max-[400px]:h-4 w-5 h-5 text-blue-600" /></div>
           <p className="text-[8px] max-[400px]:text-[8px] text-[9px] font-black text-zinc-400 uppercase italic">{t("invoices.last_invoice_label")}</p>
           <p className="text-lg max-[400px]:text-lg text-xl font-black italic text-zinc-950">{invoices.length > 0 ? new Date(invoices[0].createdAt).toLocaleDateString("es") : "—"}</p>
@@ -177,7 +177,7 @@ export default function InvoicesPanel({ storeId, userEmail }: { storeId: string 
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("invoices.client_name_label")}</label>
                   <input type="text" placeholder={t("invoices.client_name_placeholder")} value={form.userName} onChange={e => setForm({...form, userName: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-2 md:gap-4">
                   <div className="col-span-2">
                     <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("invoices.amount_label")}</label>
                     <input type="number" step="0.01" placeholder="0.00" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} className="w-full bg-zinc-50 p-2.5 md:p-3.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-xs md:text-sm" />
