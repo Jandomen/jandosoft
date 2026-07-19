@@ -211,28 +211,36 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
     const rect = el.getBoundingClientRect();
     setTargetRect(rect);
 
-    const tooltipW = 400;
-    const tooltipH = 340;
+    const isMobile = window.innerWidth <= 400;
+    const tooltipW = isMobile ? 280 : 400;
+    const tooltipH = isMobile ? 260 : 340;
 
     let left: number, top: number, arrowDir: "top" | "bottom";
-    const gap = 16;
+    const gap = isMobile ? 12 : 16;
 
-    top = rect.bottom + gap;
-    left = rect.left + rect.width / 2 - tooltipW / 2;
-
-    if (top + tooltipH > window.innerHeight - 16) {
-      top = rect.top - tooltipH - gap;
-      arrowDir = "bottom";
-    } else {
+    if (isMobile) {
+      left = (window.innerWidth - tooltipW) / 2;
+      top = (window.innerHeight - tooltipH) / 2;
       arrowDir = "top";
+    } else {
+      top = rect.bottom + gap;
+      left = rect.left + rect.width / 2 - tooltipW / 2;
+
+      if (top + tooltipH > window.innerHeight - 16) {
+        top = rect.top - tooltipH - gap;
+        arrowDir = "bottom";
+      } else {
+        arrowDir = "top";
+      }
+
+      if (current.id === "explore") left += 100;
     }
 
-    // Push tooltip +100px for the "explore" step so it doesn't overlap the sidebar
-    if (current.id === "explore") left += 100;
-
-    if (left < 16) left = 16;
-    if (left + tooltipW > window.innerWidth - 16) {
-      left = window.innerWidth - tooltipW - 16;
+    if (!isMobile) {
+      if (left < 16) left = 16;
+      if (left + tooltipW > window.innerWidth - 16) {
+        left = window.innerWidth - tooltipW - 16;
+      }
     }
     if (top < 16) top = 16;
 
@@ -536,7 +544,7 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
       <motion.div
         ref={tooltipRef}
         key={step}
-        initial={{ opacity: 0, scale: 0.92, y: tooltipPos.arrowDir === "top" ? 12 : -12 }}
+        initial={{ opacity: 0, scale: 0.92, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92 }}
         transition={{ type: "spring", stiffness: 350, damping: 30 }}
@@ -544,7 +552,7 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
         style={{ top: tooltipPos.top, left: tooltipPos.left }}
       >
         <div
-          className={`absolute ${
+          className={`absolute max-[400px]:hidden ${
             tooltipPos.arrowDir === "top" ? "-top-2" : "-bottom-2"
           } left-1/2 -translate-x-1/2 w-4 h-2 z-[1]`}
         >
