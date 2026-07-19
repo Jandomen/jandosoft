@@ -203,8 +203,8 @@ export default function UserProfilePanel({
   };
 
   const inputClass =
-    "w-full bg-zinc-50 p-3 pl-9 rounded-lg border border-zinc-100 outline-none text-sm focus:bg-white focus:border-red-200 focus:ring-2 focus:ring-red-600/10 transition-all";
-  const labelClass = "text-xs font-medium text-zinc-400 mb-1.5 block";
+    "w-full bg-zinc-50 dark:bg-zinc-800 p-3 pl-9 rounded-lg border border-zinc-100 dark:border-zinc-700 outline-none text-sm focus:bg-white dark:focus:bg-zinc-700 focus:border-red-200 dark:focus:border-red-500 focus:ring-2 focus:ring-red-600/10 dark:focus:ring-red-500/20 transition-all dark:text-white dark:placeholder:text-zinc-500";
+  const labelClass = "text-xs font-medium text-zinc-400 dark:text-zinc-500 mb-1.5 block";
 
   return (
     <motion.div
@@ -213,20 +213,20 @@ export default function UserProfilePanel({
       className="max-w-2xl mx-auto py-4 md:py-10 space-y-8"
     >
       <div className="flex items-center gap-4 mb-2">
-        <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center">
-          <User className="w-6 h-6 text-red-600" />
+        <div className="w-12 h-12 bg-red-50 dark:bg-red-950/30 rounded-xl flex items-center justify-center">
+          <User className="w-6 h-6 text-red-600 dark:text-red-400" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-zinc-950">
+          <h2 className="text-xl font-bold text-zinc-950 dark:text-white">
             {t("profile.title")}
           </h2>
-          <p className="text-xs text-zinc-400">{user.email}</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">{user.email}</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-zinc-100 p-6 md:p-8 space-y-6">
-        <h3 className="text-sm font-semibold text-zinc-950 tracking-tight flex items-center gap-2">
-          <Crown className="w-4 h-4 text-red-500" />
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 p-6 md:p-8 space-y-6">
+        <h3 className="text-sm font-semibold text-zinc-950 dark:text-white tracking-tight flex items-center gap-2">
+          <Crown className="w-4 h-4 text-red-500 dark:text-red-400" />
           {t("user.my_plan") || "Mi Plan"}
         </h3>
 
@@ -234,8 +234,8 @@ export default function UserProfilePanel({
           className={cn(
             "rounded-xl p-5 border",
             hasPaidPlan
-              ? "bg-gradient-to-br from-red-50 to-amber-50 border-red-100"
-              : "bg-zinc-50 border-zinc-100"
+              ? "bg-gradient-to-br from-red-50 to-amber-50 dark:from-red-950/20 dark:to-amber-950/20 border-red-100 dark:border-red-900/30"
+              : "bg-zinc-50 dark:bg-zinc-800 border-zinc-100 dark:border-zinc-700"
           )}
         >
           <div className="flex items-start justify-between mb-4">
@@ -246,7 +246,7 @@ export default function UserProfilePanel({
                     "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider",
                     hasPaidPlan
                       ? "bg-red-600 text-white"
-                      : "bg-zinc-200 text-zinc-600"
+                      : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
                   )}
                 >
                   {hasPaidPlan
@@ -254,20 +254,20 @@ export default function UserProfilePanel({
                     : t("user.free")}
                 </span>
                 {hasPaidPlan && (
-                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
                     {t("user.active") || "Activo"}
                   </span>
                 )}
                 {isExpired && (
-                  <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">
+                  <span className="text-[10px] font-bold text-red-500 dark:text-red-400 uppercase tracking-wider">
                     {t("user.expired") || "Expirado"}
                   </span>
                 )}
               </div>
               {hasPaidPlan && (
-                <p className="text-lg font-black text-zinc-950 mt-2">
+                <p className="text-lg font-black text-zinc-950 dark:text-white mt-2">
                   ${getPlanPrice(user.subscription)}{" "}
-                  <span className="text-xs font-medium text-zinc-400">
+                  <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">
                     USD/mes
                   </span>
                 </p>
@@ -277,11 +277,11 @@ export default function UserProfilePanel({
 
           <div className="space-y-2.5">
             {createdAtDate && (
-              <div className="flex items-center gap-2.5 text-xs text-zinc-500">
-                <Calendar className="w-3.5 h-3.5 text-zinc-400" />
+              <div className="flex items-center gap-2.5 text-xs text-zinc-500 dark:text-zinc-400">
+                <Calendar className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
                 <span>
                   {t("user.member_since") || "Miembro desde"}:{" "}
-                  <strong className="text-zinc-700">
+                  <strong className="text-zinc-700 dark:text-zinc-200">
                     {createdAtDate.toLocaleDateString("es-MX", {
                       year: "numeric",
                       month: "long",
@@ -292,11 +292,11 @@ export default function UserProfilePanel({
               </div>
             )}
             {expiryDate && hasPaidPlan && (
-              <div className="flex items-center gap-2.5 text-xs text-zinc-500">
-                <CreditCard className="w-3.5 h-3.5 text-zinc-400" />
+              <div className="flex items-center gap-2.5 text-xs text-zinc-500 dark:text-zinc-400">
+                <CreditCard className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
                 <span>
                   {t("user.expires") || "Expira"}:{" "}
-                  <strong className="text-zinc-700">
+                  <strong className="text-zinc-700 dark:text-zinc-200">
                     {expiryDate.toLocaleDateString("es-MX", {
                       year: "numeric",
                       month: "long",
@@ -332,7 +332,7 @@ export default function UserProfilePanel({
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setShowCancelConfirm(true)}
-                className="px-5 py-3 bg-white text-red-600 border border-red-200 rounded-xl text-xs font-semibold hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+                className="px-5 py-3 bg-white dark:bg-zinc-800 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40 rounded-xl text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-950/20 transition-all flex items-center justify-center gap-2"
               >
                 {t("user.cancel_plan") || "Cancelar Plan"}
               </motion.button>
@@ -341,13 +341,13 @@ export default function UserProfilePanel({
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-zinc-100 p-6 md:p-8 space-y-6">
-        <h3 className="text-sm font-semibold text-zinc-950 tracking-tight">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 p-6 md:p-8 space-y-6">
+        <h3 className="text-sm font-semibold text-zinc-950 dark:text-white tracking-tight">
           {t("register.name_placeholder")}
         </h3>
         <div className="flex items-end gap-3">
           <div className="relative flex-1">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 dark:text-zinc-600" />
             <input
               type="text"
               value={name}
@@ -371,16 +371,16 @@ export default function UserProfilePanel({
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-zinc-100 p-6 md:p-8 space-y-6">
-        <h3 className="text-sm font-semibold text-zinc-950 tracking-tight flex items-center gap-2">
-          <Lock className="w-4 h-4 text-red-500" />
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 p-6 md:p-8 space-y-6">
+        <h3 className="text-sm font-semibold text-zinc-950 dark:text-white tracking-tight flex items-center gap-2">
+          <Lock className="w-4 h-4 text-red-500 dark:text-red-400" />
           {t("profile.change_password")}
         </h3>
         <div className="space-y-4">
           <div>
             <p className={labelClass}>{t("profile.current_password")}</p>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 dark:text-zinc-600" />
               <input
                 type={showCurrent ? "text" : "password"}
                 value={currentPassword}
@@ -390,7 +390,7 @@ export default function UserProfilePanel({
               <button
                 type="button"
                 onClick={() => setShowCurrent(!showCurrent)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-500"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 dark:text-zinc-600 hover:text-zinc-500 dark:hover:text-zinc-400"
               >
                 {showCurrent ? (
                   <EyeOff className="w-4 h-4" />
@@ -403,7 +403,7 @@ export default function UserProfilePanel({
           <div>
             <p className={labelClass}>{t("profile.new_password")}</p>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 dark:text-zinc-600" />
               <input
                 type={showNew ? "text" : "password"}
                 value={newPassword}
@@ -413,7 +413,7 @@ export default function UserProfilePanel({
               <button
                 type="button"
                 onClick={() => setShowNew(!showNew)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-500"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 dark:text-zinc-600 hover:text-zinc-500 dark:hover:text-zinc-400"
               >
                 {showNew ? (
                   <EyeOff className="w-4 h-4" />
@@ -426,7 +426,7 @@ export default function UserProfilePanel({
           <div>
             <p className={labelClass}>{t("profile.confirm_password")}</p>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 dark:text-zinc-600" />
               <input
                 type={showConfirm ? "text" : "password"}
                 value={confirmPassword}
@@ -436,7 +436,7 @@ export default function UserProfilePanel({
               <button
                 type="button"
                 onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-500"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 dark:text-zinc-600 hover:text-zinc-500 dark:hover:text-zinc-400"
               >
                 {showConfirm ? (
                   <EyeOff className="w-4 h-4" />
@@ -473,12 +473,12 @@ export default function UserProfilePanel({
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-red-200 p-6 md:p-8 space-y-6">
-        <h3 className="text-sm font-semibold text-red-600 tracking-tight flex items-center gap-2">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-red-200 dark:border-red-900/30 p-6 md:p-8 space-y-6">
+        <h3 className="text-sm font-semibold text-red-600 dark:text-red-400 tracking-tight flex items-center gap-2">
           <Trash2 className="w-4 h-4" />
           {t("profile.delete_account")}
         </h3>
-        <p className="text-xs text-zinc-500 leading-relaxed">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
           {t("profile.delete_warning")}
         </p>
         {!showDeleteConfirm ? (
@@ -496,9 +496,9 @@ export default function UserProfilePanel({
             animate={{ opacity: 1, height: "auto" }}
             className="space-y-4"
           >
-            <div className="bg-red-50 border border-red-100 rounded-lg p-4 flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-              <p className="text-xs font-medium text-red-700">
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/30 rounded-lg p-4 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
+              <p className="text-xs font-medium text-red-700 dark:text-red-300">
                 {t("profile.delete_confirm_btn")} — escribe{" "}
                 <strong>ELIMINAR</strong> e ingresa tu contraseña para
                 confirmar.
@@ -509,21 +509,21 @@ export default function UserProfilePanel({
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
               placeholder="ELIMINAR"
-              className="w-full bg-zinc-50 p-3 rounded-lg border border-zinc-100 outline-none text-sm focus:bg-white focus:border-red-200 transition-all uppercase tracking-widest text-center font-bold"
+              className="w-full bg-zinc-50 dark:bg-zinc-800 p-3 rounded-lg border border-zinc-100 dark:border-zinc-700 outline-none text-sm focus:bg-white dark:focus:bg-zinc-700 focus:border-red-200 dark:focus:border-red-500 transition-all uppercase tracking-widest text-center font-bold dark:text-white"
             />
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 dark:text-zinc-600" />
               <input
                 type={showDeletePassword ? "text" : "password"}
                 value={deletePassword}
                 onChange={(e) => setDeletePassword(e.target.value)}
                 placeholder={t("profile.current_password")}
-                className="w-full bg-zinc-50 p-3 pl-9 rounded-lg border border-zinc-100 outline-none text-sm focus:bg-white focus:border-red-200 transition-all"
+                className="w-full bg-zinc-50 dark:bg-zinc-800 p-3 pl-9 rounded-lg border border-zinc-100 dark:border-zinc-700 outline-none text-sm focus:bg-white dark:focus:bg-zinc-700 focus:border-red-200 dark:focus:border-red-500 transition-all dark:text-white"
               />
               <button
                 type="button"
                 onClick={() => setShowDeletePassword(!showDeletePassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-500"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 dark:text-zinc-600 hover:text-zinc-500 dark:hover:text-zinc-400"
               >
                 {showDeletePassword ? (
                   <EyeOff className="w-4 h-4" />
@@ -548,7 +548,7 @@ export default function UserProfilePanel({
                   setDeleteError("");
                 }}
                 disabled={deleting}
-                className="flex-1 py-3 bg-zinc-50 text-zinc-600 rounded-lg text-xs font-semibold hover:bg-zinc-100 transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-lg text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-all flex items-center justify-center gap-2"
               >
                 <X className="w-3.5 h-3.5" />
                 {t("action.cancel")}
@@ -586,19 +586,19 @@ export default function UserProfilePanel({
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl p-6 md:p-8 max-w-sm w-full space-y-5 shadow-2xl"
+              className="bg-white dark:bg-zinc-900 rounded-2xl p-6 md:p-8 max-w-sm w-full space-y-5 shadow-2xl border border-zinc-100 dark:border-zinc-800"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-center">
-                <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center">
-                  <AlertCircle className="w-7 h-7 text-red-600" />
+                <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-950/40 flex items-center justify-center">
+                  <AlertCircle className="w-7 h-7 text-red-600 dark:text-red-400" />
                 </div>
               </div>
               <div className="text-center space-y-2">
-                <h3 className="text-lg font-black italic text-zinc-950 uppercase">
+                <h3 className="text-lg font-black italic text-zinc-950 dark:text-white uppercase">
                   {t("user.cancel_plan") || "Cancelar Plan"}
                 </h3>
-                <p className="text-xs font-bold text-zinc-400 italic">
+                <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 italic">
                   {t("user.cancel_plan_confirm") ||
                     "Se cancelará al final del periodo de facturación. No se realiza reembolso."}
                 </p>
@@ -614,7 +614,7 @@ export default function UserProfilePanel({
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowCancelConfirm(false)}
-                  className="flex-1 py-3 bg-zinc-50 text-zinc-500 rounded-xl font-black italic text-xs hover:bg-zinc-100 transition-all"
+                  className="flex-1 py-3 bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl font-black italic text-xs hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-all"
                 >
                   {t("user.cancel_plan_confirm_no") || "No, mantener"}
                 </motion.button>
