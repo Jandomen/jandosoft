@@ -133,6 +133,7 @@ export default function UserDashboard({
   const PAGE_SIZE = 10;
 
   const isFree = !user.subscription || isExpired;
+  const hasPaidPlan = user.subscription && user.subscription !== "free" && !isExpired;
 
   const stores = Array.isArray(userStores)
     ? userStores
@@ -614,29 +615,6 @@ export default function UserDashboard({
             {t("user.ai_support")}
           </motion.button>
 
-          {(user.subscription && user.subscription !== "free" && !isExpired) && (
-            <>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowChangePlan(true)}
-                className="w-full sm:w-auto px-5 py-3 bg-white/20 backdrop-blur-xl text-white border border-white/20 rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs uppercase tracking-wide sm:tracking-widest hover:bg-white hover:text-zinc-950 transition-all italic shadow-2xl flex items-center justify-center gap-2"
-              >
-                <Zap className="w-3 h-3" />
-                {t("user.update_plan") || "ACTUALIZAR PLAN"}
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowCancelConfirm(true)}
-                className="w-full sm:w-auto px-5 py-3 bg-white/10 backdrop-blur-xl text-white/70 border border-white/10 rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs uppercase tracking-wide sm:tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 transition-all italic shadow-2xl flex items-center justify-center gap-2"
-              >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                {t("user.cancel_plan") || "CANCELAR PLAN"}
-              </motion.button>
-            </>
-          )}
-
           {((!user.subscription || user.subscription === "free" || isExpired)) && (
             <motion.button
               whileTap={{ scale: 0.95 }}
@@ -645,6 +623,16 @@ export default function UserDashboard({
             >
               <Zap className="w-3 h-3" />
               {isExpired ? (t("user.reactivate_plan") || "REACTIVAR PLAN") : (t("user.get_plan") || "OBTENER PLAN")}
+            </motion.button>
+          )}
+          {hasPaidPlan && (
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onNavigate("profile")}
+              className="w-full sm:w-auto px-5 py-3 bg-white/20 backdrop-blur-xl text-white border border-white/20 rounded-2xl font-black text-[10px] max-[400px]:text-[10px] text-xs uppercase tracking-wide sm:tracking-widest hover:bg-white hover:text-zinc-950 transition-all italic shadow-2xl flex items-center justify-center gap-2"
+            >
+              <Zap className="w-3 h-3" />
+              {t("user.update_plan") || "Mi Plan"}
             </motion.button>
           )}
         </div>

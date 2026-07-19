@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   User,
   Lock,
@@ -12,9 +12,16 @@ import {
   EyeOff,
   Save,
   X,
+  Zap,
+  Calendar,
+  CreditCard,
+  AlertCircle,
+  Crown,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { PLANS } from "@/lib/plans";
+import { cn } from "@/lib/utils";
 
 interface UserProfilePanelProps {
   user: {
@@ -23,10 +30,12 @@ interface UserProfilePanelProps {
     subscription: string | null;
     subscriptionExpiry: Date | null;
     isSuspended: boolean;
+    createdAt?: Date | null;
   };
   apiFetch: (url: string, options?: RequestInit) => Promise<Response>;
   showToast: (msg: string, type: "success" | "error" | "info") => void;
   onLogout: () => void;
+  onNavigateToPricing?: () => void;
 }
 
 export default function UserProfilePanel({
@@ -34,6 +43,7 @@ export default function UserProfilePanel({
   apiFetch,
   showToast,
   onLogout,
+  onNavigateToPricing,
 }: UserProfilePanelProps) {
   const { t } = useLanguage();
 
@@ -55,6 +65,40 @@ export default function UserProfilePanel({
   const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [allPlans, setAllPlans] = useState<any[]>(PLANS);
+
+  useEffect(() => {
+    fetch("/api/plans")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.plans?.length > 0) setAllPlans(d.plans);
+      })
+      .catch(() => {});
+  }, []);
+
+  const getPlanName = (planId: string | null) => {
+    if (!planId || planId === "free") return t("user.free");
+    const found = allPlans.find((p: any) => p.id === planId);
+    return found ? t(found.nameKey ?? found.name) : planId.replace(/^plan_/i, "").replace(/_/g, " ");
+  };
+
+  const getPlanPrice = (planId: string | null) => {
+    if (!planId || planId === "free") return 0;
+    const found = allPlans.find((p: any) => p.id === planId);
+    return found?.priceUsd || found?.price || 0;
+  };
+
+  const expiryDate = user.subscriptionExpiry
+    ? new Date(user.subscriptionExpiry)
+    : null;
+  const isExpired = expiryDate ? new Date() > expiryDate : false;
+  const hasPaidPlan =
+    user.subscription && user.subscription !== "free" && !isExpired;
+  const isFree = !user.subscription || user.subscription === "free" || isExpired;
+
+  const createdAtDate = user.createdAt ? new Date(user.createdAt) : null;
 
   const handleSaveName = async () => {
     if (!name.trim() || name === user.name) return;
@@ -139,7 +183,27 @@ export default function UserProfilePanel({
     }
   };
 
-  const inputClass = "w-full bg-zinc-50 p-3 pl-9 rounded-lg border border-zinc-100 outline-none text-sm focus:bg-white focus:border-red-200 focus:ring-2 focus:ring-red-600/10 transition-all";
+  const handleCancelPlan = async () => {
+    setShowCancelConfirm(false);
+    try {
+      const res = await fetch("/api/stripe/cancel-subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ immediately: false }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        showToast(data.error, "error");
+        return;
+      }
+      showToast(data.message || "Plan cancelado correctamente", "success");
+    } catch {
+      showToast("Error al cancelar", "error");
+    }
+  };
+
+  const inputClass =
+    "w-full bg-zinc-50 p-3 pl-9 rounded-lg border border-zinc-100 outline-none text-sm focus:bg-white focus:border-red-200 focus:ring-2 focus:ring-red-600/10 transition-all";
   const labelClass = "text-xs font-medium text-zinc-400 mb-1.5 block";
 
   return (
@@ -153,13 +217,134 @@ export default function UserProfilePanel({
           <User className="w-6 h-6 text-red-600" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-zinc-950">{t("profile.title")}</h2>
+          <h2 className="text-xl font-bold text-zinc-950">
+            {t("profile.title")}
+          </h2>
           <p className="text-xs text-zinc-400">{user.email}</p>
         </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-zinc-100 p-6 md:p-8 space-y-6">
-        <h3 className="text-sm font-semibold text-zinc-950 tracking-tight">{t("register.name_placeholder")}</h3>
+        <h3 className="text-sm font-semibold text-zinc-950 tracking-tight flex items-center gap-2">
+          <Crown className="w-4 h-4 text-red-500" />
+          {t("user.my_plan") || "Mi Plan"}
+        </h3>
+
+        <div
+          className={cn(
+            "rounded-xl p-5 border",
+            hasPaidPlan
+              ? "bg-gradient-to-br from-red-50 to-amber-50 border-red-100"
+              : "bg-zinc-50 border-zinc-100"
+          )}
+        >
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span
+                  className={cn(
+                    "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider",
+                    hasPaidPlan
+                      ? "bg-red-600 text-white"
+                      : "bg-zinc-200 text-zinc-600"
+                  )}
+                >
+                  {hasPaidPlan
+                    ? getPlanName(user.subscription)
+                    : t("user.free")}
+                </span>
+                {hasPaidPlan && (
+                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
+                    {t("user.active") || "Activo"}
+                  </span>
+                )}
+                {isExpired && (
+                  <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">
+                    {t("user.expired") || "Expirado"}
+                  </span>
+                )}
+              </div>
+              {hasPaidPlan && (
+                <p className="text-lg font-black text-zinc-950 mt-2">
+                  ${getPlanPrice(user.subscription)}{" "}
+                  <span className="text-xs font-medium text-zinc-400">
+                    USD/mes
+                  </span>
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2.5">
+            {createdAtDate && (
+              <div className="flex items-center gap-2.5 text-xs text-zinc-500">
+                <Calendar className="w-3.5 h-3.5 text-zinc-400" />
+                <span>
+                  {t("user.member_since") || "Miembro desde"}:{" "}
+                  <strong className="text-zinc-700">
+                    {createdAtDate.toLocaleDateString("es-MX", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </strong>
+                </span>
+              </div>
+            )}
+            {expiryDate && hasPaidPlan && (
+              <div className="flex items-center gap-2.5 text-xs text-zinc-500">
+                <CreditCard className="w-3.5 h-3.5 text-zinc-400" />
+                <span>
+                  {t("user.expires") || "Expira"}:{" "}
+                  <strong className="text-zinc-700">
+                    {expiryDate.toLocaleDateString("es-MX", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </strong>
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          {isFree ? (
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={onNavigateToPricing}
+              className="flex-1 px-5 py-3 bg-red-600 text-white rounded-xl text-xs font-semibold hover:bg-red-700 transition-all shadow-sm flex items-center justify-center gap-2"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              {t("user.get_plan") || "Obtener Plan"}
+            </motion.button>
+          ) : (
+            <>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={onNavigateToPricing}
+                className="flex-1 px-5 py-3 bg-red-600 text-white rounded-xl text-xs font-semibold hover:bg-red-700 transition-all shadow-sm flex items-center justify-center gap-2"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                {t("user.update_plan") || "Actualizar Plan"}
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setShowCancelConfirm(true)}
+                className="px-5 py-3 bg-white text-red-600 border border-red-200 rounded-xl text-xs font-semibold hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+              >
+                {t("user.cancel_plan") || "Cancelar Plan"}
+              </motion.button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-zinc-100 p-6 md:p-8 space-y-6">
+        <h3 className="text-sm font-semibold text-zinc-950 tracking-tight">
+          {t("register.name_placeholder")}
+        </h3>
         <div className="flex items-end gap-3">
           <div className="relative flex-1">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
@@ -176,7 +361,11 @@ export default function UserProfilePanel({
             disabled={saving || !name.trim() || name === user.name}
             className="px-5 py-3 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 transition-all shadow-sm disabled:opacity-50 flex items-center gap-2 shrink-0"
           >
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            {saving ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Save className="w-3.5 h-3.5" />
+            )}
             {t("profile.save")}
           </motion.button>
         </div>
@@ -203,7 +392,11 @@ export default function UserProfilePanel({
                 onClick={() => setShowCurrent(!showCurrent)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-500"
               >
-                {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showCurrent ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
               </button>
             </div>
           </div>
@@ -222,7 +415,11 @@ export default function UserProfilePanel({
                 onClick={() => setShowNew(!showNew)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-500"
               >
-                {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showNew ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
               </button>
             </div>
           </div>
@@ -241,7 +438,11 @@ export default function UserProfilePanel({
                 onClick={() => setShowConfirm(!showConfirm)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-500"
               >
-                {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showConfirm ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
               </button>
             </div>
           </div>
@@ -254,10 +455,19 @@ export default function UserProfilePanel({
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={handleChangePassword}
-            disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+            disabled={
+              changingPassword ||
+              !currentPassword ||
+              !newPassword ||
+              !confirmPassword
+            }
             className="px-5 py-3 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 transition-all shadow-sm disabled:opacity-50 flex items-center gap-2"
           >
-            {changingPassword ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+            {changingPassword ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            )}
             {t("profile.change_password")}
           </motion.button>
         </div>
@@ -289,7 +499,9 @@ export default function UserProfilePanel({
             <div className="bg-red-50 border border-red-100 rounded-lg p-4 flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
               <p className="text-xs font-medium text-red-700">
-                {t("profile.delete_confirm_btn")} — escribe <strong>ELIMINAR</strong> e ingresa tu contraseña para confirmar.
+                {t("profile.delete_confirm_btn")} — escribe{" "}
+                <strong>ELIMINAR</strong> e ingresa tu contraseña para
+                confirmar.
               </p>
             </div>
             <input
@@ -313,7 +525,11 @@ export default function UserProfilePanel({
                 onClick={() => setShowDeletePassword(!showDeletePassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-500"
               >
-                {showDeletePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showDeletePassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
               </button>
             </div>
             {deleteError && (
@@ -325,7 +541,12 @@ export default function UserProfilePanel({
             <div className="flex gap-3">
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(""); setDeletePassword(""); setDeleteError(""); }}
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeleteConfirmText("");
+                  setDeletePassword("");
+                  setDeleteError("");
+                }}
                 disabled={deleting}
                 className="flex-1 py-3 bg-zinc-50 text-zinc-600 rounded-lg text-xs font-semibold hover:bg-zinc-100 transition-all flex items-center justify-center gap-2"
               >
@@ -335,16 +556,73 @@ export default function UserProfilePanel({
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={handleDeleteAccount}
-                disabled={deleteConfirmText !== "ELIMINAR" || !deletePassword || deleting}
+                disabled={
+                  deleteConfirmText !== "ELIMINAR" || !deletePassword || deleting
+                }
                 className="flex-1 py-3 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                {deleting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5" />
+                )}
                 {t("profile.delete_confirm_btn")}
               </motion.button>
             </div>
           </motion.div>
         )}
       </div>
+
+      <AnimatePresence>
+        {showCancelConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowCancelConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 md:p-8 max-w-sm w-full space-y-5 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-center">
+                <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center">
+                  <AlertCircle className="w-7 h-7 text-red-600" />
+                </div>
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-black italic text-zinc-950 uppercase">
+                  {t("user.cancel_plan") || "Cancelar Plan"}
+                </h3>
+                <p className="text-xs font-bold text-zinc-400 italic">
+                  {t("user.cancel_plan_confirm") ||
+                    "Se cancelará al final del periodo de facturación. No se realiza reembolso."}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleCancelPlan}
+                  className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black italic text-xs hover:bg-red-700 transition-all"
+                >
+                  {t("user.cancel_plan_confirm_yes") || "Sí, cancelar"}
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="flex-1 py-3 bg-zinc-50 text-zinc-500 rounded-xl font-black italic text-xs hover:bg-zinc-100 transition-all"
+                >
+                  {t("user.cancel_plan_confirm_no") || "No, mantener"}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

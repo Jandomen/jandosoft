@@ -46,6 +46,7 @@ export async function GET(req: NextRequest) {
         user: {
           email: user.email,
           name: user.name,
+          createdAt: (user as any).createdAt,
           subscription: displaySubscription,
           plan: isExpired ? null : user.plan,
           planStatus: isExpired ? null : user.planStatus,

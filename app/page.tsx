@@ -336,6 +336,8 @@ export default function Page() {
     emailVerified: true as boolean,
     organizationId: "",
     role: "member" as string,
+    createdAt: null as Date | null,
+    name: "" as string,
   });
   const [org, setOrg] = useState<any>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -649,7 +651,7 @@ export default function Page() {
     syncToken(null);
     setOrg(null);
     setUserStores([]);
-    setUser({ email: "", subscription: null, subscriptionExpiry: null, subscriptionStatus: null, planLimits: null, isSuspended: false, emailVerified: true, organizationId: "", role: "member" });
+    setUser({ email: "", subscription: null, subscriptionExpiry: null, subscriptionStatus: null, planLimits: null, isSuspended: false, emailVerified: true, organizationId: "", role: "member", createdAt: null, name: "" });
     setActiveTab("home");
     localStorage.removeItem(SESSION_KEY);
     fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
@@ -967,6 +969,7 @@ export default function Page() {
                       apiFetch={apiFetch}
                       showToast={showToast}
                       onLogout={handleLogout}
+                      onNavigateToPricing={() => setActiveTab("pricing")}
                     />
                   )}
                   {activeTab === "support" && isLogged && (
