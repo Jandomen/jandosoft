@@ -1183,56 +1183,60 @@ export default function UserDashboard({
         {showCreateStore && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-6"
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-6"
             onClick={() => setShowCreateStore(false)}
           >
             <motion.div
-              initial={{ scale: 0.9 }} animate={{ scale: 1 }}
-              className="w-full max-w-md bg-white rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-4xl relative"
+              initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+              className="w-full max-w-md bg-white rounded-t-[2rem] md:rounded-[2rem] shadow-4xl relative max-h-[90vh] flex flex-col"
               onClick={e => e.stopPropagation()}
             >
-              <button onClick={() => setShowCreateStore(false)} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl">
-                <X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" />
-              </button>
-              <h3 className="text-xl md:text-2xl font-black italic text-zinc-950 mb-6 uppercase tracking-tighter">
-                {editingStoreId ? t("biz.edit_store") : t("user.new_store_title")}
-              </h3>
-              <div className="space-y-4">
+              <div className="sticky top-0 z-10 bg-white rounded-t-[2rem] md:rounded-t-[2rem] px-5 pt-5 pb-3 border-b border-zinc-50">
+                <button onClick={() => setShowCreateStore(false)} className="absolute top-4 right-4 p-2 hover:bg-zinc-50 rounded-xl z-20">
+                  <X className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" />
+                </button>
+                <h3 className="text-lg md:text-xl font-black italic text-zinc-950 uppercase tracking-tighter pr-10">
+                  {editingStoreId ? t("biz.edit_store") : t("user.new_store_title")}
+                </h3>
+              </div>
+              <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
                 <div>
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_edit_name")}</label>
-                  <input data-tour="form_name" type="text" value={storeForm.name} onChange={e => setStoreForm({...storeForm, name: e.target.value})} placeholder={t("user.store_name_placeholder")} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
+                  <input data-tour="form_name" type="text" value={storeForm.name} onChange={e => setStoreForm({...storeForm, name: e.target.value})} placeholder={t("user.store_name_placeholder")} className="w-full bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm" />
                 </div>
                 <div>
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_edit_desc")}</label>
-                  <textarea data-tour="form_desc" value={storeForm.desc} onChange={e => setStoreForm({...storeForm, desc: e.target.value})} placeholder={t("user.desc_placeholder")} className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-24 mt-1 text-sm" />
+                  <textarea data-tour="form_desc" value={storeForm.desc} onChange={e => setStoreForm({...storeForm, desc: e.target.value})} placeholder={t("user.desc_placeholder")} className="w-full bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all resize-none h-16 mt-1 text-sm" />
                 </div>
-                <div>
-                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_field_industry")}</label>
-                  <select data-tour="form_industry" value={storeForm.industry} onChange={e => setStoreForm({...storeForm, industry: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic">
-                    <option value="tecnologia">{t("biz.industry_technology")}</option>
-                    <option value="comercio">{t("biz.industry_commerce")}</option>
-                    <option value="servicios">{t("biz.industry_services")}</option>
-                    <option value="salud">{t("biz.industry_health")}</option>
-                    <option value="educacion">{t("biz.industry_education")}</option>
-                    <option value="otro">{t("biz.industry_other")}</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_field_type")}</label>
-                  <select data-tour="form_type" value={storeForm.type} onChange={e => setStoreForm({...storeForm, type: e.target.value})} className="w-full bg-zinc-50 p-3 md:p-4 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic">
-                    <option value="" disabled>{t("user.select_type")}</option>
-                    <option value="general">{t("user.store_type_general")}</option>
-                    <option value="ventas">{t("user.store_type_sales")}</option>
-                    <option value="saas">{t("user.store_type_saas")}</option>
-                    <option value="crm">{t("user.store_type_crm")}</option>
-                    <option value="tienda">{t("user.store_type_online")}</option>
-                    <option value="educacion">{t("user.store_type_educational")}</option>
-                    <option value="otro">{t("user.store_type_other")}</option>
-                  </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_field_industry")}</label>
+                    <select data-tour="form_industry" value={storeForm.industry} onChange={e => setStoreForm({...storeForm, industry: e.target.value})} className="w-full bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic">
+                      <option value="tecnologia">{t("biz.industry_technology")}</option>
+                      <option value="comercio">{t("biz.industry_commerce")}</option>
+                      <option value="servicios">{t("biz.industry_services")}</option>
+                      <option value="salud">{t("biz.industry_health")}</option>
+                      <option value="educacion">{t("biz.industry_education")}</option>
+                      <option value="otro">{t("biz.industry_other")}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">{t("biz.config_field_type")}</label>
+                    <select data-tour="form_type" value={storeForm.type} onChange={e => setStoreForm({...storeForm, type: e.target.value})} className="w-full bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 transition-all mt-1 text-sm italic">
+                      <option value="" disabled>{t("user.select_type")}</option>
+                      <option value="general">{t("user.store_type_general")}</option>
+                      <option value="ventas">{t("user.store_type_sales")}</option>
+                      <option value="saas">{t("user.store_type_saas")}</option>
+                      <option value="crm">{t("user.store_type_crm")}</option>
+                      <option value="tienda">{t("user.store_type_online")}</option>
+                      <option value="educacion">{t("user.store_type_educational")}</option>
+                      <option value="otro">{t("user.store_type_other")}</option>
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">MÓDULOS</label>
-                  <div className="flex flex-wrap gap-2 mt-1">
+                  <div className="flex flex-wrap gap-1.5 mt-1">
                     {["services", "documents", "inventory", "education"].map((mod) => {
                       const labels: Record<string, string> = {
                         services: "Servicios",
@@ -1251,7 +1255,7 @@ export default function UserDashboard({
                               : [...storeForm.modules, mod];
                             setStoreForm({...storeForm, modules: next.length ? next : ["services"]});
                           }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold italic transition-all ${
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold italic transition-all ${
                             selected
                               ? "bg-red-600 text-white shadow-md"
                               : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
@@ -1262,13 +1266,15 @@ export default function UserDashboard({
                       );
                     })}
                   </div>
-                  <p className="text-[8px] text-zinc-300 italic mt-1 ml-1">Define qué módulos usa tu negocio. El agente IA solo usará herramientas de los módulos activos.</p>
+                  <p className="text-[8px] text-zinc-300 italic mt-1 ml-1">Define qué módulos usa tu negocio.</p>
                 </div>
+              </div>
+              <div className="sticky bottom-0 bg-white px-5 pb-5 pt-3 border-t border-zinc-50">
                 <button
                   data-tour="form_submit"
                   onClick={handleCreateStore}
                   disabled={!storeForm.name || !storeForm.type}
-                  className="w-full py-4 bg-red-600 text-white rounded-2xl font-black italic text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-red-600 text-white rounded-xl font-black italic text-sm hover:bg-red-700 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {editingStoreId ? t("biz.config_btn_save") : t("user.create")}
                 </button>
