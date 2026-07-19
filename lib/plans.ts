@@ -198,7 +198,8 @@ export function canUseFeature(subscription: string | null, feature: keyof PlanLi
 export function getPlanLabel(subscription: string | null): string {
   if (!subscription) return "SIN PLAN";
   if (subscription === "free") return "GRATIS";
-  return `PLAN ${subscription.toUpperCase()}`;
+  const found = PLANS.find(p => p.id === subscription);
+  return found ? found.name : subscription.replace(/^plan_/i, "").replace(/_/g, " ");
 }
 
 export function inheritFeatures(plan: PlanConfig, allPlans: PlanConfig[]): string[] {

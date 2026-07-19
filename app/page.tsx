@@ -403,7 +403,7 @@ export default function Page() {
     }
 
     setActiveTab("dashboard");
-    showToast(`Plan ${subType.toUpperCase()} activado correctamente`, "success");
+    showToast(`Plan ${getPlanLabel(subType)} activado correctamente`, "success");
   };
   const { showToast, ToastComponent } = useToast();
 

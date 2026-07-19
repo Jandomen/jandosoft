@@ -40,7 +40,7 @@ import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { LanguageCarousel } from "@/components/ui/LanguageCarousel";
 import { useTheme } from "@/components/public/ThemeProvider";
 import { useToast } from "@/components/ui/Toast";
-import { FREE_PLAN } from "@/lib/plans";
+import { PLANS, FREE_PLAN } from "@/lib/plans";
 
 interface UserDashboardProps {
   user: {
@@ -76,6 +76,18 @@ export default function UserDashboard({
   const { theme, toggle } = useTheme();
   const { showToast, ToastComponent } = useToast();
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [allPlans, setAllPlans] = useState<any[]>(PLANS);
+
+  useEffect(() => {
+    fetch("/api/plans").then(r => r.ok ? r.json() : null).then(d => { if (d?.plans?.length > 0) setAllPlans(d.plans); }).catch(() => {});
+  }, []);
+
+  const getPlanName = (planId: string | null) => {
+    if (!planId || planId === "free") return t("user.free");
+    const found = allPlans.find((p: any) => p.id === planId);
+    return found ? t(found.nameKey ?? found.name) : planId.replace(/^plan_/i, "").replace(/_/g, " ");
+  };
+
   const expiryDate = user.subscriptionExpiry
     ? new Date(user.subscriptionExpiry)
     : null;
@@ -547,7 +559,7 @@ export default function UserDashboard({
               >
                 {user.subscription && <Zap className="w-2.5 h-2.5" />}
                 {user.subscription
-                  ? `${t("user.plan")} ${user.subscription.toUpperCase()}`
+                  ? `${t("user.plan")} ${getPlanName(user.subscription)}`
                   : t("user.free")}
               </motion.span>
 
@@ -1397,7 +1409,7 @@ export default function UserDashboard({
                   {t("user.update_plan") || "Actualizar Plan"}
                 </h3>
                 <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1 italic">
-                  Plan actual: <span className="text-red-600">{user.subscription?.toUpperCase()}</span>
+                  Plan actual: <span className="text-red-600">{getPlanName(user.subscription)}</span>
                 </p>
               </div>
 

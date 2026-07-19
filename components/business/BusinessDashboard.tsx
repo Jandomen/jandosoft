@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn, isSoundEnabled, setSoundEnabled } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useToast } from "@/components/ui/Toast";
+import { PLANS } from "@/lib/plans";
 import { MODULE_ICONS, CURRENCIES, convertToUSD, formatPrice } from "./currency";
 import BusinessAI from "./BusinessAI";
 import AnalyticsPanel from "./AnalyticsPanel";
@@ -105,6 +106,14 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
   const isFreePlan = !subscription || subscription === "free" || planExpired || !planLimits || planLimits.maxCustomers === 0;
   const isExpiredPaid = !!(subscription && subscription !== "free" && planExpired);
+
+  const [allPlans, setAllPlans] = useState<any[]>(PLANS);
+  useEffect(() => { fetch("/api/plans").then(r => r.ok ? r.json() : null).then(d => { if (d?.plans?.length > 0) setAllPlans(d.plans); }).catch(() => {}); }, []);
+  const getPlanName = (planId: string | null | undefined) => {
+    if (!planId || planId === "free") return "Gratis";
+    const found = allPlans.find((p: any) => p.id === planId);
+    return found ? t(found.nameKey ?? found.name) : planId.replace(/^plan_/i, "").replace(/_/g, " ");
+  };
 
   const GATED_SECTIONS: Record<string, { requiredPlan: string; message: string }> = {
     analytics:        { requiredPlan: "El Gallito", message: "Analytics está disponible desde el plan El Gallito ($29/mes)" },
@@ -777,7 +786,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center shrink-0"><TrendingUp className="w-5 h-5 text-red-600" /></div>
                       <div>
-                        <p className="text-xs md:text-sm font-black italic text-zinc-950">Tu plan <span className="text-red-600">{subscription?.toUpperCase()}</span> expiró</p>
+                        <p className="text-xs md:text-sm font-black italic text-zinc-950">Tu plan <span className="text-red-600">{getPlanName(subscription)}</span> expiró</p>
                         <p className="text-[9px] md:text-[10px] font-bold text-zinc-400 italic">Reactiva para desbloquear todas las funciones</p>
                       </div>
                     </div>
