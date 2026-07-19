@@ -34,8 +34,6 @@ import {
   X,
   Bot,
   ChevronRight,
-  ChevronDown,
-  CalendarDays,
   Package,
   Star,
   Search,
@@ -70,9 +68,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn, slugify } from "@/lib/utils";
 import { useTheme } from "@/components/public/ThemeProvider";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
-import { useGeoCurrency } from "@/lib/hooks/useGeoCurrency";
+
 import { getPlanLimits, getPlanLabel } from "@/lib/plans";
-import PlansCarousel from "@/components/public/PlansCarousel";
+
 import { LanguageCarousel } from "@/components/ui/LanguageCarousel";
 import NotificationPanel from "@/components/ui/NotificationPanel";
 import ProductTour from "@/components/ui/ProductTour";
@@ -684,6 +682,9 @@ export default function Page() {
     setActiveTab("business");
   };
 
+  const _planExp = user.subscriptionExpiry ? new Date(user.subscriptionExpiry) : null;
+  const _hasActivePaidPlan = !!(user.subscription && user.subscription !== "free" && _planExp && _planExp > new Date());
+
   if (isLogged && user.isSuspended) {
     return <SuspendedAccountContent handleLogout={handleLogout} />;
   }
@@ -770,27 +771,27 @@ export default function Page() {
          </div>
       </aside>
 
-      {/* Mobile bottom navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 safe-area-bottom">
-        <div className="flex items-center justify-around h-16 px-2">
-          {isLogged ? (
-            <>
-              <MobileNavItem icon={<LayoutDashboard className="w-5 h-5" />} label={t("nav.mystores")} active={activeTab === "dashboard"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("dashboard"); }} dataTour="create_store" />
-              <MobileNavItem icon={<Package className="w-5 h-5" />} label={t("nav.products")} active={activeTab === "business" && businessSection === "products"} onClick={() => { setMobileDrawerOpen(false); if (activeStoreId) { setBusinessSection("products"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
-              <MobileNavItem icon={<Bot className="w-5 h-5" />} label={t("nav.chat")} active={activeTab === "chat"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("chat"); }} dataTour="chat" />
-              <MobileNavItem icon={<CreditCard className="w-5 h-5" />} label={user.subscription ? (t("nav.update_plan") || "Actualizar") : t("nav.plans")} active={activeTab === "pricing"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("pricing"); }} />
-              <MobileNavItem icon={<Menu className="w-5 h-5" />} label={t("nav.menu")} active={mobileDrawerOpen} onClick={() => setMobileDrawerOpen(true)} />
-            </>
-          ) : (
-            <>
-              <MobileNavItem icon={<Sparkles className="w-5 h-5" />} label={t("nav.home")} active={activeTab === "home"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("home"); }} />
-              <MobileNavItem icon={<Bot className="w-5 h-5" />} label={t("nav.chat")} active={activeTab === "chat"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("chat"); }} dataTour="chat" />
-              <MobileNavItem icon={<Package className="w-5 h-5" />} label={t("nav.plans")} active={activeTab === "pricing"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("pricing"); }} dataTour="explore" />
-              <MobileNavItem icon={<UserPlus className="w-5 h-5" />} label={t("action.access")} active={false} onClick={() => setShowLogin(true)} />
-            </>
-          )}
-        </div>
-      </nav>
+      {/* Mobile bottom navigation — hidden when user has active paid plan */}
+          <nav className={cn("md:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/80 safe-area-bottom transition-all duration-300", _hasActivePaidPlan && "translate-y-full opacity-0 pointer-events-none")}>
+            <div className="flex items-center justify-around h-16 px-2">
+              {isLogged ? (
+                <>
+                  <MobileNavItem icon={<LayoutDashboard className="w-5 h-5" />} label={t("nav.mystores")} active={activeTab === "dashboard"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("dashboard"); }} dataTour="create_store" />
+                  <MobileNavItem icon={<Package className="w-5 h-5" />} label={t("nav.products")} active={activeTab === "business" && businessSection === "products"} onClick={() => { setMobileDrawerOpen(false); if (activeStoreId) { setBusinessSection("products"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
+                  <MobileNavItem icon={<Bot className="w-5 h-5" />} label={t("nav.chat")} active={activeTab === "chat"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("chat"); }} dataTour="chat" />
+                  <MobileNavItem icon={<CreditCard className="w-5 h-5" />} label={user.subscription ? (t("nav.update_plan") || "Actualizar") : t("nav.plans")} active={activeTab === "pricing"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("pricing"); }} />
+                  <MobileNavItem icon={<Menu className="w-5 h-5" />} label={t("nav.menu")} active={mobileDrawerOpen} onClick={() => setMobileDrawerOpen(true)} />
+                </>
+              ) : (
+                <>
+                  <MobileNavItem icon={<Sparkles className="w-5 h-5" />} label={t("nav.home")} active={activeTab === "home"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("home"); }} />
+                  <MobileNavItem icon={<Bot className="w-5 h-5" />} label={t("nav.chat")} active={activeTab === "chat"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("chat"); }} dataTour="chat" />
+                  <MobileNavItem icon={<Package className="w-5 h-5" />} label={t("nav.plans")} active={activeTab === "pricing"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("pricing"); }} dataTour="explore" />
+                  <MobileNavItem icon={<UserPlus className="w-5 h-5" />} label={t("action.access")} active={false} onClick={() => setShowLogin(true)} />
+                </>
+              )}
+            </div>
+          </nav>
 
       {/* Mobile fullscreen drawer */}
       <AnimatePresence>
@@ -908,7 +909,7 @@ export default function Page() {
         )}
       </AnimatePresence>
 
-      <main className="flex-1 bg-zinc-50 relative flex flex-col overflow-hidden pb-20 md:pb-0">
+      <main className={cn("flex-1 bg-zinc-50 relative flex flex-col overflow-hidden", _hasActivePaidPlan ? "pb-4 md:pb-0" : "pb-20 md:pb-0")}>
           <HeaderNav activeTab={activeTab} isLogged={isLogged} setActiveTab={setActiveTab} setShowLogin={setShowLogin} setMobileDrawerOpen={setMobileDrawerOpen} token={token} onRestartTour={() => setTourTrigger(n => n + 1)} onNavigateNotification={(section) => { if (activeStoreId) { setBusinessSection(section); setActiveTab("business"); } else showToast(t("status.select_store_first") || "Selecciona una empresa primero", "info"); }} />
 
           <div className="flex-1 overflow-y-auto p-4 max-[400px]:p-2.5 max-[340px]:p-1.5 md:p-8 relative">
@@ -1141,108 +1142,7 @@ function HeaderNav({ activeTab, isLogged, setActiveTab, setShowLogin, setMobileD
   );
 }
 
-function MorePlansPanel() {
-  const { t } = useLanguage();
-  const geo = useGeoCurrency();
-  const [open, setOpen] = useState(false);
-  const [flexPlans, setFlexPlans] = useState<any[]>([]);
 
-  useEffect(() => {
-    fetch("/api/plans")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.plans) {
-          setFlexPlans(data.plans.filter((p: any) => p.durationDays));
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const formatPrice = (v: number) => geo.formatPrice(Math.round(v));
-
-  const durationLabel = (days: number) => {
-    if (days <= 3) return `${days} días`;
-    if (days <= 7) return `${days} días`;
-    if (days <= 15) return `${days} días`;
-    if (days === 30) return "1 mes";
-    if (days === 90) return "3 meses";
-    if (days === 180) return "6 meses";
-    return `${days} días`;
-  };
-
-  if (flexPlans.length === 0) return null;
-
-  return (
-    <div className="max-w-xl mx-auto">
-      <motion.button
-        whileTap={{ scale: 0.97 }}
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-zinc-200 rounded-xl text-sm font-bold text-zinc-700 hover:border-red-300 hover:text-red-600 transition-all shadow-sm"
-      >
-        <CalendarDays className="w-4 h-4" />
-        {t("plans.more_plans") || "Ver más planes"}
-        <ChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
-      </motion.button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="mt-4 space-y-2">
-              {flexPlans.map((p: any, i: number) => {
-                const features = (p.features || []).slice(0, 4);
-                return (
-                  <motion.div
-                    key={p.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="bg-white border border-zinc-100 rounded-xl px-4 py-3 hover:border-red-200 hover:shadow-sm transition-all"
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-zinc-800">
-                          {t(p.nameKey || p.name)}
-                        </span>
-                        <span className="text-[10px] font-semibold text-zinc-400 bg-zinc-50 px-2 py-0.5 rounded-md">
-                          {durationLabel(p.durationDays)}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-black text-red-600">
-                          {formatPrice(p.price)}
-                        </span>
-                        <div className="text-[9px] text-zinc-400 font-medium">
-                          {t("plans.per_day") || "/día"}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {features.map((f: string, fi: number) => (
-                        <span key={fi} className="text-[10px] font-medium text-zinc-500 bg-zinc-50 px-2 py-0.5 rounded-md">
-                          {t(f)}
-                        </span>
-                      ))}
-                      {p.features.length > 4 && (
-                        <span className="text-[10px] font-bold text-red-400">
-                          +{p.features.length - 4}
-                        </span>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 function HomeTabContent({ setActiveTab, isLogged, setShowLogin }: {
   setActiveTab: React.Dispatch<React.SetStateAction<TabType>>; isLogged: boolean; setShowLogin: (v: boolean) => void;
@@ -1331,30 +1231,6 @@ function HomeTabContent({ setActiveTab, isLogged, setShowLogin }: {
             </div>
           </motion.button>
         </div>
-      </section>
-
-      <section className="max-w-6xl mx-auto px-6 space-y-12">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-red-50 text-red-600 rounded-full text-xs font-medium border border-red-100">
-            <Package className="w-3.5 h-3.5" /> {t("landing.plans_badge")}
-          </div>
-          <h3 className="text-3xl md:text-5xl font-bold text-zinc-950 tracking-tight">
-            {t("landing.plans_title")} <span className="text-red-600">{t("landing.plans_title_highlight")}</span>
-          </h3>
-          <p className="text-sm md:text-base text-zinc-500 max-w-xl mx-auto">
-            {t("landing.plans_desc")}
-          </p>
-        </motion.div>
-
-        <PlansCarousel onSelectPlan={() => setActiveTab("register")} />
-
-        <MorePlansPanel />
-
-        <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center">
-          <motion.button whileTap={{ scale: 0.98 }} onClick={() => setActiveTab("register")} className="px-8 py-3.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition-all shadow-lg inline-flex items-center gap-2">
-            {t("landing.cta_start")} <ChevronRight className="w-4 h-4" />
-          </motion.button>
-        </motion.div>
       </section>
 
       <section className="max-w-6xl mx-auto px-6 space-y-12">
