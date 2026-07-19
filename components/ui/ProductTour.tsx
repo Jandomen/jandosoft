@@ -219,9 +219,15 @@ export default function ProductTour({ isNewUser, emailVerified, manualTrigger }:
     const gap = isMobile ? 12 : 16;
 
     if (isMobile) {
+      const isFormStep = formStepIds.has(current.id) || current.id === "form_submit";
       left = (window.innerWidth - tooltipW) / 2;
-      top = (window.innerHeight - tooltipH) / 2;
-      arrowDir = "top";
+      if (isFormStep) {
+        top = 12;
+        arrowDir = "top";
+      } else {
+        top = (window.innerHeight - tooltipH) / 2;
+        arrowDir = "top";
+      }
     } else {
       top = rect.bottom + gap;
       left = rect.left + rect.width / 2 - tooltipW / 2;
