@@ -780,67 +780,67 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
           )}
           <main className="flex-1 overflow-y-auto p-4 max-[400px]:p-3 max-[340px]:p-2 md:p-8 bg-white">
             {section === "dashboard" && (
-              <div className="space-y-8">
+              <div className="space-y-5 md:space-y-8">
                 {isExpiredPaid && (
-                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-r from-red-50 via-red-50/50 to-amber-50 border border-red-200 rounded-2xl p-4 md:p-5 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center shrink-0"><TrendingUp className="w-5 h-5 text-red-600" /></div>
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-r from-red-50 via-red-50/50 to-amber-50 border border-red-200 rounded-2xl p-3 md:p-5 flex items-center justify-between gap-3 md:gap-4">
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-red-100 rounded-xl flex items-center justify-center shrink-0"><TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-red-600" /></div>
                       <div>
-                        <p className="text-xs md:text-sm font-black italic text-zinc-950">Tu plan <span className="text-red-600">{getPlanName(subscription)}</span> expiró</p>
-                        <p className="text-[9px] md:text-[10px] font-bold text-zinc-400 italic">Reactiva para desbloquear todas las funciones</p>
+                        <p className="text-[11px] md:text-sm font-black italic text-zinc-950">Tu plan <span className="text-red-600">{getPlanName(subscription)}</span> expiró</p>
+                        <p className="text-[8px] md:text-[10px] font-bold text-zinc-400 italic">Reactiva para desbloquear todas las funciones</p>
                       </div>
                     </div>
-                    <motion.button whileTap={{ scale: 0.95 }} onClick={onNavigateToPricing} className="px-4 md:px-6 py-2.5 md:py-3 bg-red-600 text-white rounded-xl font-black text-[9px] md:text-[10px] italic hover:bg-red-700 transition-all shadow-lg whitespace-nowrap shrink-0">
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={onNavigateToPricing} className="px-3 md:px-6 py-2 md:py-3 bg-red-600 text-white rounded-xl font-black text-[8px] md:text-[10px] italic hover:bg-red-700 transition-all shadow-lg whitespace-nowrap shrink-0">
                       Reactivar
                     </motion.button>
                   </motion.div>
                 )}
                 {isFreePlan && !isExpiredPaid && (
-                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-r from-amber-50 via-amber-50/50 to-red-50 border border-amber-200 rounded-2xl p-4 md:p-5 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0"><TrendingUp className="w-5 h-5 text-amber-600" /></div>
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-r from-amber-50 via-amber-50/50 to-red-50 border border-amber-200 rounded-2xl p-3 md:p-5 flex items-center justify-between gap-3 md:gap-4">
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0"><TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-amber-600" /></div>
                       <div>
-                        <p className="text-xs md:text-sm font-black italic text-zinc-950">Estás en el plan <span className="text-amber-600">Gratis</span></p>
-                        <p className="text-[9px] md:text-[10px] font-bold text-zinc-400 italic">Desbloquea analytics, clientes, campañas y más</p>
+                        <p className="text-[11px] md:text-sm font-black italic text-zinc-950">Estás en el plan <span className="text-amber-600">Gratis</span></p>
+                        <p className="text-[8px] md:text-[10px] font-bold text-zinc-400 italic">Desbloquea analytics, clientes, campañas y más</p>
                       </div>
                     </div>
-                    <motion.button whileTap={{ scale: 0.95 }} onClick={onNavigateToPricing} className="px-4 md:px-6 py-2.5 md:py-3 bg-red-600 text-white rounded-xl font-black text-[9px] md:text-[10px] italic hover:bg-red-700 transition-all shadow-lg whitespace-nowrap shrink-0">
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={onNavigateToPricing} className="px-3 md:px-6 py-2 md:py-3 bg-red-600 text-white rounded-xl font-black text-[8px] md:text-[10px] italic hover:bg-red-700 transition-all shadow-lg whitespace-nowrap shrink-0">
                       Ver planes
                     </motion.button>
                   </motion.div>
                 )}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 max-[340px]:gap-2">
-                  <div className="bg-white max-[400px]:p-4 max-[340px]:p-3 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
-                    <div className="p-2 md:p-3 bg-red-50 rounded-xl w-fit max-[340px]:p-1.5"><Package className="w-4 h-4 max-[340px]:w-3.5 max-[340px]:h-3.5 md:w-5 md:h-5 text-red-600" /></div>
-                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic max-[340px]:text-[7px]">{t("biz.products_metric")}</p>
-                    <p className="max-[400px]:text-2xl max-[340px]:text-xl text-3xl font-black italic text-zinc-950">{totalProducts}</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-5">
+                  <div className="bg-white p-3 md:p-6 rounded-xl md:rounded-[2rem] border border-zinc-100 shadow-sm space-y-1.5 md:space-y-3">
+                    <div className="p-1.5 md:p-3 bg-red-50 rounded-lg md:rounded-xl w-fit"><Package className="w-3.5 h-3.5 md:w-5 md:h-5 text-red-600" /></div>
+                    <p className="text-[7px] md:text-[9px] font-black text-zinc-400 uppercase italic">{t("biz.products_metric")}</p>
+                    <p className="text-xl md:text-3xl font-black italic text-zinc-950">{totalProducts}</p>
                   </div>
-                  <div className="bg-white max-[400px]:p-4 max-[340px]:p-3 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
-                    <div className="p-2 md:p-3 bg-blue-50 rounded-xl w-fit max-[340px]:p-1.5"><Users className="w-4 h-4 max-[340px]:w-3.5 max-[340px]:h-3.5 md:w-5 md:h-5 text-blue-600" /></div>
-                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic max-[340px]:text-[7px]">{t("biz.customers_metric")}</p>
-                    <p className="max-[400px]:text-2xl max-[340px]:text-xl text-3xl font-black italic text-zinc-950">{customers.length}</p>
+                  <div className="bg-white p-3 md:p-6 rounded-xl md:rounded-[2rem] border border-zinc-100 shadow-sm space-y-1.5 md:space-y-3">
+                    <div className="p-1.5 md:p-3 bg-blue-50 rounded-lg md:rounded-xl w-fit"><Users className="w-3.5 h-3.5 md:w-5 md:h-5 text-blue-600" /></div>
+                    <p className="text-[7px] md:text-[9px] font-black text-zinc-400 uppercase italic">{t("biz.customers_metric")}</p>
+                    <p className="text-xl md:text-3xl font-black italic text-zinc-950">{customers.length}</p>
                   </div>
-                  <div className="bg-white max-[400px]:p-4 max-[340px]:p-3 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
-                    <div className="p-2 md:p-3 bg-amber-50 rounded-xl w-fit max-[340px]:p-1.5"><ShoppingCart className="w-4 h-4 max-[340px]:w-3.5 max-[340px]:h-3.5 md:w-5 md:h-5 text-amber-600" /></div>
-                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic max-[340px]:text-[7px]">{t("biz.orders_metric")}</p>
-                    <p className="max-[400px]:text-2xl max-[340px]:text-xl text-3xl font-black italic text-zinc-950">{orders.length}</p>
+                  <div className="bg-white p-3 md:p-6 rounded-xl md:rounded-[2rem] border border-zinc-100 shadow-sm space-y-1.5 md:space-y-3">
+                    <div className="p-1.5 md:p-3 bg-amber-50 rounded-lg md:rounded-xl w-fit"><ShoppingCart className="w-3.5 h-3.5 md:w-5 md:h-5 text-amber-600" /></div>
+                    <p className="text-[7px] md:text-[9px] font-black text-zinc-400 uppercase italic">{t("biz.orders_metric")}</p>
+                    <p className="text-xl md:text-3xl font-black italic text-zinc-950">{orders.length}</p>
                   </div>
-                  <div className="bg-white max-[400px]:p-4 max-[340px]:p-3 p-6 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-3">
-                    <div className="p-2 md:p-3 bg-emerald-50 rounded-xl w-fit max-[340px]:p-1.5"><DollarSign className="w-4 h-4 max-[340px]:w-3.5 max-[340px]:h-3.5 md:w-5 md:h-5 text-emerald-600" /></div>
-                    <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic max-[340px]:text-[7px]">{t("biz.sales_metric")}</p>
-                    <p className="max-[400px]:text-2xl max-[340px]:text-xl text-3xl font-black italic text-zinc-950">${totalSales}</p>
+                  <div className="bg-white p-3 md:p-6 rounded-xl md:rounded-[2rem] border border-zinc-100 shadow-sm space-y-1.5 md:space-y-3">
+                    <div className="p-1.5 md:p-3 bg-emerald-50 rounded-lg md:rounded-xl w-fit"><DollarSign className="w-3.5 h-3.5 md:w-5 md:h-5 text-emerald-600" /></div>
+                    <p className="text-[7px] md:text-[9px] font-black text-zinc-400 uppercase italic">{t("biz.sales_metric")}</p>
+                    <p className="text-xl md:text-3xl font-black italic text-zinc-950">${totalSales}</p>
                   </div>
                 </div>
 
                 {/* API Status Summary */}
-                <div className="bg-white max-[400px]:p-4 p-5 max-[400px]:rounded-[1.5rem] rounded-[2rem] border border-zinc-100 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-[10px] md:text-xs font-black italic text-zinc-950 uppercase tracking-tight flex items-center gap-2">
-                      <Plug className="w-3.5 h-3.5 text-red-600" /> APIs Conectadas
+                <div className="bg-white p-3 md:p-5 rounded-xl md:rounded-[2rem] border border-zinc-100 shadow-sm">
+                  <div className="flex items-center justify-between mb-2 md:mb-3">
+                    <h4 className="text-[9px] md:text-xs font-black italic text-zinc-950 uppercase tracking-tight flex items-center gap-1.5 md:gap-2">
+                      <Plug className="w-3 h-3 md:w-3.5 md:h-3.5 text-red-600" /> APIs Conectadas
                     </h4>
-                    <button onClick={() => setSection("integrations")} className="text-[9px] font-black text-red-600 hover:text-red-700 italic uppercase">Ver todas</button>
+                    <button onClick={() => setSection("integrations")} className="text-[8px] md:text-[9px] font-black text-red-600 hover:text-red-700 italic uppercase">Ver todas</button>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5 md:gap-2">
                     {[
                       { key: "stripe", label: "Stripe", color: "#635BFF", icon: "💳" },
                       { key: "paypal", label: "PayPal", color: "#003087", icon: "🅿️" },
@@ -857,37 +857,37 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                     }).map(api => {
                       const connected = userStore?.integrations?.[api.key]?.enabled || userStore?.paymentIntegrations?.some((p: any) => p.provider === api.key && p.enabled);
                       return (
-                        <div key={api.key} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black italic uppercase border border-green-200 bg-green-50 text-green-700 transition-all">
+                        <div key={api.key} className="flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl text-[8px] md:text-[9px] font-black italic uppercase border border-green-200 bg-green-50 text-green-700 transition-all">
                           <span>{api.icon}</span> {api.label}
-                          <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                          <span className="w-1 h-1 md:w-1.5 md:h-1.5 bg-green-500 rounded-full" />
                         </div>
                       );
                     })}
                     {userStore?.aiProvider?.enabled && (
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black italic uppercase border border-purple-200 bg-purple-50 text-purple-700">
+                      <div className="flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl text-[8px] md:text-[9px] font-black italic uppercase border border-purple-200 bg-purple-50 text-purple-700">
                         🤖 IA: {userStore.aiProvider.model || userStore.aiProvider.provider}
-                        <span className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
+                        <span className="w-1 h-1 md:w-1.5 md:h-1.5 bg-purple-500 rounded-full" />
                       </div>
                     )}
                     {!userStore?.integrations && !userStore?.paymentIntegrations?.length && !userStore?.aiProvider?.enabled && (
-                      <button onClick={() => setSection("integrations")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black italic uppercase border border-dashed border-zinc-200 bg-zinc-50 text-zinc-400 hover:border-red-300 hover:text-red-500 transition-all">
-                        <Plus className="w-3 h-3" /> Conectar APIs
+                      <button onClick={() => setSection("integrations")} className="flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 rounded-lg md:rounded-xl text-[8px] md:text-[9px] font-black italic uppercase border border-dashed border-zinc-200 bg-zinc-50 text-zinc-400 hover:border-red-300 hover:text-red-500 transition-all">
+                        <Plus className="w-2.5 h-2.5 md:w-3 md:h-3" /> Conectar APIs
                       </button>
                     )}
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-br from-zinc-950 to-zinc-900 max-[400px]:p-6 p-10 max-[400px]:rounded-[2rem] rounded-[3rem] text-white relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 rounded-full blur-[80px] -mr-32 -mt-32" />
-                  <div className="relative z-10 space-y-3 md:space-y-4">
-                    <Bot className="w-8 h-8 md:w-10 md:h-10 text-red-500" />
-                    <h3 className="max-[400px]:text-2xl text-3xl font-black italic">{t("biz.ai_ready_title")}</h3>
-                    <p className="text-zinc-400 font-medium max-w-lg max-[400px]:text-sm">{t("biz.ai_ready_desc")}</p>
-                      <div className={cn("px-3 py-1 rounded-full text-[9px] font-black italic w-fit", planExpired ? "bg-red-500/20 text-red-300" : "bg-emerald-500/20 text-emerald-300")}>
+                <div className="bg-gradient-to-br from-zinc-950 to-zinc-900 p-5 md:p-10 rounded-2xl md:rounded-[3rem] text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-48 md:w-64 h-48 md:h-64 bg-red-600/10 rounded-full blur-[60px] md:blur-[80px] -mr-24 md:-mr-32 -mt-24 md:-mt-32" />
+                  <div className="relative z-10 space-y-2 md:space-y-4">
+                    <Bot className="w-6 h-6 md:w-10 md:h-10 text-red-500" />
+                    <h3 className="text-xl md:text-3xl font-black italic">{t("biz.ai_ready_title")}</h3>
+                    <p className="text-zinc-400 font-medium max-w-lg text-xs md:text-sm">{t("biz.ai_ready_desc")}</p>
+                      <div className={cn("px-2.5 py-1 md:px-3 md:py-1 rounded-full text-[8px] md:text-[9px] font-black italic w-fit", planExpired ? "bg-red-500/20 text-red-300" : "bg-emerald-500/20 text-emerald-300")}>
                         {t("biz.msgs").replace("{n}", String(planLimits?.maxMessages ?? 999))}
                       </div>
-                      <motion.button whileTap={{ scale: 0.95 }} onClick={() => setSection("ai")} className="px-6 md:px-8 py-3 md:py-4 bg-red-600 text-white rounded-2xl font-black italic text-xs md:text-sm hover:bg-red-700 transition-all shadow-xl inline-flex items-center gap-3">
-                      {t("biz.talk_to_ai")} <ChevronRight className="w-4 h-4" />
+                      <motion.button whileTap={{ scale: 0.95 }} onClick={() => setSection("ai")} className="px-4 md:px-8 py-2.5 md:py-4 bg-red-600 text-white rounded-xl md:rounded-2xl font-black italic text-[11px] md:text-sm hover:bg-red-700 transition-all shadow-xl inline-flex items-center gap-2 md:gap-3">
+                      {t("biz.talk_to_ai")} <ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
                     </motion.button>
                   </div>
                 </div>
