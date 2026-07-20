@@ -415,6 +415,37 @@ export async function POST(req: NextRequest) {
               subscriptionId, customerId, status, periodEnd, billingInterval
             );
           }
+
+          if (sub.cancel_at_period_end && event.type === "customer.subscription.updated") {
+            try {
+              const planConfigCP = await getPlanConfig();
+              const planDefCP = planConfigCP.plans.find((p: any) => p.id === planId) || PLANS.find((p) => p.id === planId);
+              const existingCancelled = await Payment.findOne({
+                externalId: subscriptionId,
+                type: "subscription_cancellation_pending",
+              }).lean();
+              if (!existingCancelled) {
+                await Payment.create({
+                  customerEmail: customerEmail || "",
+                  customerName: "",
+                  amount: 0,
+                  currency: "mxn",
+                  platformFee: 0,
+                  netAmount: 0,
+                  stripePaymentIntentId: `wh_${eventId}`,
+                  externalId: subscriptionId,
+                  status: "cancelled",
+                  description: `Cancelación programada: ${planDefCP?.name || planId || "Plan"} — activo hasta ${periodEnd.toLocaleDateString("es-MX")}`,
+                  type: "subscription_cancellation_pending",
+                  planId: planId || "",
+                  storeName: "",
+                  ownerEmail: "",
+                });
+              }
+            } catch (e) {
+              console.error("[Webhook] Failed to create payment record for pending cancellation:", e);
+            }
+          }
         }
         break;
       }
@@ -513,8 +544,32 @@ export async function POST(req: NextRequest) {
         const deletedUserId = delMetadata.userId || null;
         const deletedEmail = delMetadata.customerEmail || null;
         const deletedSubId = deletedSub.id;
+        const deletedPlanId = delMetadata.planId || "";
 
         await resetUserToFree(deletedUserId, deletedEmail, deletedSubId, null);
+
+        try {
+          const planConfig3 = await getPlanConfig();
+          const planDef3 = planConfig3.plans.find((p: any) => p.id === deletedPlanId) || PLANS.find((p) => p.id === deletedPlanId);
+          await Payment.create({
+            customerEmail: deletedEmail || "",
+            customerName: "",
+            amount: 0,
+            currency: "mxn",
+            platformFee: 0,
+            netAmount: 0,
+            stripePaymentIntentId: `wh_${eventId}`,
+            externalId: deletedSubId,
+            status: "cancelled",
+            description: `Suscripción cancelada: ${planDef3?.name || deletedPlanId || "Plan"}`,
+            type: "subscription_cancellation",
+            planId: deletedPlanId,
+            storeName: "",
+            ownerEmail: "",
+          });
+        } catch (e) {
+          console.error("[Webhook] Failed to create payment record for cancellation:", e);
+        }
         break;
       }
 
