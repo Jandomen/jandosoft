@@ -130,7 +130,8 @@ export default function UserDashboard({
   const PAGE_SIZE = 10;
 
   const isFree = !user.subscription || isExpired;
-  const hasPaidPlan = user.subscription && user.subscription !== "free" && !isExpired;
+  const isCanceled = (user as any).subscriptionStatus === "canceled";
+  const hasPaidPlan = user.subscription && user.subscription !== "free" && !isExpired && !isCanceled;
 
   const stores = Array.isArray(userStores)
     ? userStores
@@ -562,7 +563,7 @@ export default function UserDashboard({
                   : t("user.free")}
               </motion.span>
 
-              {user.subscription && (
+              {user.subscription && !isCanceled && (
                 <motion.span
                   key={isExpired ? "expired" : "active"}
                   initial={{ scale: 0.8, opacity: 0 }}
@@ -578,6 +579,16 @@ export default function UserDashboard({
                   {isExpired || daysLeft <= 0
                     ? t("user.expired")
                     : t("user.days_left").replace("{n}", String(daysLeft))}
+                </motion.span>
+              )}
+              {isCanceled && !isExpired && (
+                <motion.span
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="flex items-center gap-1 text-[9px] max-[400px]:text-[9px] text-[10px] font-black uppercase tracking-wide sm:tracking-widest italic text-amber-500"
+                >
+                  <Clock className="w-2.5 h-2.5 max-[400px]:w-2.5 max-[400px]:h-2.5 w-3 h-3" />
+                  {t("user.cancelled") || "Cancelado"}
                 </motion.span>
               )}
             </div>

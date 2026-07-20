@@ -100,9 +100,10 @@ export default function UserProfilePanel({
     ? new Date(user.subscriptionExpiry)
     : null;
   const isExpired = expiryDate ? new Date() > expiryDate : false;
+  const isCanceled = (user as any).subscriptionStatus === "canceled";
   const hasPaidPlan =
-    user.subscription && user.subscription !== "free" && !isExpired;
-  const isFree = !user.subscription || user.subscription === "free" || isExpired;
+    user.subscription && user.subscription !== "free" && !isExpired && !isCanceled;
+  const isFree = !user.subscription || user.subscription === "free" || isExpired || isCanceled;
 
   const createdAtDate = user.createdAt ? new Date(user.createdAt) : null;
 
@@ -262,6 +263,11 @@ export default function UserProfilePanel({
                 {hasPaidPlan && (
                   <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
                     {t("user.active") || "Activo"}
+                  </span>
+                )}
+                {isCanceled && !isExpired && (
+                  <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                    {t("user.cancelled") || "Cancelado"}
                   </span>
                 )}
                 {isExpired && (
