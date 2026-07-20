@@ -14,6 +14,7 @@ import {
   deserializeTaskState,
 } from "./task-planner";
 import { GoalManager, isConfirmationResponse, isExplicitTopicChange } from "./goal-manager";
+import { WorkflowManager } from "./workflow-manager";
 
 export interface TrackerContext {
   currentTask: TaskState | null;
@@ -29,6 +30,7 @@ export interface TrackerDecision {
   toolToExecute: { name: string; args: Record<string, any> } | null;
   logs: AgentLog[];
   goalManager: GoalManager | null;
+  workflowManager: WorkflowManager | null;
 }
 
 export function processUserMessage(
@@ -36,11 +38,13 @@ export function processUserMessage(
   history: any[],
   storeContext: any,
   serializedTaskState: string | null,
-  serializedGoalState: string | null = null
+  serializedGoalState: string | null = null,
+  serializedWorkflowState: string | null = null
 ): TrackerDecision {
   const logs: AgentLog[] = [];
   const currentTask = deserializeTaskState(serializedTaskState);
   const goalManager = GoalManager.deserialize(serializedGoalState);
+  const workflowManager = WorkflowManager.deserialize(serializedWorkflowState);
   const { intent, confidence } = detectIntent(userMessage);
   const affirmative = isAffirmative(userMessage);
 
@@ -54,6 +58,114 @@ export function processUserMessage(
     reasoning: `Intent detected: ${intent} (confidence: ${confidence.toFixed(2)})`,
     outcome: "clarified",
   });
+
+  // ═══════════════════════════════════════════════════
+  // WORKFLOW MANAGER: HIGHEST PRIORITY
+  // If a workflow is active, it OVERRIDES everything.
+  // ═══════════════════════════════════════════════════
+  if (workflowManager.isActive()) {
+    const wfResult = workflowManager.processMessage(userMessage);
+
+    logs[logs.length - 1].reasoning = `Workflow active (${workflowManager.getState()?.type}). Processing step: ${wfResult.action}`;
+    logs[logs.length - 1].outcome = wfResult.action === "cancel" ? "clarified" : "executed";
+
+    // Cancel
+    if (wfResult.action === "cancel") {
+      return {
+        action: "respond_directly",
+        plan: null,
+        taskState: currentTask,
+        responsePrefix: wfResult.summary || "Flujo cancelado.",
+        toolToExecute: null,
+        logs,
+        goalManager,
+        workflowManager,
+      };
+    }
+
+    // Continue collecting info
+    if (wfResult.action === "continue_collecting") {
+      return {
+        action: "ask_for_info",
+        plan: null,
+        taskState: currentTask,
+        responsePrefix: wfResult.question,
+        toolToExecute: null,
+        logs,
+        goalManager,
+        workflowManager,
+      };
+    }
+
+    // Advance to next step with question
+    if (wfResult.action === "advance_step" && wfResult.question) {
+      return {
+        action: "ask_for_info",
+        plan: null,
+        taskState: currentTask,
+        responsePrefix: wfResult.question,
+        toolToExecute: null,
+        logs,
+        goalManager,
+        workflowManager,
+      };
+    }
+
+    // Execute tool step
+    if (wfResult.action === "execute_step" && wfResult.toolToExecute) {
+      return {
+        action: "execute_tool",
+        plan: null,
+        taskState: currentTask,
+        responsePrefix: null,
+        toolToExecute: wfResult.toolToExecute,
+        logs,
+        goalManager,
+        workflowManager,
+      };
+    }
+
+    // Workflow completed after inform step
+    if (wfResult.action === "no_workflow") {
+      return {
+        action: "respond_directly",
+        plan: null,
+        taskState: currentTask,
+        responsePrefix: null,
+        toolToExecute: null,
+        logs,
+        goalManager,
+        workflowManager,
+      };
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
+  // NO ACTIVE WORKFLOW — Check if user wants to START one
+  // ═══════════════════════════════════════════════════
+  if (!workflowManager.isActive()) {
+    const detectedType = workflowManager.detectWorkflowIntent(userMessage);
+    if (detectedType) {
+      workflowManager.startWorkflow(detectedType, storeContext);
+      logs[logs.length - 1].reasoning = `New workflow started: ${detectedType}`;
+
+      // Get the first question from the workflow
+      const firstStep = workflowManager.getState()?.steps[0];
+      if (firstStep) {
+        const question = firstStep.questionTemplate || "Empezemos...";
+        return {
+          action: "ask_for_info",
+          plan: null,
+          taskState: currentTask,
+          responsePrefix: question,
+          toolToExecute: null,
+          logs,
+          goalManager,
+        workflowManager,
+        };
+      }
+    }
+  }
 
   // ── GOAL MANAGEMENT: Detect goal ──
   const goalState = goalManager.detectGoal(userMessage, intent, confidence, storeContext);
@@ -80,7 +192,7 @@ export function processUserMessage(
         : null,
       logs,
       goalManager,
-    };
+        workflowManager,    };
   }
 
   // ── GOAL LOCK: If goal is locked, force continuation ──
@@ -101,7 +213,7 @@ export function processUserMessage(
           toolToExecute: { name: plan.toolToCall, args: plan.toolArgs },
           logs,
           goalManager,
-        };
+        workflowManager,        };
       }
     }
 
@@ -119,7 +231,7 @@ export function processUserMessage(
           toolToExecute: { name: plan.toolToCall, args: plan.toolArgs },
           logs,
           goalManager,
-        };
+        workflowManager,        };
       }
     }
 
@@ -139,7 +251,7 @@ export function processUserMessage(
         toolToExecute: { name: updatedPlan.toolToCall, args: updatedPlan.toolArgs },
         logs,
         goalManager,
-      };
+        workflowManager,      };
     }
 
     if (updatedPlan.needsConfirmation) {
@@ -153,7 +265,7 @@ export function processUserMessage(
         toolToExecute: null,
         logs,
         goalManager,
-      };
+        workflowManager,      };
     }
 
     logs[logs.length - 1].reasoning = `Goal locked. Continuing to collect: ${updatedPlan.missingParams.join(", ")}`;
@@ -167,7 +279,7 @@ export function processUserMessage(
       toolToExecute: null,
       logs,
       goalManager,
-    };
+        workflowManager,    };
   }
 
   // ── No active goal — fall through to original logic ──
@@ -195,7 +307,7 @@ export function processUserMessage(
       toolToExecute: { name: currentTask.plan.toolToCall, args: currentTask.plan.toolArgs },
       logs,
       goalManager,
-    };
+        workflowManager,    };
   }
 
   // Case 2: Affirmative to last agent question
@@ -218,7 +330,7 @@ export function processUserMessage(
         : null,
       logs,
       goalManager,
-    };
+        workflowManager,    };
   }
 
   // Case 3: Affirmative without context
@@ -233,7 +345,7 @@ export function processUserMessage(
       toolToExecute: null,
       logs,
       goalManager,
-    };
+        workflowManager,    };
   }
 
   // Case 4: Topic change
@@ -267,7 +379,7 @@ export function processUserMessage(
           : null,
         logs,
         goalManager,
-      };
+        workflowManager,      };
     }
   }
 
@@ -292,7 +404,7 @@ export function processUserMessage(
         : null,
       logs,
       goalManager,
-    };
+        workflowManager,    };
   }
 
   // Case 6: New task (idle or completed)
@@ -311,7 +423,7 @@ export function processUserMessage(
       toolToExecute: null,
       logs,
       goalManager,
-    };
+        workflowManager,    };
   }
 
   if (plan.missingParams.length > 0 && plan.toolToCall) {
@@ -326,7 +438,7 @@ export function processUserMessage(
       toolToExecute: null,
       logs,
       goalManager,
-    };
+        workflowManager,    };
   }
 
   if (plan.toolToCall && plan.missingParams.length === 0) {
@@ -342,7 +454,7 @@ export function processUserMessage(
       toolToExecute: { name: plan.toolToCall, args: plan.toolArgs },
       logs,
       goalManager,
-    };
+        workflowManager,    };
   }
 
   logs[logs.length - 1].outcome = "executed";
@@ -355,13 +467,19 @@ export function processUserMessage(
     toolToExecute: null,
     logs,
     goalManager,
-  };
+        workflowManager,  };
 }
 
-export function generateTaskContext(state: TaskState | null, goalManager?: GoalManager | null): string {
+export function generateTaskContext(state: TaskState | null, goalManager?: GoalManager | null, workflowManager?: WorkflowManager | null): string {
   const parts: string[] = [];
 
-  // Goal context first (higher priority)
+  // Workflow context first (highest priority)
+  if (workflowManager) {
+    const wfCtx = workflowManager.generateWorkflowContext();
+    if (wfCtx) parts.push(wfCtx);
+  }
+
+  // Goal context (second priority)
   if (goalManager) {
     const goalCtx = goalManager.generateGoalContext();
     if (goalCtx) parts.push(goalCtx);
@@ -418,3 +536,5 @@ export function trackAgentResponse(
 export { serializeTaskState, deserializeTaskState };
 export { GoalManager, isConfirmationResponse, isExplicitTopicChange } from "./goal-manager";
 export type { GoalState, GoalSnapshot, GoalValidation } from "./goal-manager";
+export { WorkflowManager } from "./workflow-manager";
+export type { WorkflowState, WorkflowSnapshot, WorkflowValidation } from "./workflow-manager";

@@ -16,6 +16,7 @@ import {
   trackAgentResponse,
   serializeTaskState,
   GoalManager,
+  WorkflowManager,
   type TrackerDecision,
 } from "@/lib/ai/intent-tracker";
 import { contextIsolator, requireIsolation, buildCognitiveContext, injectCognitiveContextHeader } from "@/lib/ai/cognitive";
@@ -195,29 +196,33 @@ export async function POST(req: Request) {
     // Load or create persistent task state for this conversation
     const taskStateStr = (conversation as any).taskState || clientTaskState || null;
     const goalStateStr = (conversation as any).goalState || null;
+    const workflowStateStr = (conversation as any).workflowState || null;
 
-    // ── 1. Process intent with Task Planner + Goal Manager ──
+    // ── 1. Process intent with Task Planner + Goal Manager + Workflow Manager ──
     const decision = processUserMessage(
       message,
       serverHistory,
       store,
       taskStateStr,
-      goalStateStr
+      goalStateStr,
+      workflowStateStr
     );
 
     logDecision(decision, String(storeId), guestId);
 
-    // ── Extract GoalManager from decision ──
+    // ── Extract GoalManager and WorkflowManager from decision ──
     const goalManager = decision.goalManager;
+    const workflowManager = decision.workflowManager;
 
 
-    // Helper to persist assistant message + taskState + goalState
-    const persistResponse = async (text: string, taskStateSerialized: string | null, goalStateSerialized: string | null = null) => {
+    // Helper to persist assistant message + taskState + goalState + workflowState
+    const persistResponse = async (text: string, taskStateSerialized: string | null, goalStateSerialized: string | null = null, workflowStateSerialized: string | null = null) => {
       try {
         await WidgetMessage.create({ conversationId: conversation._id, role: "assistant", content: text });
         const update: Record<string, any> = {};
         if (taskStateSerialized) update.taskState = taskStateSerialized;
         if (goalStateSerialized) update.goalState = goalStateSerialized;
+        if (workflowStateSerialized) update.workflowState = workflowStateSerialized;
         if (Object.keys(update).length > 0) {
           await WidgetConversation.findByIdAndUpdate(conversation._id, update);
         }
@@ -229,7 +234,8 @@ export async function POST(req: Request) {
     if (decision.action === "ask_confirmation" && decision.responsePrefix) {
       const updatedState = trackAgentResponse(decision.taskState, decision.responsePrefix);
       const serializedGoal = goalManager?.serialize() || null;
-      persistResponse(decision.responsePrefix, serializeTaskState(updatedState), serializedGoal);
+      const serializedWf = workflowManager?.serialize() || null;
+      persistResponse(decision.responsePrefix, serializeTaskState(updatedState), serializedGoal, serializedWf);
       return Response.json({
         text: decision.responsePrefix,
         actions: [],
@@ -237,6 +243,7 @@ export async function POST(req: Request) {
         provider: hasOwnAI ? store.aiProvider.provider : "platform",
         taskState: serializeTaskState(updatedState),
         goalState: serializedGoal,
+        workflowState: serializedWf,
         intent: decision.plan?.intent || "unknown",
         logs: decision.logs.map(l => ({
           intent: l.detectedIntent,
@@ -252,7 +259,8 @@ export async function POST(req: Request) {
     if (decision.action === "clarify") {
       const clarifyText = "¿En qué puedo ayudarte? Puedo mostrarte nuestros productos, agendar una cita, hacer un pedido o cualquier otra cosa.";
       const serializedGoal = goalManager?.serialize() || null;
-      persistResponse(clarifyText, serializeTaskState(decision.taskState), serializedGoal);
+      const serializedWf = workflowManager?.serialize() || null;
+      persistResponse(clarifyText, serializeTaskState(decision.taskState), serializedGoal, serializedWf);
       return Response.json({
         text: clarifyText,
         actions: [],
@@ -260,6 +268,7 @@ export async function POST(req: Request) {
         provider: hasOwnAI ? store.aiProvider.provider : "platform",
         taskState: serializeTaskState(decision.taskState),
         goalState: serializedGoal,
+        workflowState: serializedWf,
         intent: "unknown",
         logs: decision.logs.map(l => ({
           intent: l.detectedIntent,
@@ -351,7 +360,7 @@ export async function POST(req: Request) {
     const timeContext = injectTimeContext(store);
 
     // ── Generate task context for system prompt ──
-    const taskContext = generateTaskContext(decision.taskState, goalManager);
+    const taskContext = generateTaskContext(decision.taskState, goalManager, workflowManager);
 
     const cognitiveHeader = injectCognitiveContextHeader(cognitiveCtx);
     const storeModules = (store as any).modules?.length ? (store as any).modules : ["services"];
@@ -475,14 +484,15 @@ ${taskContext}`;
     if (decision.action === "execute_tool" && decision.toolToExecute) {
       const { name, args } = decision.toolToExecute;
 
-      // ── TOOL GUARD: Validate tool against current goal ──
+      // ── TOOL GUARD: Validate tool against current goal and workflow ──
       if (goalManager) {
         const validation = goalManager.validateTool(name, args);
         if (!validation.allowed) {
           console.log(`[GoalGuard] BLOCKED direct tool ${name}: ${validation.reason}`);
           const blockedText = `${validation.reason}${validation.suggestion ? `\n\n${validation.suggestion}` : ""}`;
           const serializedGoal = goalManager.serialize();
-          persistResponse(blockedText, serializeTaskState(decision.taskState), serializedGoal);
+          const serializedWf = workflowManager?.serialize() || null;
+          persistResponse(blockedText, serializeTaskState(decision.taskState), serializedGoal, serializedWf);
           return Response.json({
             text: blockedText,
             actions: [],
@@ -490,6 +500,35 @@ ${taskContext}`;
             provider: hasOwnAI ? store.aiProvider.provider : "platform",
             taskState: serializeTaskState(decision.taskState),
             goalState: serializedGoal,
+            workflowState: serializedWf,
+            intent: decision.plan?.intent || "unknown",
+            logs: decision.logs.map(l => ({
+              intent: l.detectedIntent,
+              confidence: l.confidence,
+              tool: l.selectedTool,
+              outcome: l.outcome,
+              reasoning: l.reasoning,
+            })),
+          });
+        }
+      }
+
+      // ── WORKFLOW GUARD: Validate tool against active workflow ──
+      if (workflowManager?.isActive()) {
+        const wfValidation = workflowManager.validateTool(name);
+        if (!wfValidation.allowed) {
+          console.log(`[WorkflowGuard] BLOCKED direct tool ${name}: ${wfValidation.reason}`);
+          const blockedText = wfValidation.reason;
+          const serializedWf = workflowManager.serialize();
+          persistResponse(blockedText, serializeTaskState(decision.taskState), goalManager?.serialize() || null, serializedWf);
+          return Response.json({
+            text: blockedText,
+            actions: [],
+            remaining,
+            provider: hasOwnAI ? store.aiProvider.provider : "platform",
+            taskState: serializeTaskState(decision.taskState),
+            goalState: goalManager?.serialize() || null,
+            workflowState: serializedWf,
             intent: decision.plan?.intent || "unknown",
             logs: decision.logs.map(l => ({
               intent: l.detectedIntent,
@@ -516,6 +555,11 @@ ${taskContext}`;
       // ── GOAL STATE: Advance subtask on success ──
       if (goalManager && result?.success !== false) {
         goalManager.advanceSubtask(name, toolResultStr);
+      }
+
+      // ── WORKFLOW STATE: Notify workflow of tool execution ──
+      if (workflowManager?.isActive()) {
+        workflowManager.onToolExecuted(name, result);
       }
 
       // Send notification for significant actions
@@ -578,6 +622,20 @@ ${taskContext}`;
           }
         }
 
+        // ── WORKFLOW GUARD: Validate LLM tool call against active workflow ──
+        if (workflowManager?.isActive()) {
+          const wfValidation = workflowManager.validateTool(tc.function.name);
+          if (!wfValidation.allowed) {
+            console.log(`[WorkflowGuard] BLOCKED LLM tool ${tc.function.name}: ${wfValidation.reason}`);
+            messages.push({
+              role: "tool",
+              tool_call_id: tc.id,
+              content: JSON.stringify({ success: false, error: wfValidation.reason }),
+            });
+            continue;
+          }
+        }
+
         const result = await executeTool(tc, store, guestId || "guest");
         toolExecuted = tc.function.name;
         toolResultStr = JSON.stringify(result);
@@ -599,6 +657,11 @@ ${taskContext}`;
               await Notification.create({ type: "customer", title: "Nuevo cliente registrado", message: `${args.name || args.customerName || "Cliente"} - ${args.email || ""}`, userId: String(store.ownerId), storeId: String(store._id), link: "/dashboard" });
             }
           } catch (e) { console.error("Notification creation failed:", e); }
+        }
+
+        // ── WORKFLOW STATE: Notify workflow of LLM tool execution ──
+        if (workflowManager?.isActive()) {
+          workflowManager.onToolExecuted(tc.function.name, result);
         }
 
         messages.push({
@@ -625,7 +688,12 @@ ${taskContext}`;
       goalManager.markCompleted();
     }
 
-    // ── 10. Log execution metrics ──
+    // ── 10. Finalize workflow if completed ──
+    if (workflowManager && workflowManager.getState()?.status === "completed") {
+      // Workflow already marked complete by processMessage
+    }
+
+    // ── 11. Log execution metrics ──
     const duration = Date.now() - startTime;
     const goalSnapshot = goalManager?.getSnapshot();
     console.log(
@@ -638,7 +706,8 @@ ${taskContext}`;
 
     const serializedTaskState = serializeTaskState(updatedState);
     const serializedGoal = goalManager?.serialize() || null;
-    persistResponse(finalResponse || "Acción completada.", serializedTaskState, serializedGoal);
+    const serializedWf = workflowManager?.serialize() || null;
+    persistResponse(finalResponse || "Acción completada.", serializedTaskState, serializedGoal, serializedWf);
 
     const usedProvider = hasOwnAI ? store.aiProvider.provider : "platform";
 
@@ -649,6 +718,7 @@ ${taskContext}`;
       provider: usedProvider,
       taskState: serializedTaskState,
       goalState: serializedGoal,
+      workflowState: serializedWf,
       intent: decision.plan?.intent || "unknown",
       logs: decision.logs.map(l => ({
         intent: l.detectedIntent,
