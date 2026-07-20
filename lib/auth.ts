@@ -52,3 +52,16 @@ export function getAuthFromHeaders(req: Request): JWTPayload | null {
   if (!authHeader?.startsWith("Bearer ")) return null;
   return verifyToken(authHeader.slice(7));
 }
+
+export async function getAuthVerified(req: Request): Promise<{ auth: JWTPayload } | { error: string; status: number }> {
+  const auth = getAuthFromHeaders(req) || await getAuthFromCookies();
+  if (!auth) return { error: "No autorizado", status: 401 };
+  try {
+    const { connectDB } = await import("./mongodb");
+    const { User } = await import("./models/User");
+    await connectDB();
+    const exists = await User.findById(auth.userId).lean().select("_id").catch(() => null);
+    if (!exists) return { error: "Sesión inválida. La cuenta ya no existe.", status: 401 };
+  } catch {}
+  return { auth };
+}

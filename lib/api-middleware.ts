@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthFromHeaders, getAuthFromCookies, JWTPayload } from "./auth";
+import { connectDB } from "./mongodb";
+import { User } from "./models/User";
 
 export type HandlerWithAuth<T = any> = (
   req: NextRequest,
@@ -14,6 +16,11 @@ export function withAuth(handler: HandlerWithAuth) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
     try {
+      await connectDB();
+      const user = await User.findById(auth.userId).lean().select("_id").catch(() => null);
+      if (!user) {
+        return NextResponse.json({ error: "Sesión inválida. La cuenta ya no existe.", code: "USER_DELETED" }, { status: 401 });
+      }
       const body = req.method !== "GET" && req.method !== "DELETE"
         ? await req.json().catch(() => ({}))
         : {};

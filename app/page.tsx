@@ -414,8 +414,26 @@ export default function Page() {
     if (!headers["Content-Type"] && options.body) {
       headers["Content-Type"] = "application/json";
     }
-    return fetch(url, { ...options, headers });
-  }, []);
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401 && !url.includes("/api/auth/")) {
+      try {
+        const body = await res.clone().json().catch(() => ({}));
+        const msg = body.code === "USER_DELETED"
+          ? "Tu cuenta ya no existe. La sesión ha sido cerrada."
+          : "Tu sesión ha expirado. Inicia sesión de nuevo.";
+        setIsLogged(false);
+        syncToken(null);
+        setOrg(null);
+        setUserStores([]);
+        setUser({ email: "", subscription: null, subscriptionExpiry: null, subscriptionStatus: null, planLimits: null, isSuspended: false, emailVerified: true, organizationId: "", role: "member", createdAt: null, name: "" });
+        setActiveTab("home");
+        localStorage.removeItem(SESSION_KEY);
+        fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+        setTimeout(() => showToast(msg, "error"), 100);
+      } catch {}
+    }
+    return res;
+  }, [showToast]);
 
   const loadFromAPI = useCallback(async (email: string) => {
     try {
