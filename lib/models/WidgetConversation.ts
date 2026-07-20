@@ -5,6 +5,7 @@ export interface IWidgetConversation extends Document {
   guestId: string;
   lastMessage: string;
   taskState: string | null;
+  goalState: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -15,6 +16,7 @@ const WidgetConversationSchema = new Schema<IWidgetConversation>(
     guestId: { type: String, required: true },
     lastMessage: { type: String, default: "" },
     taskState: { type: String, default: null },
+    goalState: { type: String, default: null },
   },
   { timestamps: true }
 );

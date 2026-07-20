@@ -12,6 +12,7 @@ import { registerWorkflowPlugins } from "@/lib/workflow/register";
 import { buildContext, type ContextRequest } from "@/lib/ai/context-builder";
 import { validateInput, detectPromptInjection } from "@/lib/ai/guardrails";
 import { getStoreTimezone, getDateComponents } from "@/lib/ai/time";
+import { type GoalManager } from "@/lib/ai/goal-manager";
 
 registerAllTools();
 registerWorkflowPlugins();
@@ -190,12 +191,14 @@ export async function askBusinessAIWithTools({
   history,
   userId,
   cognitiveHeader,
+  goalManager,
 }: {
   message: string;
   store: any;
   history?: any[];
   userId: string;
   cognitiveHeader?: string;
+  goalManager?: GoalManager | null;
 }): Promise<{ response: string; actions: any[] }> {
   const startTime = Date.now();
   const domainInfo = detectDomain(message, (history || []).map((h: any) => h.content || ""));
@@ -240,6 +243,22 @@ export async function askBusinessAIWithTools({
       const appointmentTools = new Set(["create_appointment", "update_appointment", "cancel_appointment"]);
       let modifiedAppointments = false;
       for (const tc of msg.tool_calls) {
+        // ── TOOL GUARD: Validate tool against current goal ──
+        if (goalManager) {
+          let toolArgs: Record<string, any> = {};
+          try { toolArgs = JSON.parse(tc.function.arguments); } catch {}
+          const validation = goalManager.validateTool(tc.function.name, toolArgs);
+          if (!validation.allowed) {
+            console.log(`[GoalGuard] BLOCKED ${tc.function.name}: ${validation.reason}`);
+            messages.push({
+              role: "tool",
+              tool_call_id: tc.id,
+              content: JSON.stringify({ success: false, error: validation.reason, suggestion: validation.suggestion }),
+            });
+            continue;
+          }
+        }
+
         const result = await executeRegisteredTool(tc, store, userId);
         actions.push({ tool: tc.function.name, args: JSON.parse(tc.function.arguments), result });
         invalidateStoreCache(String(store?._id || store?.id));
@@ -248,6 +267,12 @@ export async function askBusinessAIWithTools({
           tool_call_id: tc.id,
           content: JSON.stringify(result),
         });
+
+        // ── GOAL STATE: Advance subtask on successful tool execution ──
+        if (goalManager && result?.success !== false) {
+          goalManager.advanceSubtask(tc.function.name, JSON.stringify(result));
+        }
+
         if (appointmentTools.has(tc.function.name)) modifiedAppointments = true;
       }
       if (modifiedAppointments) {

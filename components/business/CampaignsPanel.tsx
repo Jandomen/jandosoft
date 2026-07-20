@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Megaphone, Plus, Trash2, Edit3, X, Send, Clock, CheckCircle2, AlertCircle, BarChart3, Mail, Smartphone, Users, Eye, MousePointerClick, Loader2, Play, Pause, FileText, Copy } from "lucide-react";
+import { Megaphone, Plus, Trash2, Edit3, X, Send, Clock, CheckCircle2, AlertCircle, BarChart3, Mail, Smartphone, Users, Eye, MousePointerClick, Loader2, Play, Pause, FileText, Copy, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import CampaignProtectionPanel from "./CampaignProtectionPanel";
 
 interface Campaign {
   id: number;
@@ -38,6 +39,7 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, sto
   const [showQuickEmail, setShowQuickEmail] = useState(false);
   const [quickEmail, setQuickEmail] = useState({ to: "", subject: "", body: "" });
   const [sendingQuick, setSendingQuick] = useState(false);
+  const [activeTab, setActiveTab] = useState<"campaigns" | "protection">("campaigns");
 
   const totalSent = campaigns.reduce((s, c) => s + c.stats.sent, 0);
   const totalOpened = campaigns.reduce((s, c) => s + c.stats.opened, 0);
@@ -189,6 +191,26 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, sto
 
   return (
     <div className="space-y-4 md:space-y-8">
+      {/* Tab Navigation */}
+      <div className="flex gap-1.5 bg-zinc-50 p-1 rounded-xl">
+        <button onClick={() => setActiveTab("campaigns")} className={cn(
+          "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[10px] font-black italic transition-all",
+          activeTab === "campaigns" ? "bg-white text-red-600 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
+        )}>
+          <Megaphone className="w-3.5 h-3.5" /> Campañas
+        </button>
+        <button onClick={() => setActiveTab("protection")} className={cn(
+          "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[10px] font-black italic transition-all",
+          activeTab === "protection" ? "bg-white text-red-600 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
+        )}>
+          <Shield className="w-3.5 h-3.5" /> Smart Protection
+        </button>
+      </div>
+
+      {activeTab === "protection" ? (
+        <CampaignProtectionPanel storeId={storeId || ""} onApplySegment={(seg) => { setForm(f => ({ ...f, audience: seg })); setActiveTab("campaigns"); }} />
+      ) : (
+      <>
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2 md:gap-4">
         <div>
@@ -406,6 +428,8 @@ export default function CampaignsPanel({ campaigns, setCampaigns, onPersist, sto
           </motion.div>
         )}
       </AnimatePresence>
+      </>
+      )}
     </div>
   );
 }

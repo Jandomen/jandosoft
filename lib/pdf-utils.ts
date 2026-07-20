@@ -52,7 +52,7 @@ async function addBrandHeader(doc: jsPDF) {
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(255, 200, 200);
-  doc.text("Enterprise Platform", 20, 34);
+  doc.text("Plataforma empresarial", 20, 34);
 }
 
 async function addBrandFooter(doc: jsPDF, y: number) {
@@ -193,7 +193,7 @@ export async function generatePaymentReceiptPDF(transaction: {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.text(`Metodo de pago: ${transaction.paymentMethod || "Tarjeta"}`, 28, infoBottomY + 6);
-  doc.text("JANDOSOFT Enterprise - Plataforma SaaS", 28, infoBottomY + 12);
+  doc.text("JANDOSOFT Empresarial - Plataforma SaaS", 28, infoBottomY + 12);
 
   doc.setDrawColor(220, 220, 225);
   doc.setLineWidth(0.3);
@@ -201,7 +201,7 @@ export async function generatePaymentReceiptPDF(transaction: {
 
   doc.setTextColor(180, 180, 185);
   doc.setFontSize(7);
-  doc.text("Este recibo es generado automaticamente por JANDOSOFT Enterprise.", 105, 275, { align: "center" });
+  doc.text("Este recibo es generado automaticamente por JANDOSOFT Soluciones.", 105, 275, { align: "center" });
   doc.text("Para soporte: soporte@jandosoft.com", 105, 279, { align: "center" });
 
   await addBrandFooter(doc, 285);

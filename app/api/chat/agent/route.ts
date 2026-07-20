@@ -15,6 +15,7 @@ import {
   generateTaskContext,
   trackAgentResponse,
   serializeTaskState,
+  GoalManager,
   type TrackerDecision,
 } from "@/lib/ai/intent-tracker";
 import { contextIsolator, requireIsolation, buildCognitiveContext, injectCognitiveContextHeader } from "@/lib/ai/cognitive";
@@ -193,24 +194,32 @@ export async function POST(req: Request) {
 
     // Load or create persistent task state for this conversation
     const taskStateStr = (conversation as any).taskState || clientTaskState || null;
+    const goalStateStr = (conversation as any).goalState || null;
 
-    // ── 1. Process intent with Task Planner ──
+    // ── 1. Process intent with Task Planner + Goal Manager ──
     const decision = processUserMessage(
       message,
       serverHistory,
       store,
-      taskStateStr
+      taskStateStr,
+      goalStateStr
     );
 
     logDecision(decision, String(storeId), guestId);
 
+    // ── Extract GoalManager from decision ──
+    const goalManager = decision.goalManager;
 
-    // Helper to persist assistant message + taskState
-    const persistResponse = async (text: string, taskStateSerialized: string | null) => {
+
+    // Helper to persist assistant message + taskState + goalState
+    const persistResponse = async (text: string, taskStateSerialized: string | null, goalStateSerialized: string | null = null) => {
       try {
         await WidgetMessage.create({ conversationId: conversation._id, role: "assistant", content: text });
-        if (taskStateSerialized) {
-          await WidgetConversation.findByIdAndUpdate(conversation._id, { taskState: taskStateSerialized });
+        const update: Record<string, any> = {};
+        if (taskStateSerialized) update.taskState = taskStateSerialized;
+        if (goalStateSerialized) update.goalState = goalStateSerialized;
+        if (Object.keys(update).length > 0) {
+          await WidgetConversation.findByIdAndUpdate(conversation._id, update);
         }
       } catch (e) {
         console.error("Error saving assistant response:", e);
@@ -219,13 +228,15 @@ export async function POST(req: Request) {
 
     if (decision.action === "ask_confirmation" && decision.responsePrefix) {
       const updatedState = trackAgentResponse(decision.taskState, decision.responsePrefix);
-      persistResponse(decision.responsePrefix, serializeTaskState(updatedState));
+      const serializedGoal = goalManager?.serialize() || null;
+      persistResponse(decision.responsePrefix, serializeTaskState(updatedState), serializedGoal);
       return Response.json({
         text: decision.responsePrefix,
         actions: [],
         remaining,
         provider: hasOwnAI ? store.aiProvider.provider : "platform",
         taskState: serializeTaskState(updatedState),
+        goalState: serializedGoal,
         intent: decision.plan?.intent || "unknown",
         logs: decision.logs.map(l => ({
           intent: l.detectedIntent,
@@ -240,13 +251,15 @@ export async function POST(req: Request) {
     // ── 3. Handle clarification (affirmative without context) ──
     if (decision.action === "clarify") {
       const clarifyText = "¿En qué puedo ayudarte? Puedo mostrarte nuestros productos, agendar una cita, hacer un pedido o cualquier otra cosa.";
-      persistResponse(clarifyText, serializeTaskState(decision.taskState));
+      const serializedGoal = goalManager?.serialize() || null;
+      persistResponse(clarifyText, serializeTaskState(decision.taskState), serializedGoal);
       return Response.json({
         text: clarifyText,
         actions: [],
         remaining,
         provider: hasOwnAI ? store.aiProvider.provider : "platform",
         taskState: serializeTaskState(decision.taskState),
+        goalState: serializedGoal,
         intent: "unknown",
         logs: decision.logs.map(l => ({
           intent: l.detectedIntent,
@@ -338,7 +351,7 @@ export async function POST(req: Request) {
     const timeContext = injectTimeContext(store);
 
     // ── Generate task context for system prompt ──
-    const taskContext = generateTaskContext(decision.taskState);
+    const taskContext = generateTaskContext(decision.taskState, goalManager);
 
     const cognitiveHeader = injectCognitiveContextHeader(cognitiveCtx);
     const storeModules = (store as any).modules?.length ? (store as any).modules : ["services"];
@@ -462,6 +475,33 @@ ${taskContext}`;
     if (decision.action === "execute_tool" && decision.toolToExecute) {
       const { name, args } = decision.toolToExecute;
 
+      // ── TOOL GUARD: Validate tool against current goal ──
+      if (goalManager) {
+        const validation = goalManager.validateTool(name, args);
+        if (!validation.allowed) {
+          console.log(`[GoalGuard] BLOCKED direct tool ${name}: ${validation.reason}`);
+          const blockedText = `${validation.reason}${validation.suggestion ? `\n\n${validation.suggestion}` : ""}`;
+          const serializedGoal = goalManager.serialize();
+          persistResponse(blockedText, serializeTaskState(decision.taskState), serializedGoal);
+          return Response.json({
+            text: blockedText,
+            actions: [],
+            remaining,
+            provider: hasOwnAI ? store.aiProvider.provider : "platform",
+            taskState: serializeTaskState(decision.taskState),
+            goalState: serializedGoal,
+            intent: decision.plan?.intent || "unknown",
+            logs: decision.logs.map(l => ({
+              intent: l.detectedIntent,
+              confidence: l.confidence,
+              tool: l.selectedTool,
+              outcome: l.outcome,
+              reasoning: l.reasoning,
+            })),
+          });
+        }
+      }
+
       // Create a synthetic tool call for execution
       const syntheticToolCall = {
         id: `tc_${Date.now()}`,
@@ -472,6 +512,11 @@ ${taskContext}`;
       toolExecuted = name;
       toolResultStr = JSON.stringify(result);
       actions.push({ tool: name, args, result });
+
+      // ── GOAL STATE: Advance subtask on success ──
+      if (goalManager && result?.success !== false) {
+        goalManager.advanceSubtask(name, toolResultStr);
+      }
 
       // Send notification for significant actions
       if (result?.success && store?.ownerId) {
@@ -517,6 +562,22 @@ ${taskContext}`;
         const tc = msg.tool_calls[0];
         messages.push(msg);
 
+        // ── TOOL GUARD: Validate LLM tool call against current goal ──
+        if (goalManager) {
+          let llmToolArgs: Record<string, any> = {};
+          try { llmToolArgs = JSON.parse(tc.function.arguments); } catch {}
+          const validation = goalManager.validateTool(tc.function.name, llmToolArgs);
+          if (!validation.allowed) {
+            console.log(`[GoalGuard] BLOCKED LLM tool ${tc.function.name}: ${validation.reason}`);
+            messages.push({
+              role: "tool",
+              tool_call_id: tc.id,
+              content: JSON.stringify({ success: false, error: validation.reason, suggestion: validation.suggestion }),
+            });
+            continue;
+          }
+        }
+
         const result = await executeTool(tc, store, guestId || "guest");
         toolExecuted = tc.function.name;
         toolResultStr = JSON.stringify(result);
@@ -559,17 +620,25 @@ ${taskContext}`;
       toolResultStr
     );
 
-    // ── 9. Log execution metrics ──
+    // ── 9. Finalize goal if all subtasks complete ──
+    if (goalManager && goalManager.getState()?.status === "completed") {
+      goalManager.markCompleted();
+    }
+
+    // ── 10. Log execution metrics ──
     const duration = Date.now() - startTime;
+    const goalSnapshot = goalManager?.getSnapshot();
     console.log(
       `[Agent:${storeId}] Completed in ${duration}ms | ` +
       `Tool: ${toolExecuted || "none"} | ` +
       `Actions: ${actions.length} | ` +
-      `Response length: ${finalResponse.length}`
+      `Response length: ${finalResponse.length}` +
+      (goalSnapshot?.isActive ? ` | Goal: ${goalSnapshot.progress}%` : "")
     );
 
     const serializedTaskState = serializeTaskState(updatedState);
-    persistResponse(finalResponse || "Acción completada.", serializedTaskState);
+    const serializedGoal = goalManager?.serialize() || null;
+    persistResponse(finalResponse || "Acción completada.", serializedTaskState, serializedGoal);
 
     const usedProvider = hasOwnAI ? store.aiProvider.provider : "platform";
 
@@ -579,6 +648,7 @@ ${taskContext}`;
       remaining,
       provider: usedProvider,
       taskState: serializedTaskState,
+      goalState: serializedGoal,
       intent: decision.plan?.intent || "unknown",
       logs: decision.logs.map(l => ({
         intent: l.detectedIntent,

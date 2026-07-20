@@ -367,6 +367,21 @@ export interface IStore extends Document {
   currency?: string;
   timezone?: string;
   workflows?: IWorkflow[];
+  protectionSettings?: {
+    enabled: boolean;
+    maxEmailsPerDay: number;
+    maxSMSPerDay: number;
+    maxWhatsAppPerDay: number;
+    customerCooldownHours: number;
+    batchSizes: { email: number; sms: number; whatsapp: number };
+    batchDelaySeconds: number;
+    excludeBounced: boolean;
+    excludeUnsubscribed: boolean;
+    excludeNoContact: boolean;
+    enableBatching: boolean;
+    minHoursBetweenCampaigns: number;
+    autoExcludeInvalidPhones: boolean;
+  };
 }
 
 export interface IWorkflowStep {
@@ -905,6 +920,31 @@ const StoreSchema = new Schema<IStore>({
   currency: { type: String, default: "USD" },
   timezone: { type: String, default: "" },
   workflows: { type: [Schema.Types.Mixed], default: [] },
+  protectionSettings: {
+    type: {
+      enabled: { type: Boolean, default: true },
+      maxEmailsPerDay: { type: Number, default: 500 },
+      maxSMSPerDay: { type: Number, default: 100 },
+      maxWhatsAppPerDay: { type: Number, default: 200 },
+      customerCooldownHours: { type: Number, default: 24 },
+      batchSizes: {
+        type: {
+          email: { type: Number, default: 50 },
+          sms: { type: Number, default: 30 },
+          whatsapp: { type: Number, default: 100 },
+        },
+        default: { email: 50, sms: 30, whatsapp: 100 },
+      },
+      batchDelaySeconds: { type: Number, default: 5 },
+      excludeBounced: { type: Boolean, default: true },
+      excludeUnsubscribed: { type: Boolean, default: true },
+      excludeNoContact: { type: Boolean, default: true },
+      enableBatching: { type: Boolean, default: true },
+      minHoursBetweenCampaigns: { type: Number, default: 6 },
+      autoExcludeInvalidPhones: { type: Boolean, default: true },
+    },
+    default: null,
+  },
 }, { timestamps: true });
 
 export const Store = mongoose.models.Store || mongoose.model<IStore>("Store", StoreSchema);
