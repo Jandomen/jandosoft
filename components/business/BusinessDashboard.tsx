@@ -723,10 +723,10 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
         {/* Mobile horizontal tab bar */}
         <div className="md:hidden overflow-x-auto no-scrollbar border-b border-zinc-100 bg-white">
-          <div className="flex gap-1.5 px-3 py-2.5 min-w-max items-center">
+          <div className="flex gap-2 px-3 py-2.5 min-w-max items-center">
             {isFreePlan && (
-              <motion.button whileTap={{ scale: 0.92 }} onClick={onNavigateToPricing} className="flex items-center gap-1 px-3 py-2 rounded-xl text-[10px] font-black italic bg-gradient-to-r from-red-500 to-red-600 text-white whitespace-nowrap shadow-md">
-                <TrendingUp className="w-3 h-3" /> {isExpiredPaid ? "Reactivar" : "Ver planes"}
+              <motion.button whileTap={{ scale: 0.92 }} onClick={onNavigateToPricing} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[10px] font-black italic bg-gradient-to-r from-red-500 to-red-600 text-white whitespace-nowrap shadow-md">
+                <TrendingUp className="w-3.5 h-3.5" /> {isExpiredPaid ? "Reactivar" : "Ver planes"}
               </motion.button>
             )}
             {activeModules.map((mod) => (
@@ -735,13 +735,13 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 whileTap={{ scale: 0.92 }}
                 onClick={() => handleSectionChange(mod.sectionKey)}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black italic transition-all whitespace-nowrap",
+                  "flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[10px] font-black italic transition-all whitespace-nowrap",
                   section === mod.sectionKey
                     ? "bg-red-600 text-white shadow-md"
                     : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100"
                 )}
               >
-                <span className="w-3.5 h-3.5">{MODULE_ICONS[mod.icon]}</span>
+                <span className="w-4 h-4 shrink-0">{MODULE_ICONS[mod.icon]}</span>
                 {t(mod.nameKey)}
                 {isFreePlan && gatedKeys.includes(mod.sectionKey) && (
                   <span className="text-[7px] bg-amber-100 text-amber-600 px-1 py-0.5 rounded-full font-black">PRO</span>
