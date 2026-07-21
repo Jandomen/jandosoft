@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, User, Loader2, Sparkles, Trash2, Mic, MicOff, Store, BarChart3, ShoppingCart, TrendingUp, Zap, Menu, Plus, MessageSquare, MoreHorizontal, Globe, ArrowRight, CreditCard } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, Trash2, Store, BarChart3, ShoppingCart, TrendingUp, Zap, Menu, Plus, MessageSquare, MoreHorizontal, Globe, ArrowRight, CreditCard } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useVoiceInput } from "@/lib/hooks/useVoiceInput";
 import { readFileAsText, formatFileMessage, readImageAsBase64, isImageFile, getImageFromClipboard } from "@/lib/utils/readFile";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { useConversations, type StoredMessage } from "@/lib/hooks/useConversations";
@@ -607,8 +606,6 @@ Después de ejecutar, SIEMPRE confirma el resultado en tu mensaje.`;
     }
   }, [input, isLoading, canSend, messages, context, attachedImages, buildCopilotPrompt, executeActions]);
 
-  const voice = useVoiceInput({ autoSend: true, onResult: handleSend });
-
   const handleNewChat = () => {
     createConversation();
     setSidebarOpen(false);
@@ -888,25 +885,13 @@ Después de ejecutar, SIEMPRE confirma el resultado en tu mensaje.`;
             placeholder={!canSend ? (isPublic ? t("chat.placeholder_limit_anon") : t("chat.placeholder_limit_user")) : t("chat.placeholder_default")}
             disabled={!canSend}
             className={cn(
-              "w-full bg-zinc-50 max-[400px]:p-3 max-[340px]:p-2.5 max-[400px]:text-xs text-sm p-4 md:p-5 pr-20 md:pr-24 rounded-xl md:rounded-2xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 focus:ring-2 focus:ring-red-600/5 transition-all shadow-sm disabled:opacity-50 disabled:bg-zinc-100",
-              voice.isSupported ? "max-[400px]:pr-[102px]" : "max-[400px]:pr-[72px]"
+              "w-full bg-zinc-50 max-[400px]:p-3 max-[340px]:p-2.5 max-[400px]:text-xs text-sm p-4 md:p-5 pr-16 md:pr-20 rounded-xl md:rounded-2xl border border-zinc-100 outline-none font-medium focus:bg-white focus:border-red-200 focus:ring-2 focus:ring-red-600/5 transition-all shadow-sm disabled:opacity-50 disabled:bg-zinc-100"
             )}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleSend()}
           />
           <div className="absolute right-1 md:right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 md:gap-1">
-            {voice.isSupported && (
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                type="button"
-                onClick={voice.isListening ? voice.stopListening : voice.startListening}
-                disabled={isLoading || !canSend}
-                className={cn("w-8 h-8 max-[340px]:w-7 max-[340px]:h-7 rounded-xl flex items-center justify-center transition-all shrink-0", voice.isListening ? "bg-red-600 text-white animate-pulse shadow-lg shadow-red-200" : "text-zinc-400 hover:text-red-600 hover:bg-red-50")}
-              >
-                {voice.isListening ? <MicOff className="w-3.5 h-3.5 max-[340px]:w-3 max-[340px]:h-3 md:w-4 md:h-4" /> : <Mic className="w-3.5 h-3.5 max-[340px]:w-3 max-[340px]:h-3 md:w-4 md:h-4" />}
-              </motion.button>
-            )}
             <motion.button
               whileTap={{ scale: 0.9 }}
               id="chat-send-btn"
