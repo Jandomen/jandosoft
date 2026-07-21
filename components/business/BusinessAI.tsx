@@ -181,7 +181,7 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
           const priceVal = typeof action.price === "string" ? parseFloat(action.price.replace(/[^0-9.]/g, "")) : Number(action.price) || 0;
           const currencyVal = action.currency || "USD";
           const stockVal = action.stock || 0;
-          newProducts = [...newProducts, { id: uid(), name: action.name, price: priceVal, currency: currencyVal, priceUSD: convertToUSD(priceVal, currencyVal), stock: stockVal, images: [] }];
+          newProducts = [...newProducts, { id: uid(), name: action.name, price: priceVal, currency: currencyVal, priceUSD: convertToUSD(priceVal, currencyVal), stock: stockVal, images: [], desc: action.desc || "", barcode: action.barcode || "" }];
           result += `✅ Producto "${action.name}" creado. `;
           onExecuteAutomations?.("new_product", { productName: action.name, productPrice: priceVal, productStock: stockVal });
           if (stockVal <= 5) onExecuteAutomations?.("low_stock", { productName: action.name, productStock: stockVal });
@@ -233,7 +233,7 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
           result += `🗑️ Servicio eliminado. `;
           break;
         case "addKbEntry":
-          newKbEntries = [...newKbEntries, { id: uid(), title: action.title, content: action.content, category: action.category || "general", createdAt: new Date().toISOString() }];
+          newKbEntries = [...newKbEntries, { id: uid(), title: action.title, content: action.content, question: action.question || "", category: action.category || "general", createdAt: new Date().toISOString() }];
           result += `📚 Entrada "${action.title}" añadida a la base de conocimiento. `;
           break;
         case "deleteKbEntry":
@@ -803,7 +803,7 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
             const storeId = (store as any)?._id || (store as any)?.id;
             if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
             const existing = (store as any)?.grades || [];
-            const newEntry = { id: uid(), studentName: action.studentName, course: action.course || "", score: Number(action.score) || 0, period: action.period || "", comments: action.comments || "", subject: action.subject || "", gradeWeight: Number(action.gradeWeight) || 1, letterGrade: action.letterGrade || "", semester: action.semester || "", ...(action.data || {}) };
+            const newEntry = { id: uid(), studentName: action.studentName, course: action.course || "", score: Number(action.score) || 0, period: action.period || "", comments: action.comments || "", subject: action.subject || "", gradeWeight: Number(action.gradeWeight) || 1, letterGrade: action.letterGrade || "", semester: action.semester || "", attendance: Number(action.attendance) || 0, ...(action.data || {}) };
             const _ok = await Promise.resolve(onSaveStore?.(storeId, { grades: [...existing, newEntry] }));
             if (_ok !== false) result += `✅ Calificación para ${action.studentName} creada. `;
             else result += `⚠️ Error al guardar en el servidor.`;
