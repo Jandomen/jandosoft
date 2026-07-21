@@ -120,6 +120,6 @@ export async function POST(req: Request) {
     return Response.json({ text });
   } catch (error) {
     console.error("Admin Chat Error:", error);
-    return Response.json({ error: "Error al generar respuesta." }, { status: 500 });
+    return Response.json({ error: "No pude procesar tu solicitud. Intenta de nuevo." }, { status: 500 });
   }
 }

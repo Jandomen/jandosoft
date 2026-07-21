@@ -365,9 +365,18 @@ ${context.email ? `- Usuario: ${context.email}` : ""}${plansBlock}
     if (error?.error?.message) console.error("OpenRouter msg:", error.error.message);
     if (error?.code === "insufficient_quota") console.error("QUOTA EXCEEDED — OpenRouter key needs funds");
     const isCreditError = error?.status === 402 || error?.code === "insufficient_quota";
-    const friendlyMsg = isCreditError
-      ? "El AI no está disponible en este momento. Inténtalo más tarde."
-      : "Error al generar respuesta. Intenta de nuevo.";
+    const isRateLimit = error?.status === 429 || error?.error?.code === "rate_limit_exceeded";
+    const isTimeout = error?.code === "ETIMEDOUT" || error?.code === "ECONNRESET" || error?.message?.includes("timeout");
+    let friendlyMsg: string;
+    if (isCreditError) {
+      friendlyMsg = "El servicio de IA no está disponible en este momento. Se están renovando los créditos. Intenta más tarde.";
+    } else if (isRateLimit) {
+      friendlyMsg = "Demasiadas solicitudes al mismo tiempo. Espera unos segundos y vuelve a intentar.";
+    } else if (isTimeout) {
+      friendlyMsg = "La respuesta está tardando más de lo esperado. Intenta de nuevo en unos momentos.";
+    } else {
+      friendlyMsg = "No pude procesar tu mensaje en este momento. Intenta de nuevo, por favor.";
+    }
     return Response.json({ error: friendlyMsg }, { status: 500 });
   }
 }

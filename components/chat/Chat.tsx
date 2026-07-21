@@ -598,7 +598,7 @@ Después de ejecutar, SIEMPRE confirma el resultado en tu mensaje.`;
 
         setMessages(prev => [...prev, { role: "bot", content: botContent, timestamp: Date.now() }]);
       } else if (data.error) {
-        setMessages(prev => [...prev, { role: "bot", content: `Error: ${data.error}`, timestamp: Date.now() }]);
+        setMessages(prev => [...prev, { role: "bot", content: data.error, timestamp: Date.now() }]);
       }
     } catch {
       setMessages(prev => [...prev, { role: "bot", content: t("chat.server_error"), timestamp: Date.now() }]);

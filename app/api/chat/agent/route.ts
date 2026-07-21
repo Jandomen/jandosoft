@@ -740,12 +740,22 @@ ${taskContext}`;
     if (isProviderError) {
       console.error("[Agent Route] Provider error:", error?.status, error?.message || error);
       return Response.json({
-        text: "El servicio de IA está temporalmente sobrecargado. Por favor, intenta de nuevo en unos segundos.",
+        text: "Estoy un poco lento ahora mismo. Dame un momento y vuelve a escribirme.",
       });
+    }
+    const isRateLimit = error?.status === 429 || error?.error?.code === "rate_limit_exceeded";
+    const isTimeout = error?.code === "ETIMEDOUT" || error?.code === "ECONNRESET" || error?.message?.includes("timeout");
+    let errorMsg: string;
+    if (isRateLimit) {
+      errorMsg = "Demasiadas consultas al mismo tiempo. Espera unos segundos e intenta de nuevo.";
+    } else if (isTimeout) {
+      errorMsg = "Mi respuesta está tardando más de lo normal. Intenta escribirme de nuevo en unos momentos.";
+    } else {
+      errorMsg = "No pude procesar tu mensaje ahora mismo. Por favor, intenta de nuevo.";
     }
     console.error("Chat Agent API 500:", error?.message || error);
     return Response.json(
-      { error: "Error al generar respuesta. Intenta de nuevo." },
+      { error: errorMsg },
       { status: 500 }
     );
   }
