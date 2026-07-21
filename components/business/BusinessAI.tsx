@@ -1282,6 +1282,25 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
             } catch { result += `⚠️ Error al registrar historial. `; }
           })());
           break;
+        case "changeLanguage": {
+          const lang = action.language || action.lang;
+          const validLangs = ["es", "en", "fr", "zh", "hi", "ko", "ja", "it", "pt", "ru"];
+          if (!lang || !validLangs.includes(lang)) {
+            result += `⚠️ Idioma no válido. Idiomas disponibles: ${validLangs.join(", ")}. `;
+            break;
+          }
+          const storeId = (store as any)?._id || (store as any)?.id;
+          if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; break; }
+          asyncOps.push((async () => {
+            try {
+              const currentConfig = (store as any)?.agentConfig || {};
+              const _ok = await Promise.resolve(onSaveStore?.(storeId, { agentConfig: { ...currentConfig, lang } }));
+              if (_ok !== false) result += `✅ Idioma del chat widget cambiado a ${lang}. `;
+              else result += `⚠️ Error al cambiar idioma. `;
+            } catch { result += `⚠️ Error al cambiar idioma. `; }
+          })());
+          break;
+        }
       }
     }
     await Promise.all(asyncOps);
@@ -1468,6 +1487,8 @@ REGLAS:
 - Puedes enviar correos electrónicos (sendEmail) con los campos to, subject y content.
 - Puedes enviar mensajes (sendMessage) con los campos to y content.
 - Puedes añadir contactos (addContact) con el campo email.
+- Puedes cambiar el idioma del chat widget (changeLanguage) con el campo language. Idiomas válidos: es, en, fr, zh, hi, ko, ja, it, pt, ru.
+- Puedes cambiar el idioma del chat widget (changeLanguage) con el campo language. Idiomas válidos: es, en, fr, zh, hi, ko, ja, it, pt, ru.
 ${activeDescriptions}
 - IMPORTANTE: SIEMPRE que el usuario te pida crear, modificar, eliminar o enviar algo, DEBES incluir el bloque JSON con las acciones correspondientes. No te limites a decir "lo haré" sin generar el JSON.
 

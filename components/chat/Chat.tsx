@@ -9,7 +9,7 @@ import MarkdownRenderer from "./MarkdownRenderer";
 import { useConversations, type StoredMessage } from "@/lib/hooks/useConversations";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
-export default function Chat({ maxMessages = 10, context, userStores, onStoresChange }: { maxMessages?: number; context?: { storeName?: string; industry?: string; storeType?: string; description?: string; email?: string; plan?: string }; userStores?: any[]; onStoresChange?: (stores: any[]) => void }) {
+export default function Chat({ maxMessages = 10, context, userStores, onStoresChange }: { maxMessages?: number; context?: { storeName?: string; industry?: string; storeType?: string; description?: string; email?: string; plan?: string; storeId?: string }; userStores?: any[]; onStoresChange?: (stores: any[]) => void }) {
   const { t } = useLanguage();
 
   const SUGGESTED_ACTIONS = [
@@ -166,6 +166,7 @@ TIPOS DE ACCIÓN (valores de "type"):
 - getAnalytics: obtiene estadísticas de una empresa. Parámetros: storeId
 - getNotifications: lista las notificaciones del usuario. Parámetros: (ninguno)
 - sendEmail: envía un correo electrónico. Parámetros: to, subject, content
+- changeLanguage: cambia el idioma del chat widget. Parámetros: language (código: es, en, fr, zh, hi, ko, ja, it, pt, ru)
 
 GESTIÓN DE CUENTA:
 - Si el usuario pide cambiar contraseña y está autenticado, usa changePassword con la contraseña actual y la nueva.
@@ -181,6 +182,7 @@ CAPACIDADES ADICIONALES:
 - Puedes ver estadísticas de una empresa con getAnalytics.
 - Puedes ver notificaciones del usuario con getNotifications.
 - Puedes enviar correos electrónicos con sendEmail (to, subject, content).
+- Puedes cambiar el idioma del chat widget con changeLanguage (language: es, en, fr, zh, hi, ko, ja, it, pt, ru).
 - Siempre pregunta qué quiere hacer antes de ejecutar acciones destructivas.
 
 VALORES DE "industry": tecnologia | comercio | servicios | salud | educacion | otro
@@ -499,6 +501,35 @@ Después de ejecutar, SIEMPRE confirma el resultado en tu mensaje.`;
             }
           } catch {
             results.push(`❌ Error de conexión al enviar correo.`);
+          }
+          break;
+        }
+        case "changeLanguage": {
+          const lang = action.language || action.lang;
+          const validLangs = ["es", "en", "fr", "zh", "hi", "ko", "ja", "it", "pt", "ru"];
+          if (!lang || !validLangs.includes(lang)) {
+            results.push(`❌ Idioma no válido. Idiomas disponibles: ${validLangs.join(", ")}.`);
+            break;
+          }
+          const sid = context?.storeId || userStores?.[0]?._id;
+          if (!sid) {
+            results.push(`❌ No se pudo identificar la tienda.`);
+            break;
+          }
+          try {
+            const res = await fetch(`/api/stores/${sid}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ agentConfig: { lang } }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+              results.push(`✅ Idioma cambiado a **${lang}**. El chat ahora responderá en este idioma.`);
+            } else {
+              results.push(`❌ ${data.error || "Error al cambiar idioma"}`);
+            }
+          } catch {
+            results.push(`❌ Error de conexión al cambiar idioma.`);
           }
           break;
         }
