@@ -25,9 +25,11 @@ interface Reservation {
 
 interface Props {
   storeId: string;
+  category?: string;
 }
 
-const STATUS_TABS = ["all", "pending", "confirmed", "seated", "completed", "cancelled"] as const;
+const RESTAURANT_TABS = ["all", "pending", "confirmed", "seated", "completed", "cancelled"] as const;
+const GENERIC_TABS = ["all", "pending", "confirmed", "completed", "cancelled"] as const;
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",
   confirmed: "bg-blue-100 text-blue-700",
@@ -42,9 +44,10 @@ const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => {
   return `${h > 23 ? h - 24 : h}:${m}`;
 }).filter(t => { const h = parseInt(t.split(":")[0]); return h >= 11 && h <= 23; });
 
-export default function ReservationsPanel({ storeId }: Props) {
+export default function ReservationsPanel({ storeId, category = "restaurant" }: Props) {
   const { t } = useLanguage();
   const { showToast } = useToast();
+  const isRestaurant = category === "restaurant" || category === "catering" || category === "coffee_shop" || category === "bakery";
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -53,7 +56,7 @@ export default function ReservationsPanel({ storeId }: Props) {
   const [tables, setTables] = useState<any[]>([]);
   const [form, setForm] = useState({
     customerName: "", phone: "", email: "", date: new Date().toISOString().split("T")[0],
-    time: "19:00", partySize: "2", tableNumber: "", notes: "",
+    time: "09:00", partySize: "2", tableNumber: "", notes: "",
   });
   const [conflict, setConflict] = useState(false);
 
@@ -71,6 +74,7 @@ export default function ReservationsPanel({ storeId }: Props) {
   };
 
   const fetchTables = async () => {
+    if (!isRestaurant) return;
     try {
       const res = await fetch(`/api/restaurant/${storeId}`);
       const data = await res.json();
@@ -94,6 +98,7 @@ export default function ReservationsPanel({ storeId }: Props) {
     return true;
   });
 
+  const STATUS_TABS = isRestaurant ? RESTAURANT_TABS : GENERIC_TABS;
   const tabCounts = STATUS_TABS.reduce((acc, tab) => {
     acc[tab] = tab === "all"
       ? reservations.filter(r => !dateFilter || r.date === dateFilter).length
@@ -102,21 +107,21 @@ export default function ReservationsPanel({ storeId }: Props) {
   }, {} as Record<string, number>);
 
   const createReservation = async () => {
-    if (!form.customerName || !form.phone) return;
+    if (!form.customerName || (isRestaurant && !form.phone)) return;
     try {
       const res = await fetch(`/api/restaurant/${storeId}/reservations`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerName: form.customerName, phone: form.phone, email: form.email,
-          date: form.date, time: form.time, partySize: parseInt(form.partySize) || 2,
-          tableNumber: form.tableNumber ? parseInt(form.tableNumber) : undefined,
+          date: form.date, time: form.time, partySize: isRestaurant ? (parseInt(form.partySize) || 2) : 1,
+          tableNumber: isRestaurant && form.tableNumber ? parseInt(form.tableNumber) : undefined,
           notes: form.notes,
         }),
       });
       const data = await res.json();
       setReservations(prev => [data.reservation || data, ...prev]);
       setShowModal(false);
-      setForm({ customerName: "", phone: "", email: "", date: new Date().toISOString().split("T")[0], time: "19:00", partySize: "2", tableNumber: "", notes: "" });
+      setForm({ customerName: "", phone: "", email: "", date: new Date().toISOString().split("T")[0], time: isRestaurant ? "19:00" : "09:00", partySize: "2", tableNumber: "", notes: "" });
       showToast(t("restaurant.reservation_created"), "success");
     } catch {
       showToast(t("restaurant.error_saving"), "error");
@@ -182,9 +187,9 @@ export default function ReservationsPanel({ storeId }: Props) {
                   <p className="text-sm font-black italic text-zinc-950 truncate">{res.customerName}</p>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
                     {res.phone && <span className="text-[9px] text-zinc-400 font-bold italic flex items-center gap-1"><Phone className="w-2.5 h-2.5" />{res.phone}</span>}
-                    <span className="text-[9px] text-zinc-400 font-bold italic flex items-center gap-1"><Users className="w-2.5 h-2.5" />{res.partySize}</span>
+                    {isRestaurant && <span className="text-[9px] text-zinc-400 font-bold italic flex items-center gap-1"><Users className="w-2.5 h-2.5" />{res.partySize}</span>}
                     <span className="text-[9px] text-zinc-400 font-bold italic flex items-center gap-1"><Clock className="w-2.5 h-2.5" />{res.date} {res.time}</span>
-                    {res.tableNumber && <span className="text-[9px] text-zinc-400 font-bold italic">{t("restaurant.table")} {res.tableNumber}</span>}
+                    {isRestaurant && res.tableNumber && <span className="text-[9px] text-zinc-400 font-bold italic">{t("restaurant.table")} {res.tableNumber}</span>}
                   </div>
                   {res.notes && <p className="text-[9px] text-zinc-300 italic mt-1">{res.notes}</p>}
                 </div>
@@ -243,7 +248,7 @@ export default function ReservationsPanel({ storeId }: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("restaurant.phone")}</label>
+                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("restaurant.phone")}{isRestaurant ? "" : " (opcional)"}</label>
                     <input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
                       className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
                   </div>
@@ -266,11 +271,13 @@ export default function ReservationsPanel({ storeId }: Props) {
                       {TIME_SLOTS.map(slot => <option key={slot} value={slot}>{slot}</option>)}
                     </select>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("restaurant.party_size")}</label>
-                    <input type="number" min="1" value={form.partySize} onChange={e => setForm({ ...form, partySize: e.target.value })}
-                      className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
-                  </div>
+                  {isRestaurant && (
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("restaurant.party_size")}</label>
+                      <input type="number" min="1" value={form.partySize} onChange={e => setForm({ ...form, partySize: e.target.value })}
+                        className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all" />
+                    </div>
+                  )}
                 </div>
 
                 {conflict && (
@@ -279,22 +286,24 @@ export default function ReservationsPanel({ storeId }: Props) {
                   </div>
                 )}
 
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("restaurant.assign_table")}</label>
-                  <select value={form.tableNumber} onChange={e => setForm({ ...form, tableNumber: e.target.value })}
-                    className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all">
-                    <option value="">{t("restaurant.no_table")}</option>
-                    {availableTables.map(tb => (
-                      <option key={tb.id || tb._id} value={tb.number}>{t("restaurant.table")} {tb.number} ({tb.capacity} {t("restaurant.people")})</option>
-                    ))}
-                  </select>
-                </div>
+                {isRestaurant && (
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1">{t("restaurant.assign_table")}</label>
+                    <select value={form.tableNumber} onChange={e => setForm({ ...form, tableNumber: e.target.value })}
+                      className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all">
+                      <option value="">{t("restaurant.no_table")}</option>
+                      {availableTables.map(tb => (
+                        <option key={tb.id || tb._id} value={tb.number}>{t("restaurant.table")} {tb.number} ({tb.capacity} {t("restaurant.people")})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <textarea placeholder={t("restaurant.notes")} value={form.notes} rows={2}
                   onChange={e => setForm({ ...form, notes: e.target.value })}
                   className="w-full bg-zinc-50 p-3 rounded-xl border border-zinc-100 outline-none text-sm font-medium focus:bg-white focus:border-red-200 transition-all resize-none" />
 
-                <motion.button whileTap={{ scale: 0.97 }} onClick={createReservation} disabled={!form.customerName || !form.phone}
+                <motion.button whileTap={{ scale: 0.97 }} onClick={createReservation} disabled={!form.customerName || (isRestaurant && !form.phone)}
                   className="w-full py-4 bg-red-600 text-white rounded-2xl font-black italic hover:bg-red-700 transition-all shadow-xl disabled:opacity-50">
                   {t("restaurant.create_reservation")}
                 </motion.button>

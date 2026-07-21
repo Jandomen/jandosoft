@@ -2770,7 +2770,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
             {(section as string) === "restaurant" && <RestaurantDashboard storeId={String(storeId)} store={userStore} onSaveStore={onSaveStore} />}
             {(section as string) === "floor_plan" && <FloorPlanEditor storeId={String(storeId)} floorPlan={(userStore as any)?.restaurantFloorPlan || {}} tables={((userStore as any)?.restaurantTables || [])} onSave={(fp: any) => onSaveStore?.(storeId, { restaurantFloorPlan: fp, restaurantTables: fp.tables })} />}
             {(section as string) === "restaurant_orders" && <OrdersPanel storeId={String(storeId)} />}
-            {(section as string) === "reservations" && <ReservationsPanel storeId={String(storeId)} />}
+            {(section as string) === "reservations" && <ReservationsPanel storeId={String(storeId)} category={storeCategory} />}
             {(section as string) === "promotions" && <PromotionsPanel storeId={String(storeId)} />}
             {(section as string) === "loyalty" && <LoyaltyPanel storeId={String(storeId)} />}
             {(section as string) === "restaurant_reviews" && <ReviewsPanel storeId={String(storeId)} />}
