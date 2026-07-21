@@ -9,6 +9,51 @@ import { cn, searchKnowledgeBase } from "@/lib/utils";
 import { useVoiceInput } from "@/lib/hooks/useVoiceInput";
 import MarkdownRenderer from "@/components/chat/MarkdownRenderer";
 import { convertToUSD } from "./currency";
+import { CATEGORIES, type CategoryId } from "@/lib/categories/registry";
+
+const MODULE_ACTIONS: Record<string, string[]> = {
+  menu: ["addMenuItem", "updateMenuItem", "deleteMenuItem"],
+  recipes: ["addRecipe", "updateRecipe", "deleteRecipe"],
+  restaurant: ["addReservation", "updateReservation", "cancelReservation", "replyToReview", "addPromotion", "updatePromotion", "deletePromotion", "addRestaurantOrder", "updateRestaurantOrder", "addLoyaltyPoints", "updateLoyaltySettings", "updateWaiterCall"],
+  clients: ["addClient", "updateClient", "deleteClient"],
+  case_files: ["addCaseFile", "updateCaseFile", "deleteCaseFile"],
+  hearings: ["addHearing", "updateHearing", "deleteHearing"],
+  documents: ["addDocument", "updateDocument", "deleteDocument"],
+  medical_records: ["addMedicalRecord", "updateMedicalRecord", "deleteMedicalRecord"],
+  prescriptions: ["addPrescription", "updatePrescription", "deletePrescription"],
+  doctors: ["addDoctor", "updateDoctor", "deleteDoctor"],
+  courses: ["addCourse", "updateCourse", "deleteCourse"],
+  classes: ["addClass", "updateClass", "deleteClass"],
+  students: ["addStudent", "updateStudent", "deleteStudent"],
+  grades: ["addGrade", "updateGrade", "deleteGrade"],
+  barbers: ["addBarber", "updateBarber", "deleteBarber"],
+  queue: ["addToQueue", "updateQueueEntry", "addBarberHistoryEntry"],
+  inventory: ["addInventoryItem", "updateInventoryItem", "deleteInventoryItem"],
+  gallery: ["addGalleryItem", "updateGalleryItem", "deleteGalleryItem"],
+  testimonials: ["addTestimonial", "updateTestimonial", "deleteTestimonial"],
+  products: ["addProduct", "updateProduct", "deleteProduct"],
+  customers: ["addCustomer", "updateCustomer", "deleteCustomer"],
+  orders: ["addOrder", "updateOrder", "deleteOrder"],
+  services: ["addService", "updateService", "deleteService"],
+  knowledgebase: ["addKbEntry", "updateKbEntry", "deleteKbEntry"],
+  automations: ["addAutomation", "updateAutomation", "deleteAutomation", "addWorkflow", "updateWorkflow", "deleteWorkflow"],
+  campaigns: ["addCampaign", "updateCampaign", "deleteCampaign"],
+  appointments: ["addAppointment", "updateAppointment", "cancelAppointment"],
+};
+
+const GENERIC_MODULES = new Set(["products", "customers", "orders", "services", "knowledgebase", "automations", "campaigns", "appointments"]);
+
+function getAllowedActions(category: string): Set<string> {
+  const catDef = CATEGORIES[category as CategoryId] || CATEGORIES.general;
+  const allowed = new Set<string>();
+  for (const mod of GENERIC_MODULES) {
+    for (const action of MODULE_ACTIONS[mod] || []) allowed.add(action);
+  }
+  for (const mod of catDef.modules) {
+    for (const action of MODULE_ACTIONS[mod] || []) allowed.add(action);
+  }
+  return allowed;
+}
 
 const AI_WINDOW_MS = 2.5 * 60 * 60 * 1000;
 
@@ -44,6 +89,9 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
   const [aiConversations, setAiConversations] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const storeCategory = (store as any)?.category || "general";
+  const allowedActions = getAllowedActions(storeCategory);
+  const categoryModules = new Set((CATEGORIES[storeCategory as CategoryId] || CATEGORIES.general).modules);
 
   // Load messaging data for AI context
   useEffect(() => {
@@ -156,10 +204,27 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
     const matchedKb = searchKnowledgeBase(query, kbEntries, 5);
     const kbStr = matchedKb.map((k: any) => `[${k.category}] ${k.question ? k.question + " → " : ""}${k.title}: ${k.content.slice(0, 200)}`).join("\n");
 
-    return `DATOS ACTUALES:\nProductos (${products.length}): ${productsStr || "ninguno"}\nServicios (${services.length}): ${servicesStr || "ninguno"}\nClientes de negocio (${customers.length}): ${customersStr || "ninguno"}\nPedidos (${orders.length}): ${ordersStr || "ninguno"}\nCampañas (${campaigns.length}): ${campaignsStr || "ninguna"}\nVentas totales: $${totalSales}${storeConfig}\n\nCLIENTES LEGALES (${(store?.clients || []).length}):\n${clientsList || "  No hay clientes legales registrados."}\n\nEXPEDIENTES (${(store?.caseFiles || []).length}):\n${caseFilesList || "  No hay expedientes."}\n\nAUDIENCIAS (${(store?.hearings || []).length}):\n${hearingsList || "  No hay audiencias."}\n\nDOCUMENTOS (${(store?.documents || []).length}):\n${documentsList || "  No hay documentos."}\n\nHISTORIALES MÉDICOS (${(store?.medicalRecords || []).length}):\n${medicalRecordsList || "  No hay historiales médicos."}\n\nRECETAS MÉDICAS (${(store?.prescriptions || []).length}):\n${prescriptionsList || "  No hay recetas médicas."}\n\nDOCTORAS/DOCTORES (${(store?.doctors || []).length}):\n${doctorsList || "  No hay doctoras registradas."}\n\nCURSOS (${(store?.courses || []).length}):\n${coursesList || "  No hay cursos."}\n\nESTUDIANTES (${(store?.students || []).length}):\n${studentsList || "  No hay estudiantes registrados."}\n\nCALIFICACIONES (${(store?.grades || []).length}):\n${gradesList || "  No hay calificaciones."}\n\nCLASES (${(store?.classes || []).length}):\n${classesList || "  No hay clases registradas."}\n\nMENÚ (${(store?.menuItems || []).length}):\n${menuItemsList || "  No hay items en el menú."}\n\nRECETAS (${(store?.recipes || []).length}):\n${recipesList || "  No hay recetas."}\n\nINVENTARIO (${(store?.inventoryItems || []).length}):\n${inventoryItemsList || "  No hay items en inventario."}\n\nGALERÍA (${(store?.galleryItems || []).length}):\n${galleryItemsList || "  No hay imágenes en la galería."}\n\nTESTIMONIOS (${(store?.testimonials || []).length}):\n${testimonialsList || "  No hay testimonios."}\n\nBASE DE CONOCIMIENTO (relevantes filtrados de un total de ${kbEntries.length} entradas):\n${kbStr || "No hay entradas relevantes en la base de conocimiento para esta consulta."}\n\nAUTOMATIZACIONES ACTIVAS (${automations.filter((a: any) => a.enabled).length}):\n${autoStr || "No hay automatizaciones activas."}\n\nCONTACTOS (${aiContacts.length}): ${contactsStr || "No hay contactos guardados. Puedes añadir contactos con la acción addContact."}\n\nCONVERSACIONES RECIENTES (${aiConversations.length}):\n${aiConversations.map((c: any) => {
-      const other = c.participants?.find((p: any) => p.email !== c.lastSenderId) || c.participants?.[0];
-      return `- ${other?.name || "Usuario"}: ${c.lastMessage || "Sin mensajes"}`;
-    }).join("\n") || "No hay conversaciones."}\n\nCITAS (${appointments.length}):\n${appointmentsStr || "  No hay citas agendadas."}\n\nPuedes consultar la base de conocimiento, automatizaciones, contactos, conversaciones y citas para responder preguntas del usuario. También puedes sugerir añadir, modificar o eliminar entradas de KB, automatizaciones y citas usando los actions correspondientes. Puedes enviar mensajes a otros usuarios usando la acción sendMessage, enviar correos electrónicos con sendEmail, y añadir contactos con addContact.`;
+    let sections = `DATOS ACTUALES:\nProductos (${products.length}): ${productsStr || "ninguno"}\nServicios (${services.length}): ${servicesStr || "ninguno"}\nClientes de negocio (${customers.length}): ${customersStr || "ninguno"}\nPedidos (${orders.length}): ${ordersStr || "ninguno"}\nCampañas (${campaigns.length}): ${campaignsStr || "ninguna"}\nVentas totales: $${totalSales}${storeConfig}`;
+
+    if (categoryModules.has("clients")) sections += `\n\nCLIENTES LEGALES (${(store?.clients || []).length}):\n${clientsList || "  No hay clientes legales registrados."}`;
+    if (categoryModules.has("case_files")) sections += `\n\nEXPEDIENTES (${(store?.caseFiles || []).length}):\n${caseFilesList || "  No hay expedientes."}`;
+    if (categoryModules.has("hearings")) sections += `\n\nAUDIENCIAS (${(store?.hearings || []).length}):\n${hearingsList || "  No hay audiencias."}`;
+    if (categoryModules.has("documents")) sections += `\n\nDOCUMENTOS (${(store?.documents || []).length}):\n${documentsList || "  No hay documentos."}`;
+    if (categoryModules.has("medical_records")) sections += `\n\nHISTORIALES MÉDICOS (${(store?.medicalRecords || []).length}):\n${medicalRecordsList || "  No hay historiales médicos."}`;
+    if (categoryModules.has("prescriptions")) sections += `\n\nRECETAS MÉDICAS (${(store?.prescriptions || []).length}):\n${prescriptionsList || "  No hay recetas médicas."}`;
+    if (categoryModules.has("doctors")) sections += `\n\nDOCTORAS/DOCTORES (${(store?.doctors || []).length}):\n${doctorsList || "  No hay doctoras registradas."}`;
+    if (categoryModules.has("courses")) sections += `\n\nCURSOS (${(store?.courses || []).length}):\n${coursesList || "  No hay cursos."}`;
+    if (categoryModules.has("students")) sections += `\n\nESTUDIANTES (${(store?.students || []).length}):\n${studentsList || "  No hay estudiantes registrados."}`;
+    if (categoryModules.has("grades")) sections += `\n\nCALIFICACIONES (${(store?.grades || []).length}):\n${gradesList || "  No hay calificaciones."}`;
+    if (categoryModules.has("classes")) sections += `\n\nCLASES (${(store?.classes || []).length}):\n${classesList || "  No hay clases registradas."}`;
+    if (categoryModules.has("menu")) sections += `\n\nMENÚ (${(store?.menuItems || []).length}):\n${menuItemsList || "  No hay items en el menú."}`;
+    if (categoryModules.has("recipes")) sections += `\n\nRECETAS (${(store?.recipes || []).length}):\n${recipesList || "  No hay recetas."}`;
+    if (categoryModules.has("inventory")) sections += `\n\nINVENTARIO (${(store?.inventoryItems || []).length}):\n${inventoryItemsList || "  No hay items en inventario."}`;
+    if (categoryModules.has("gallery")) sections += `\n\nGALERÍA (${(store?.galleryItems || []).length}):\n${galleryItemsList || "  No hay imágenes en la galería."}`;
+    if (categoryModules.has("testimonials")) sections += `\n\nTESTIMONIOS (${(store?.testimonials || []).length}):\n${testimonialsList || "  No hay testimonios."}`;
+
+    sections += `\n\nBASE DE CONOCIMIENTO (${kbEntries.length}):\n${kbStr || "  No hay entradas."}\n\nAUTOMATIZACIONES (${automations.length}):\n${autoStr || "  No hay automatizaciones."}\n\nCONTACTOS (${aiContacts.length}):\n${contactsStr || "  No hay contactos."}\n\nCONVERSACIONES:\n${aiConversations.length > 0 ? aiConversations.slice(0, 5).map((c: any) => { const other = c.participants?.find((p: any) => p.email !== c.lastSenderId) || c.participants?.[0]; return `- ${other?.name || "Usuario"}: ${c.lastMessage || "Sin mensajes"}`; }).join("\n") : "No hay conversaciones."}\n\nCITAS (${appointments.length}):\n${appointmentsStr || "  No hay citas agendadas."}\n\nPuedes consultar la base de conocimiento, automatizaciones, contactos, conversaciones y citas para responder preguntas del usuario. También puedes sugerir añadir, modificar o eliminar entradas usando los actions correspondientes. Puedes enviar mensajes a otros usuarios usando la acción sendMessage, enviar correos electrónicos con sendEmail, y añadir contactos con addContact.`;
+    return sections;
   };
 
   const executeActions = async (actions: any[]) => {
@@ -176,6 +241,10 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
     const uid = () => ++_uid;
     const asyncOps: Promise<void>[] = [];
     for (const action of actions) {
+      if (!allowedActions.has(action.type)) {
+        result += `⚠️ La acción "${action.type}" no está disponible para este tipo de negocio. `;
+        continue;
+      }
       switch (action.type) {
         case "addProduct":
           const priceVal = typeof action.price === "string" ? parseFloat(action.price.replace(/[^0-9.]/g, "")) : Number(action.price) || 0;
@@ -1240,150 +1309,173 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
     try {
       const ac = (store as any)?.agentConfig || {};
       const contextInfo = getContextInfo(input);
-      const defaultSystem = `Eres un asistente IA experto en gestión de negocios y en la plataforma Jandosoft. Ayudas al usuario a administrar su negocio "${agentName}" dentro de Jandosoft.
+      const MODULE_EXAMPLES: Record<string, string> = {
+        products: `  {"type":"addProduct","name":"Nombre","price":100,"stock":5,"desc":"Descripción","barcode":"123"},
+  {"type":"deleteProduct","id":123},
+  {"type":"updateProduct","id":123,"data":{"name":"Nuevo","price":200,"stock":10}}`,
+        customers: `  {"type":"addCustomer","name":"Juan","email":"j@e.com","phone":"123"},
+  {"type":"updateCustomer","id":1,"data":{"email":"nuevo@email.com","phone":"987654321"}},
+  {"type":"deleteCustomer","id":456}`,
+        orders: `  {"type":"addOrder","product":"Producto","amount":100,"status":"Pagado"},
+  {"type":"deleteOrder","id":789},
+  {"type":"updateOrder","id":789,"data":{"status":"Enviado","amount":150}}`,
+        services: `  {"type":"addService","name":"Consulta legal","price":500,"desc":"Asesoría de 1 hora","duration":60},
+  {"type":"updateService","id":1,"data":{"price":600,"desc":"Nueva descripción"}},
+  {"type":"deleteService","id":1}`,
+        knowledgebase: `  {"type":"addKbEntry","title":"Política de devoluciones","content":"Texto completo...","category":"politicas","question":"¿Cuál es la política?"},
+  {"type":"deleteKbEntry","id":1},
+  {"type":"updateKbEntry","id":1,"data":{"title":"Nuevo título","content":"Nuevo contenido","category":"faq"}}`,
+        automations: `  {"type":"addAutomation","name":"Notificar nuevo producto","trigger":"new_product","actionType":"send_notification","actionConfig":{"message":"¡Nuevo producto creado!"}},
+  {"type":"updateAutomation","id":1,"data":{"name":"Nuevo nombre","enabled":false}},
+  {"type":"deleteAutomation","id":1}`,
+        campaigns: `  {"type":"addCampaign","name":"Campaña de bienvenida","type":"email","subject":"Bienvenido","body":"Hola {{name}}, gracias por tu compra","audience":"todos"},
+  {"type":"updateCampaign","id":1,"data":{"status":"sending"}},
+  {"type":"deleteCampaign","id":1}`,
+        appointments: `  {"type":"addAppointment","customerName":"Juan","customerEmail":"j@e.com","customerPhone":"123","serviceName":"Consulta","servicePrice":50,"date":"2026-06-17","time":"15:00","duration":60,"notes":"Nota opcional"},
+  {"type":"updateAppointment","id":"ID_DE_CITA","data":{"date":"2026-06-18","time":"16:00","status":"confirmed"}},
+  {"type":"cancelAppointment","id":"ID_DE_CITA"}`,
+        clients: `  {"type":"addClient","name":"María García","email":"maria@email.com","phone":"555-1234"},
+  {"type":"updateClient","id":1,"data":{"email":"nuevo@email.com"}},
+  {"type":"deleteClient","id":1}`,
+        case_files: `  {"type":"addCaseFile","title":"Caso González vs Pérez","clientName":"Carlos González","type":"civil","status":"activo"},
+  {"type":"updateCaseFile","id":1,"data":{"status":"cerrado"}},
+  {"type":"deleteCaseFile","id":1}`,
+        hearings: `  {"type":"addHearing","caseNumber":"Audiencia preliminar","date":"2026-07-15","time":"10:00","hearingType":"virtual","court":"Juzgado 1","judge":"Juez Pérez","duration":60},
+  {"type":"updateHearing","id":1,"data":{"date":"2026-07-16"}},
+  {"type":"deleteHearing","id":1}`,
+        documents: `  {"type":"addDocument","name":"Contrato","type":"contrato","desc":"Contrato de arrendamiento","fileUrl":"https://..."},
+  {"type":"updateDocument","id":1,"data":{"name":"Nuevo título"}},
+  {"type":"deleteDocument","id":1}`,
+        medical_records: `  {"type":"addMedicalRecord","patientName":"Ana López","date":"2026-07-10","diagnosis":"Hipertensión","doctor":"Dra. Martínez","visitType":"general","symptoms":"Dolor de cabeza","treatment":"Medicación"},
+  {"type":"updateMedicalRecord","id":1,"data":{"diagnosis":"Actualizado"}},
+  {"type":"deleteMedicalRecord","id":1}`,
+        prescriptions: `  {"type":"addPrescription","patientName":"Ana López","medication":"Enalapril","dosage":"10mg","frequency":"1 vez al día","prescribedBy":"Dra. Martínez"},
+  {"type":"updatePrescription","id":1,"data":{"dosage":"20mg"}},
+  {"type":"deletePrescription","id":1}`,
+        doctors: `  {"type":"addDoctor","name":"Dra. María","specialty":"Cardiología","phone":"555-9876","email":"maria@clinica.com","licenseNumber":"12345"},
+  {"type":"updateDoctor","id":1,"data":{"consultationFee":1800}},
+  {"type":"deleteDoctor","id":1}`,
+        inventory: `  {"type":"addInventoryItem","name":"Laptop HP","quantity":10,"price":25000,"category":"Electrónicos","sku":"LPT-001","minStock":2},
+  {"type":"updateInventoryItem","id":1,"data":{"quantity":8}},
+  {"type":"deleteInventoryItem","id":1}`,
+        gallery: `  {"type":"addGalleryItem","title":"Oficina","imageUrl":"https://...","desc":"Vista principal","category":"instalaciones","featured":true},
+  {"type":"updateGalleryItem","id":1,"data":{"featured":false}},
+  {"type":"deleteGalleryItem","id":1}`,
+        testimonials: `  {"type":"addTestimonial","clientName":"Carlos","text":"Excelente servicio","rating":5,"company":"Tech Corp","approved":true},
+  {"type":"updateTestimonial","id":1,"data":{"rating":4}},
+  {"type":"deleteTestimonial","id":1}`,
+        classes: `  {"type":"addClass","name":"Matemáticas","course":"Matemáticas","teacher":"Prof. García","schedule":"Lun-Mie 10:00","capacity":30,"price":500},
+  {"type":"updateClass","id":1,"data":{"capacity":35}},
+  {"type":"deleteClass","id":1}`,
+        courses: `  {"type":"addCourse","name":"Programación Web","desc":"Curso completo","price":2000,"durationWeeks":12,"instructor":"Prof. López","level":"intermedio"},
+  {"type":"updateCourse","id":1,"data":{"price":2200}},
+  {"type":"deleteCourse","id":1}`,
+        students: `  {"type":"addStudent","name":"Ana Pérez","email":"ana@email.com","phone":"555-1111","grade":"9°","parentName":"María Pérez"},
+  {"type":"updateStudent","id":1,"data":{"grade":"10°"}},
+  {"type":"deleteStudent","id":1}`,
+        grades: `  {"type":"addGrade","studentName":"Ana Pérez","course":"Programación","score":95,"period":"2026-1","subject":"HTML","letterGrade":"A"},
+  {"type":"updateGrade","id":1,"data":{"score":98}},
+  {"type":"deleteGrade","id":1}`,
+        menu: `  {"type":"addMenuItem","name":"Hamburguesa","desc":"Carne 200g","price":150,"category":"hamburguesas","ingredients":"Carne, queso","calories":650,"featured":true},
+  {"type":"updateMenuItem","id":1,"data":{"price":160}},
+  {"type":"deleteMenuItem","id":1}`,
+        recipes: `  {"type":"addRecipe","name":"Pasta Alfredo","ingredients":"Pasta, crema","instructions":"Cocer pasta...","prepTime":10,"cookTime":20,"difficulty":"fácil","servings":4},
+  {"type":"updateRecipe","id":1,"data":{"difficulty":"media"}},
+  {"type":"deleteRecipe","id":1}`,
+        restaurant: `  {"type":"addReservation","customerName":"Juan","phone":"555-1234","email":"j@e.com","date":"2026-07-20","time":"19:00","partySize":4,"notes":"Mesa junto a ventana"},
+  {"type":"updateReservation","id":"RES_ID","data":{"status":"confirmed"}},
+  {"type":"cancelReservation","id":"RES_ID"},
+  {"type":"replyToReview","reviewId":1,"reply":"¡Gracias por tu reseña!"},
+  {"type":"addPromotion","code":"VERANO20","type":"percentage","value":20,"description":"20% en verano","validFrom":"2026-07-01","validUntil":"2026-08-31"},
+  {"type":"updatePromotion","id":1,"data":{"active":false}},
+  {"type":"deletePromotion","id":1},
+  {"type":"addRestaurantOrder","type":"dine_in","tableNumber":5,"items":[{"name":"Hamburguesa","quantity":2,"price":150}],"total":300},
+  {"type":"updateRestaurantOrder","id":"ORD_ID","data":{"status":"delivered"}},
+  {"type":"addLoyaltyPoints","memberId":"M1","points":100,"type":"earned","description":"Compra en restaurante"},
+  {"type":"updateLoyaltySettings","pointsPerDollar":2,"rewardsThreshold":500},
+  {"type":"updateWaiterCall","id":"CALL_ID","status":"resolved"}`,
+        barbers: `  {"type":"addBarber","name":"Carlos","phone":"555-1234","email":"carlos@barber.com","specialties":["fade","barba"],"bio":"10 años de experiencia"},
+  {"type":"updateBarber","id":1,"data":{"specialties":["fade","barba","diseño"]}},
+  {"type":"deleteBarber","id":1}`,
+        queue: `  {"type":"addToQueue","customerName":"Pedro","phone":"555-5678","serviceRequested":"Corte de cabello","notes":"Quiere fade alto"},
+  {"type":"updateQueueEntry","id":"Q_ID","data":{"status":"in_progress"}},
+  {"type":"addBarberHistoryEntry","barberName":"Carlos","customerName":"Pedro","service":"Corte de cabello","price":150,"duration":30,"rating":5,"date":"2026-07-15"}`,
+      };
+
+      const MODULE_DESCRIPTIONS: Record<string, string> = {
+        products: "- Puedes gestionar productos: crear (addProduct), modificar (updateProduct) y eliminar (deleteProduct).",
+        customers: "- Puedes gestionar clientes: crear (addCustomer), modificar (updateCustomer) y eliminar (deleteCustomer).",
+        orders: "- Puedes gestionar pedidos: crear (addOrder), modificar (updateOrder) y eliminar (deleteOrder).",
+        services: "- Puedes gestionar servicios: crear (addService), modificar (updateService) y eliminar (deleteService).",
+        knowledgebase: "- Puedes gestionar la base de conocimiento: crear (addKbEntry), modificar (updateKbEntry) y eliminar (deleteKbEntry).",
+        automations: "- Puedes crear automatizaciones (addAutomation) con triggers: new_order, new_customer, new_product, low_stock, payment_received y actionTypes: send_notification, send_email, webhook, send_telegram, send_discord, send_slack, post_to_social, ai_generate. También editarlas y eliminarlas.\n- También puedes crear Workflows (addWorkflow) con triggers avanzados: new_customer, new_order, new_appointment, payment_received, payment_failed, low_stock, customer_birthday, customer_inactive, webhook_received. Cada workflow tiene pasos con condiciones y acciones. También editarlos (updateWorkflow) y eliminarlos (deleteWorkflow).",
+        campaigns: "- Puedes crear campañas de marketing (addCampaign) de tipo email o sms. También editarlas (updateCampaign) y eliminarlas (deleteCampaign).",
+        appointments: "- Puedes gestionar citas/agenda: crear (addAppointment), modificar (updateAppointment) y cancelar (cancelAppointment). Usa fechas implícitas.",
+        clients: "- Puedes gestionar clientes legales: crear (addClient), modificar (updateClient) y eliminar (deleteClient).",
+        case_files: "- Puedes gestionar expedientes: crear (addCaseFile), modificar (updateCaseFile) y eliminar (deleteCaseFile).",
+        hearings: "- Puedes gestionar audiencias: crear (addHearing), modificar (updateHearing) y eliminar (deleteHearing).",
+        documents: "- Puedes gestionar documentos: crear (addDocument), modificar (updateDocument) y eliminar (deleteDocument).",
+        medical_records: "- Puedes gestionar historiales médicos: crear (addMedicalRecord), modificar (updateMedicalRecord) y eliminar (deleteMedicalRecord).",
+        prescriptions: "- Puedes gestionar recetas médicas: crear (addPrescription), modificar (updatePrescription) y eliminar (deletePrescription).",
+        doctors: "- Puedes gestionar doctores: crear (addDoctor), modificar (updateDoctor) y eliminar (deleteDoctor).",
+        inventory: "- Puedes gestionar inventario: crear (addInventoryItem), modificar (updateInventoryItem) y eliminar (deleteInventoryItem).",
+        gallery: "- Puedes gestionar la galería: crear (addGalleryItem), modificar (updateGalleryItem) y eliminar (deleteGalleryItem).",
+        testimonials: "- Puedes gestionar testimonios: crear (addTestimonial), modificar (updateTestimonial) y eliminar (deleteTestimonial).",
+        classes: "- Puedes gestionar clases: crear (addClass), modificar (updateClass) y eliminar (deleteClass).",
+        courses: "- Puedes gestionar cursos: crear (addCourse), modificar (updateCourse) y eliminar (deleteCourse).",
+        students: "- Puedes gestionar estudiantes: crear (addStudent), modificar (updateStudent) y eliminar (deleteStudent).",
+        grades: "- Puedes gestionar calificaciones: crear (addGrade), modificar (updateGrade) y eliminar (deleteGrade).",
+        menu: "- Puedes gestionar el menú: crear (addMenuItem), modificar (updateMenuItem) y eliminar (deleteMenuItem).",
+        recipes: "- Puedes gestionar recetas: crear (addRecipe), modificar (updateRecipe) y eliminar (deleteRecipe).",
+        restaurant: "- Puedes gestionar reservaciones (addReservation/updateReservation/cancelReservation), responder reseñas (replyToReview), promociones (addPromotion/updatePromotion/deletePromotion), pedidos de restaurante (addRestaurantOrder/updateRestaurantOrder), puntos de lealtad (addLoyaltyPoints/updateLoyaltySettings), llamadas de mesero (updateWaiterCall).",
+        barbers: "- Puedes gestionar barberos (addBarber/updateBarber/deleteBarber), cola de barbershop (addToQueue/updateQueueEntry) e historial de barbero (addBarberHistoryEntry).",
+      };
+
+      const activeExamples = Object.entries(MODULE_EXAMPLES)
+        .filter(([mod]) => GENERIC_MODULES.has(mod) || categoryModules.has(mod as any))
+        .map(([, ex]) => ex)
+        .join(",\n");
+
+      const activeDescriptions = Object.entries(MODULE_DESCRIPTIONS)
+        .filter(([mod]) => GENERIC_MODULES.has(mod) || categoryModules.has(mod as any))
+        .map(([, desc]) => desc)
+        .join("\n");
+
+      const catPrompt = (CATEGORIES[storeCategory as CategoryId] || CATEGORIES.general).systemPrompt;
+
+      const defaultSystem = `${catPrompt} Ayudas al usuario a administrar su negocio "${agentName}" dentro de Jandosoft.
 
 ${contextInfo}
 
-IMPORTANTE - ERES EXPERTO EN JANDOSOFT: Puedes dar sugerencias sobre cómo usar las funciones de Jandosoft para mejorar el negocio: configuración de empresa, productos, pagos (Stripe, cripto), integraciones (Telegram, Discord, Slack, WhatsApp, Twilio, redes sociales), automatizaciones, base de conocimiento, campañas de marketing, analíticas, equipo, facturación, planes (Free/Basic/Enterprise), y el builder visual. Usa la configuración de la empresa arriba para dar consejos personalizados.
+IMPORTANTE - SOLO PUEDES VER Y MODIFICAR los datos del negocio actual (${agentName}). NO tienes acceso a datos de otros usuarios ni empresas.
 
-IMPORTANTE - SOLO PUEDES VER Y MODIFICAR los datos del negocio actual (${agentName}). NO tienes acceso a datos de otros usuarios, otras empresas, ni información fuera del contexto proporcionado arriba. Si el usuario te pide datos de otros negocios o información que no está en el contexto, debes responder que no tienes acceso a esa información.
-
-Puedes MODIFICAR los datos del negocio actual. Para ello, incluye al final de tu respuesta un bloque JSON con las acciones a ejecutar, usando este formato EXACTO:
+Puedes MODIFICAR los datos del negocio actual. Para ello, incluye al final de tu respuesta un bloque JSON con las acciones a ejecutar:
 
 \`\`\`json
 {"actions":[
-  {"type":"addProduct","name":"Nombre","price":100,"stock":5},
-  {"type":"deleteProduct","id":123},
-  {"type":"updateProduct","id":123,"data":{"name":"Nuevo","price":200,"stock":10}},
-  {"type":"addCustomer","name":"Juan","email":"j@e.com","phone":"123"},
-  {"type":"updateCustomer","id":1,"data":{"email":"nuevo@email.com","phone":"987654321"}},
-  {"type":"deleteCustomer","id":456},
-  {"type":"addOrder","product":"Producto","amount":100,"status":"Pagado"},
-  {"type":"deleteOrder","id":789},
-  {"type":"updateOrder","id":789,"data":{"status":"Enviado","amount":150}},
-  {"type":"addService","name":"Consulta legal","price":500,"desc":"Asesoría de 1 hora","duration":60},
-  {"type":"updateService","id":1,"data":{"price":600,"desc":"Nueva descripción"}},
-  {"type":"deleteService","id":1},
-  {"type":"addKbEntry","title":"Política de devoluciones","content":"Texto completo...","category":"politicas"},
-  {"type":"deleteKbEntry","id":1},
-  {"type":"updateKbEntry","id":1,"data":{"title":"Nuevo título","content":"Nuevo contenido","category":"faq"}},
-  {"type":"sendMessage","to":"email@usuario.com","content":"Mensaje a enviar"},
-  {"type":"sendEmail","to":"cliente@email.com","subject":"Saludos desde Jandosoft","content":"<h1>Hola</h1><p>Mensaje personalizado</p>"},
-  {"type":"addContact","email":"email@usuario.com"},
-  {"type":"addAppointment","customerName":"Juan","customerEmail":"j@e.com","customerPhone":"123","serviceName":"Consulta","servicePrice":50,"date":"2026-06-17","time":"15:00","duration":60,"notes":"Nota opcional"},
-  {"type":"updateAppointment","id":"ID_DE_CITA","data":{"date":"2026-06-18","time":"16:00","status":"confirmed","notes":"Actualizada"}},
-  {"type":"cancelAppointment","id":"ID_DE_CITA"},
-  {"type":"addAutomation","name":"Notificar nuevo producto","trigger":"new_product","actionType":"send_notification","actionConfig":{"message":"¡Nuevo producto creado!"}},
-  {"type":"updateAutomation","id":1,"data":{"name":"Nuevo nombre","enabled":false}},
-  {"type":"deleteAutomation","id":1},
-  {"type":"addCampaign","name":"Campaña de bienvenida","type":"email","subject":"Bienvenido","body":"Hola {{name}}, gracias por tu compra","audience":"todos"},
-  {"type":"updateCampaign","id":1,"data":{"status":"sending"}},
-   {"type":"deleteCampaign","id":1},
-   {"type":"addClient","name":"María García","email":"maria@email.com","phone":"555-1234"},
-   {"type":"updateClient","id":1,"data":{"email":"nuevo@email.com","phone":"555-5678"}},
-   {"type":"deleteClient","id":1},
-   {"type":"addCaseFile","title":"Caso González vs Pérez","clientName":"Carlos González","type":"civil","status":"activo"},
-   {"type":"updateCaseFile","id":1,"data":{"status":"cerrado"}},
-   {"type":"deleteCaseFile","id":1},
-   {"type":"addHearing","caseNumber":"Audiencia preliminar","date":"2026-07-15","time":"10:00","hearingType":"virtual","court":"Juzgado 1","judge":"Juez Pérez","duration":60},
-   {"type":"updateHearing","id":1,"data":{"date":"2026-07-16","time":"11:00"}},
-   {"type":"deleteHearing","id":1},
-   {"type":"addDocument","title":"Contrato de arrendamiento","type":"contrato","content":"Texto del documento..."},
-   {"type":"updateDocument","id":1,"data":{"title":"Nuevo título","type":"legal"}},
-   {"type":"deleteDocument","id":1},
-   {"type":"addMedicalRecord","patientName":"Ana López","date":"2026-07-10","diagnosis":"Hipertensión","doctor":"Dra. Martínez","visitType":"general","symptoms":"Dolor de cabeza","treatment":"Medicación"},
-   {"type":"updateMedicalRecord","id":1,"data":{"diagnosis":"Diagnóstico actualizado","treatment":"Nuevo tratamiento"}},
-   {"type":"deleteMedicalRecord","id":1},
-   {"type":"addPrescription","patientName":"Ana López","medication":"Enalapril","dosage":"10mg","frequency":"1 vez al día","startDate":"2026-07-10","endDate":"2026-10-10","prescribedBy":"Dra. Martínez","refills":2,"instructions":"Tomar con alimentos"},
-   {"type":"updatePrescription","id":1,"data":{"dosage":"20mg","frequency":"2 veces al día"}},
-   {"type":"deletePrescription","id":1},
-   {"type":"addDoctor","name":"Dra. María Martínez","specialty":"Cardiología","phone":"555-9876","email":"maria@clinica.com","schedule":"Lun-Vie 9:00-18:00","licenseNumber":"12345","department":"Cardiología","consultationFee":1500},
-   {"type":"updateDoctor","id":1,"data":{"consultationFee":1800,"available":false}},
-   {"type":"deleteDoctor","id":1},
-   {"type":"addInventoryItem","name":"Laptop HP","quantity":10,"price":25000,"category":"Electrónicos","supplier":"Proveedor X","sku":"LPT-HP-001","minStock":2,"unit":"pieza","description":"Laptop HP Pavilion"},
-   {"type":"updateInventoryItem","id":1,"data":{"quantity":8,"price":24000}},
-   {"type":"deleteInventoryItem","id":1},
-   {"type":"addGalleryItem","title":"Oficina principal","imageUrl":"https://...","desc":"Vista de la oficina principal","category":"instalaciones","featured":true},
-   {"type":"updateGalleryItem","id":1,"data":{"title":"Nuevo título","featured":false}},
-   {"type":"deleteGalleryItem","id":1},
-   {"type":"addTestimonial","clientName":"Carlos López","text":"Excelente servicio, muy recomendado","rating":5,"company":"Tech Corp","position":"CEO","approved":true,"featured":true},
-   {"type":"updateTestimonial","id":1,"data":{"rating":4,"approved":false}},
-   {"type":"deleteTestimonial","id":1},
-   {"type":"addClass","name":"Matemáticas Avanzadas","course":"Matemáticas","teacher":"Prof. García","schedule":"Lun-Mie 10:00-12:00","capacity":30,"price":500,"room":"Aula 101","startDate":"2026-08-01","endDate":"2026-12-15","recurring":"semanal"},
-   {"type":"updateClass","id":1,"data":{"capacity":35,"price":550,"teacher":"Prof. López"}},
-   {"type":"deleteClass","id":1},
-   {"type":"addCourse","name":"Programación Web","desc":"Curso de desarrollo web","price":2000,"durationWeeks":12,"schedule":"Lun-Mie 18:00-20:00","instructor":"Prof. López","maxStudents":25,"level":"intermedio","startDate":"2026-08-01"},
-   {"type":"updateCourse","id":1,"data":{"price":2200,"maxStudents":30}},
-   {"type":"deleteCourse","id":1},
-   {"type":"addStudent","name":"Ana Pérez","email":"ana@email.com","phone":"555-1111","grade":"9°","parentName":"María Pérez","address":"Calle 123","emergencyContact":"555-2222"},
-   {"type":"updateStudent","id":1,"data":{"phone":"555-3333","grade":"10°"}},
-   {"type":"deleteStudent","id":1},
-   {"type":"addGrade","studentName":"Ana Pérez","course":"Programación Web","score":95,"period":"2026-1","subject":"HTML","letterGrade":"A","semester":"2026-A"},
-   {"type":"updateGrade","id":1,"data":{"score":98,"letterGrade":"A+"}},
-   {"type":"deleteGrade","id":1},
-   {"type":"addMenuItem","name":"Hamburguesa Clásica","desc":"Carne angus 200g","price":150,"category":"hamburguesas","ingredients":"Carne, queso, lechuga","calories":650,"featured":true,"preparationTime":15},
-   {"type":"updateMenuItem","id":1,"data":{"price":160,"featured":false}},
-   {"type":"deleteMenuItem","id":1},
-   {"type":"addRecipe","name":"Pasta Alfredo","ingredients":"Pasta, crema, queso","instructions":"Cocer pasta, agregar crema...","prepTime":10,"cookTime":20,"difficulty":"fácil","servings":4,"calories":450,"tags":"italiana,pasta"},
-   {"type":"updateRecipe","id":1,"data":{"difficulty":"media","cookTime":25}},
-   {"type":"deleteRecipe","id":1}
+${activeExamples}
 ]}
 \`\`\`
 
 REGLAS:
-- **CREAR = ACCIÓN INMEDIATA**: Cuando el usuario te pida CREAR algo (producto, servicio, cliente, pedido, cita, audiencia, documento, expediente, inventario, receta, galería, testimonio, clase, curso, estudiante, calificación, menú, etc.), genera el bloque JSON con la acción correspondiente INMEDIATAMENTE en tu respuesta. NO pidas confirmación, NO preguntes detalles que ya puedes inferir, NO digas "voy a crear" sin generar el JSON. Simplemente créalo y confirma después.
-- **ELIMINAR = CONFIRMACIÓN PREVIA**: Siempre confirma con el usuario ANTES de eliminar algo. Si el usuario pide eliminar TODOS los elementos de un tipo, PRIMERO lista lo que vas a eliminar y pide confirmación explícita. NO generes acciones de eliminación hasta que el usuario confirme con "sí" o "confirmo".
-- Si el usuario confirma la eliminación, genera TODAS las acciones delete en un solo bloque JSON.
+- **CREAR = ACCIÓN INMEDIATA**: Cuando el usuario te pida CREAR algo, genera el bloque JSON INMEDIATAMENTE. NO pidas confirmación.
+- **ELIMINAR = CONFIRMACIÓN PREVIA**: Siempre confirma ANTES de eliminar algo.
 - **MODIFICAR = ACCIÓN INMEDIATA**: Si el usuario pide modificar datos, genera el JSON y explícale qué cambiaste.
-- Para fechas y horas: si el usuario no especifica, usa fecha de hoy o mañana según contexto. Si no especifica hora, usa la primera disponible (9:00 AM o 10:00 AM).
+- Para fechas y horas: si el usuario no especifica, usa fecha de hoy o mañana según contexto.
 - Precios y montos en dólares.
 - No inventes datos que no existan en el contexto.
-- Responde en español profesional y amigable, CONCISO. No des explicaciones largas, solo ejecuta y confirma.
-- Si ves que falta configuración importante (Stripe no conectado, empresa no pública, etc.), sugiere amablemente cómo mejorarlo.
-- Puedes gestionar citas/agenda: crear (addAppointment), modificar (updateAppointment) y cancelar (cancelAppointment). Usa fechas implícitas ("mañana", "próximo lunes") sin preguntar de más.
-- Puedes enviar correos electrónicos (sendEmail) a cualquier dirección de email desde aquí o desde los botones "Correo rápido" en Clientes y Campañas. Incluye los campos: to (destinatario), subject (asunto) y content (contenido HTML del mensaje).
-- Puedes gestionar servicios: crear (addService), modificar (updateService) y eliminar (deleteService).
-- Puedes crear campañas de marketing (addCampaign) de tipo email o sms. También editarlas (updateCampaign) y eliminarlas (deleteCampaign).
-- Puedes crear automatizaciones (addAutomation) con triggers: new_order, new_customer, new_product, low_stock, payment_received y actionTypes: send_notification, send_email, webhook, send_telegram, send_discord, send_slack, post_to_social, ai_generate. También editarlas (updateAutomation) y eliminarlas (deleteAutomation).
-- También puedes crear Workflows (addWorkflow) con triggers avanzados: new_customer, new_order, new_appointment, payment_received, payment_failed, low_stock, customer_birthday, customer_inactive, webhook_received. Cada workflow tiene pasos con condiciones y acciones. También editarlos (updateWorkflow) y eliminarlos (deleteWorkflow).
-- Puedes gestionar clientes legales: crear (addClient), modificar (updateClient) y eliminar (deleteClient). Los clientes legales son personas físicas o morales representadas por el despacho.
-- Puedes gestionar expedientes: crear (addCaseFile), modificar (updateCaseFile) y eliminar (deleteCaseFile). Los expedientes tienen título, cliente asociado, tipo (civil, penal, familiar, laboral, mercantil, administrativo) y estado (activo, cerrado, suspendido).
-- Puedes gestionar audiencias: crear (addHearing), modificar (updateHearing) y eliminar (deleteHearing). Los campos son: caseNumber (número de caso/título), date (fecha), time (hora), hearingType (presencial/virtual), court (juzgado), judge (juez), room (sala), duration (duración en minutos), outcome (resultado), notes (notas).
-- Puedes gestionar documentos: crear (addDocument), modificar (updateDocument) y eliminar (deleteDocument). Los documentos tienen título, tipo (contrato, demanda, oficio, dictamen, escrito) y contenido.
-- Las entidades legales (clientes legales, expedientes, audiencias, documentos) se crean dentro de la configuración de la empresa y aparecen automáticamente en sus paneles correspondientes.
-- Puedes gestionar historiales médicos: crear (addMedicalRecord), modificar (updateMedicalRecord) y eliminar (deleteMedicalRecord). Los historiales médicos incluyen paciente, fecha, diagnóstico, doctor, tipo de visita, síntomas, tratamiento y fecha de seguimiento.
-- Puedes gestionar recetas médicas: crear (addPrescription), modificar (updatePrescription) y eliminar (deletePrescription). Las recetas incluyen paciente, medicamento, dosis, frecuencia, fechas, doctor que prescribe, farmacia y número de refills.
-- Puedes gestionar doctoras/doctores: crear (addDoctor), modificar (updateDoctor) y eliminar (deleteDoctor). Los doctores incluyen nombre, especialidad, teléfono, email, horario, número de cédula/licencia, departamento, honorarios de consulta y disponibilidad.
-- Las entidades médicas (historiales, recetas, doctores) se guardan en la configuración de la empresa y se reflejan automáticamente en sus paneles.
-- Puedes gestionar inventario: crear (addInventoryItem), modificar (updateInventoryItem) y eliminar (deleteInventoryItem). Los items de inventario incluyen nombre, cantidad, precio, proveedor, categoría, SKU, stock mínimo, ubicación y unidad.
-- Puedes gestionar la galería: crear (addGalleryItem), modificar (updateGalleryItem) y eliminar (deleteGalleryItem). Los items de galería incluyen título, URL de imagen, descripción, texto alternativo, categoría y si es destacado.
-- Puedes gestionar testimonios: crear (addTestimonial), modificar (updateTestimonial) y eliminar (deleteTestimonial). Los testimonios incluyen nombre del cliente, texto, calificación (1-5), empresa, puesto, si está aprobado y si es destacado.
-- Las entidades de negocio (inventario, galería, testimonios) se guardan en la configuración de la empresa y se reflejan automáticamente en sus paneles.
-- Puedes gestionar clases: crear (addClass), modificar (updateClass) y eliminar (deleteClass). Las clases incluyen nombre, curso, profesor, horario, capacidad, precio, inscritos, aula y fechas.
-- Puedes gestionar cursos: crear (addCourse), modificar (updateCourse) y eliminar (deleteCourse). Los cursos incluyen nombre, descripción, precio, duración, horario, instructor, máximo de estudiantes y nivel.
-- Puedes gestionar estudiantes: crear (addStudent), modificar (updateStudent) y eliminar (deleteStudent). Los estudiantes incluyen nombre, email, teléfono, grado, nombre del padre/tutor, dirección, fecha de nacimiento, contacto de emergencia y notas.
-- Puedes gestionar calificaciones: crear (addGrade), modificar (updateGrade) y eliminar (deleteGrade). Las calificaciones incluyen nombre del estudiante, curso, puntuación, período, comentarios, materia, peso y calificación con letra.
-- Las entidades educativas (cursos, estudiantes, calificaciones, clases) se guardan en la configuración de la empresa y se reflejan automáticamente en sus paneles.
-- Puedes gestionar el menú: crear (addMenuItem), modificar (updateMenuItem) y eliminar (deleteMenuItem). Los items de menú incluyen nombre, descripción, precio, categoría, ingredientes, calorías, info dietética, tiempo de preparación y si es destacado.
-- Puedes gestionar recetas: crear (addRecipe), modificar (updateRecipe) y eliminar (deleteRecipe). Las recetas incluyen nombre, ingredientes, instrucciones, tiempo de preparación, tiempo de cocción, dificultad, porciones, calorías y etiquetas.
-- Las entidades de restaurante (menú, recetas) se guardan en la configuración de la empresa y se reflejan automáticamente en sus paneles.
-- Puedes gestionar reservaciones: crear (addReservation), modificar (updateReservation) y cancelar (cancelReservation). Las reservaciones incluyen customerName, phone, email, date, time, partySize, tableNumber y notes. Las reservaciones se crean directamente en la API del restaurante.
-- Puedes responder reseñas: usar replyToReview con reviewId y reply para responder a una reseña de cliente.
-- Puedes gestionar promociones: crear (addPromotion), modificar (updatePromotion) y eliminar (deletePromotion). Las promociones incluyen code, description, type (percentage/fixed/bogo/free_item), value, minOrder, maxUses, validFrom, validUntil y active.
-- Puedes gestionar pedidos del restaurante: crear (addRestaurantOrder) y actualizar estado (updateRestaurantOrder). Los pedidos incluyen type (dine_in/takeout/delivery), tableNumber, items (array con name/quantity/price), total, notes y couponCode.
-- Puedes gestionar lealtad: agregar puntos (addLoyaltyPoints) con memberId, points, type (earned/redeemed/adjusted) y description. También actualizar configuración (updateLoyaltySettings) con pointsPerDollar y rewardsThreshold.
-- Puedes gestionar llamadas de mesero: actualizar estado (updateWaiterCall) con id y status (acknowledged/resolved).
-- Puedes gestionar barberos: crear (addBarber), modificar (updateBarber) y eliminar (deleteBarber). Los barberos incluyen name, phone, email, photoUrl, specialties, bio y schedule.
-- Puedes gestionar la cola de barbershop: añadir (addToQueue) con customerName, phone, serviceRequested, preferredBarber y notes. Actualizar estado (updateQueueEntry) con id y status (in_progress/completed/cancelled).
-- Puedes registrar historial de barbero: crear (addBarberHistoryEntry) con barberName, customerName, phone, service, price, duration, rating, notes y date.
-- IMPORTANTE: SIEMPRE que el usuario te pida crear, modificar, eliminar o enviar algo (productos, servicios, clientes, pedidos, automatizaciones, campañas, citas, clientes legales, expedientes, audiencias, documentos, historiales médicos, recetas, doctores, inventario, galería, testimonios, clases, cursos, estudiantes, calificaciones, menú, recetas de cocina, reservaciones, promociones, pedidos de restaurante, puntos de lealtad, barberos, cola de barbershop, correos electrónicos, etc.), DEBES incluir el bloque JSON con las acciones correspondientes. No te limites a decir "lo haré" sin generar el JSON.
+- Responde en español profesional y amigable, CONCISO.
+- Puedes enviar correos electrónicos (sendEmail) con los campos to, subject y content.
+- Puedes enviar mensajes (sendMessage) con los campos to y content.
+- Puedes añadir contactos (addContact) con el campo email.
+${activeDescriptions}
+- IMPORTANTE: SIEMPRE que el usuario te pida crear, modificar, eliminar o enviar algo, DEBES incluir el bloque JSON con las acciones correspondientes. No te limites a decir "lo haré" sin generar el JSON.
 
 LÍMITES ÉTICOS:
-- NO compartas, repitas ni expongas información personal de los clientes (emails, teléfonos, nombres completos) a menos que el usuario sea el dueño del negocio y esté consultando sus propios datos.
-- NO des consejos financieros, contables, legales ni médicos. Si te preguntan, recomienda consultar a un profesional.
-- NO generes contenido ofensivo, discriminatorio, engañoso o inapropiado.
-- NO inventes transacciones, productos o clientes que no existan en el contexto.
-- Si el usuario pide algo fuera del alcance de la gestión del negocio, responde amablemente que no puedes ayudar con eso y sugiere algo relacionado al negocio.`;
+- NO compartas información personal de los clientes a menos que el usuario sea el dueño.
+- NO des consejos financieros, contables, legales ni médicos.
+- NO generes contenido ofensivo o inapropiado.
+- NO inventes datos que no existan en el contexto.`;
 
       const systemContent = ac.systemPrompt
         ? `${ac.systemPrompt}\n\n${contextInfo}\n\nIMPORTANTE - Puedes MODIFICAR los datos del negocio actual. Para ello, incluye al final de tu respuesta un bloque JSON con las acciones a ejecutar, usando el formato estandar de Jandosoft.\n\nREGLAS:\n- **CREAR = ACCIÓN INMEDIATA**: Cuando el usuario te pida CREAR algo, genera el bloque JSON INMEDIATAMENTE. NO pidas confirmación, NO preguntes detalles que ya puedes inferir. Simplemente créalo y confirma después.\n- **ELIMINAR = CONFIRMACIÓN PREVIA**: Siempre confirma ANTES de eliminar algo. Si pide eliminar TODOS los elementos, lista lo que vas a eliminar y pide confirmación explícita.\n- **MODIFICAR = ACCIÓN INMEDIATA**: Si el usuario pide modificar datos, genera el JSON y explícale qué cambiaste.\n- Para fechas y horas: si el usuario no especifica, usa fecha de hoy o mañana según contexto. Si no especifica hora, usa 9:00 AM o 10:00 AM.\n- Precios y montos en dólares.\n- No inventes datos que no existan en el contexto.\n- Responde en español profesional y amigable, CONCISO.\n- Puedes enviar correos electrónicos (sendEmail) con los campos to, subject y content.
