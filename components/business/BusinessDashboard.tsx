@@ -1406,7 +1406,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
             {section === "ai" && (
               <div className="h-full flex flex-col">
-                <BusinessAI agentName={userStore?.name || "mi negocio"} store={userStore} products={products} setProducts={setProducts} services={services} setServices={setServices} customers={customers} setCustomers={setCustomers} orders={orders} setOrders={setOrders} totalSales={totalSales} kbEntries={kbEntries} setKbEntries={setKbEntries} campaigns={campaigns} setCampaigns={setCampaigns} automations={automations} setAutomations={setAutomations} onPersist={persistStore} onExecuteAutomations={executeAutomations} onSaveStore={onSaveStore} maxMessages={planLimits?.maxMessages ?? 999} />
+                <BusinessAI agentName={userStore?.name || "mi negocio"} store={userStore} products={products} setProducts={setProducts} services={services} setServices={setServices} customers={customers} setCustomers={setCustomers} orders={orders} setOrders={setOrders} totalSales={totalSales} kbEntries={kbEntries} setKbEntries={setKbEntries} campaigns={campaigns} setCampaigns={setCampaigns} automations={automations} setAutomations={setAutomations} onPersist={persistStore} onExecuteAutomations={executeAutomations} onSaveStore={onSaveStore} maxMessages={planLimits?.maxMessages ?? 999} planLimits={planLimits} />
               </div>
             )}
 

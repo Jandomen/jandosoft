@@ -57,7 +57,7 @@ function getAllowedActions(category: string): Set<string> {
 
 const AI_WINDOW_MS = 2.5 * 60 * 60 * 1000;
 
-export default function BusinessAI({ agentName, store, products, setProducts, customers, setCustomers, orders, setOrders, services, setServices, totalSales, kbEntries, setKbEntries, campaigns, setCampaigns, automations, setAutomations, onPersist, onExecuteAutomations, onSaveStore, maxMessages = 999 }: {
+export default function BusinessAI({ agentName, store, products, setProducts, customers, setCustomers, orders, setOrders, services, setServices, totalSales, kbEntries, setKbEntries, campaigns, setCampaigns, automations, setAutomations, onPersist, onExecuteAutomations, onSaveStore, maxMessages = 999, planLimits }: {
   agentName: string;
   store?: any;
   products: any[]; setProducts: any;
@@ -72,6 +72,7 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
   onExecuteAutomations?: (trigger: string, context: Record<string, any>) => void;
   onSaveStore?: (storeId: string | number, data: any) => Promise<boolean>;
   maxMessages?: number;
+  planLimits?: { maxProductsPerStore?: number; maxCustomers?: number; maxMessages?: number; maxAutomations?: number; maxCampaigns?: number; maxAppointments?: number };
 }) {
   const storageKey = `jandosoft_business_ai_${agentName.replace(/[^a-zA-Z0-9]/g, "_")}`;
   const [messages, setMessages] = useState<{ role: string; content: string; timestamp: number }[]>([]);
@@ -206,6 +207,14 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
 
     let sections = `DATOS ACTUALES:\nProductos (${products.length}): ${productsStr || "ninguno"}\nServicios (${services.length}): ${servicesStr || "ninguno"}\nClientes de negocio (${customers.length}): ${customersStr || "ninguno"}\nPedidos (${orders.length}): ${ordersStr || "ninguno"}\nCampañas (${campaigns.length}): ${campaignsStr || "ninguna"}\nVentas totales: $${totalSales}${storeConfig}`;
 
+    if (planLimits) {
+      const maxProd = planLimits.maxProductsPerStore ?? 9999;
+      const maxCust = planLimits.maxCustomers ?? 99999;
+      const maxCamp = planLimits.maxCampaigns ?? 9999;
+      const maxAuto = planLimits.maxAutomations ?? 9999;
+      sections += `\n\nLÍMITES DEL PLAN:\n- Productos: ${products.length}/${maxProd}${products.length >= maxProd ? " ⚠️ LÍMITE ALCANZADO" : ""}\n- Clientes: ${customers.length}/${maxCust}${customers.length >= maxCust ? " ⚠️ LÍMITE ALCANZADO" : ""}\n- Campañas: ${campaigns.length}/${maxCamp}${campaigns.length >= maxCamp ? " ⚠️ LÍMITE ALCANZADO" : ""}\n- Automatizaciones: ${automations.length}/${maxAuto}${automations.length >= maxAuto ? " ⚠️ LÍMITE ALCANZADO" : ""}`;
+    }
+
     if (categoryModules.has("clients")) sections += `\n\nCLIENTES LEGALES (${(store?.clients || []).length}):\n${clientsList || "  No hay clientes legales registrados."}`;
     if (categoryModules.has("case_files")) sections += `\n\nEXPEDIENTES (${(store?.caseFiles || []).length}):\n${caseFilesList || "  No hay expedientes."}`;
     if (categoryModules.has("hearings")) sections += `\n\nAUDIENCIAS (${(store?.hearings || []).length}):\n${hearingsList || "  No hay audiencias."}`;
@@ -247,6 +256,10 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
       }
       switch (action.type) {
         case "addProduct":
+          if (planLimits?.maxProductsPerStore && newProducts.length >= planLimits.maxProductsPerStore) {
+            result += `⚠️ No se pudo crear el producto. Has alcanzado el límite de ${planLimits.maxProductsPerStore} productos de tu plan. Upgradea tu plan para agregar más. `;
+            break;
+          }
           const priceVal = typeof action.price === "string" ? parseFloat(action.price.replace(/[^0-9.]/g, "")) : Number(action.price) || 0;
           const currencyVal = action.currency || "USD";
           const stockVal = action.stock || 0;
@@ -264,6 +277,10 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
           result += `✏️ Producto actualizado. `;
           break;
         case "addCustomer":
+          if (planLimits?.maxCustomers && planLimits.maxCustomers > 0 && newCustomers.length >= planLimits.maxCustomers) {
+            result += `⚠️ No se pudo registrar el cliente. Has alcanzado el límite de ${planLimits.maxCustomers} clientes de tu plan. Upgradea tu plan para agregar más. `;
+            break;
+          }
           newCustomers = [...newCustomers, { id: uid(), name: action.name, email: action.email || "", phone: action.phone || "" }];
           result += `✅ Cliente "${action.name}" registrado. `;
           onExecuteAutomations?.("new_customer", { customerName: action.name, customerEmail: action.email });
@@ -338,6 +355,10 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
           result += `✏️ Workflow actualizado. `;
           break;
         case "addCampaign":
+          if (planLimits?.maxCampaigns && newCampaigns.length >= planLimits.maxCampaigns) {
+            result += `⚠️ No se pudo crear la campaña. Has alcanzado el límite de ${planLimits.maxCampaigns} campañas de tu plan. Upgradea tu plan para crear más. `;
+            break;
+          }
           newCampaigns = [...newCampaigns, { id: uid(), name: action.name, type: action.type || "email", status: "draft", audience: action.audience || "", subject: action.subject || "", body: action.body || "", scheduledAt: null, sentAt: null, stats: { sent: 0, opened: 0, clicked: 0, bounced: 0, unsubscribed: 0 }, createdAt: new Date().toISOString() }];
           result += `📢 Campaña "${action.name}" creada. `;
           break;
