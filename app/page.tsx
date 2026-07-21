@@ -1351,7 +1351,7 @@ function StatusBarFooter({ isLogged, setShowLogin, setActiveTab }: {
         <span className="flex items-center gap-1.5 cursor-pointer hover:text-red-600 transition-colors" onClick={() => isLogged ? setActiveTab("dashboard") : setShowLogin(true)}><Lock className="w-3 h-3" /> {isLogged ? t("nav.dashboard") : t("action.login")}</span>
       </div>
       <Link href="/terminos" className="hover:text-red-600 transition-colors cursor-pointer">{t("footer.terms")}</Link>
-      <Link href="/admin" className="hover:text-red-600 transition-colors">{t("footer.admin_system")}</Link>
+      <span>Derechos reservados &copy; 2026 <span className="font-wallpoet tracking-[0.15em] text-red-500">JANDOSOFT</span></span>
     </footer>
   );
 }
