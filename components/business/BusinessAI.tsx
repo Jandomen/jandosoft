@@ -891,6 +891,328 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
             else result += `⚠️ Error al eliminar en el servidor.`;
           })());
           break;
+        case "addReservation":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!action.customerName || !action.phone) { result += "⚠️ Faltan campos requeridos: customerName, phone. "; return; }
+            try {
+              const res = await fetch(`/api/restaurant/${storeId}/reservations`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  customerName: action.customerName, phone: action.phone, email: action.email || "",
+                  date: action.date, time: action.time, partySize: Number(action.partySize) || 2,
+                  tableNumber: action.tableNumber ? Number(action.tableNumber) : undefined, notes: action.notes || "",
+                }),
+              });
+              const data = await res.json();
+              if (data.reservation || data._id) result += `✅ Reserva creada para ${action.customerName} el ${action.date} a las ${action.time}. `;
+              else result += `⚠️ Error al crear reserva. `;
+            } catch { result += `⚠️ Error al crear reserva. `; }
+          })());
+          break;
+        case "updateReservation":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            const id = action.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!id) { result += "⚠️ Error: ID de reserva requerido. "; return; }
+            try {
+              const body: any = {};
+              if (action.status) body.status = action.status;
+              if (action.date) body.date = action.date;
+              if (action.time) body.time = action.time;
+              if (action.partySize) body.partySize = Number(action.partySize);
+              if (action.tableNumber) body.tableNumber = Number(action.tableNumber);
+              if (action.notes) body.notes = action.notes;
+              await fetch(`/api/restaurant/${storeId}/reservations/${id}`, {
+                method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+              });
+              result += `✅ Reserva actualizada. `;
+            } catch { result += `⚠️ Error al actualizar reserva. `; }
+          })());
+          break;
+        case "cancelReservation":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            const id = action.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!id) { result += "⚠️ Error: ID de reserva requerido. "; return; }
+            try {
+              await fetch(`/api/restaurant/${storeId}/reservations/${id}`, {
+                method: "PUT", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "cancelled" }),
+              });
+              result += `🗑️ Reserva cancelada. `;
+            } catch { result += `⚠️ Error al cancelar reserva. `; }
+          })());
+          break;
+        case "replyToReview":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            const reviewId = action.reviewId;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!reviewId || !action.reply) { result += "⚠️ Faltan campos requeridos: reviewId, reply. "; return; }
+            try {
+              await fetch(`/api/restaurant/${storeId}/reviews/${reviewId}`, {
+                method: "PUT", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reply: action.reply }),
+              });
+              result += `✅ Respuesta enviada a la reseña. `;
+            } catch { result += `⚠️ Error al responder reseña. `; }
+          })());
+          break;
+        case "addPromotion":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!action.code || !action.type || !action.value) { result += "⚠️ Faltan campos requeridos: code, type, value. "; return; }
+            try {
+              const res = await fetch(`/api/restaurant/${storeId}/promotions`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  code: action.code.toUpperCase(), description: action.description || "", type: action.type,
+                  value: Number(action.value), minOrder: Number(action.minOrder) || 0, maxUses: Number(action.maxUses) || 0,
+                  validFrom: action.validFrom || undefined, validUntil: action.validUntil || undefined, active: action.active !== false,
+                }),
+              });
+              const data = await res.json();
+              if (data.promotion || data._id) result += `✅ Promoción "${action.code}" creada. `;
+              else result += `⚠️ Error al crear promoción. `;
+            } catch { result += `⚠️ Error al crear promoción. `; }
+          })());
+          break;
+        case "updatePromotion":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            const id = action.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!id) { result += "⚠️ Error: ID de promoción requerido. "; return; }
+            try {
+              const body: any = {};
+              if (action.code) body.code = action.code.toUpperCase();
+              if (action.description) body.description = action.description;
+              if (action.type) body.type = action.type;
+              if (action.value) body.value = Number(action.value);
+              if (action.minOrder !== undefined) body.minOrder = Number(action.minOrder);
+              if (action.maxUses !== undefined) body.maxUses = Number(action.maxUses);
+              if (action.validFrom) body.validFrom = action.validFrom;
+              if (action.validUntil) body.validUntil = action.validUntil;
+              if (action.active !== undefined) body.active = action.active;
+              await fetch(`/api/restaurant/${storeId}/promotions/${id}`, {
+                method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+              });
+              result += `✅ Promoción actualizada. `;
+            } catch { result += `⚠️ Error al actualizar promoción. `; }
+          })());
+          break;
+        case "deletePromotion":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            const id = action.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!id) { result += "⚠️ Error: ID de promoción requerido. "; return; }
+            try {
+              await fetch(`/api/restaurant/${storeId}/promotions/${id}`, { method: "DELETE" });
+              result += `🗑️ Promoción eliminada. `;
+            } catch { result += `⚠️ Error al eliminar promoción. `; }
+          })());
+          break;
+        case "addRestaurantOrder":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!action.type || !action.items?.length) { result += "⚠️ Faltan campos requeridos: type, items. "; return; }
+            try {
+              const total = action.items.reduce((sum: number, it: any) => sum + (it.price * it.quantity), 0);
+              const res = await fetch(`/api/restaurant/${storeId}/orders`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  type: action.type, tableNumber: action.tableNumber ? Number(action.tableNumber) : undefined,
+                  items: action.items, total: action.total || total, notes: action.notes || "", couponCode: action.couponCode || undefined,
+                }),
+              });
+              const data = await res.json();
+              if (data.order || data._id) result += `✅ Pedido de restaurante creado (total: $${action.total || total}). `;
+              else result += `⚠️ Error al crear pedido. `;
+            } catch { result += `⚠️ Error al crear pedido. `; }
+          })());
+          break;
+        case "updateRestaurantOrder":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            const id = action.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!id) { result += "⚠️ Error: ID de pedido requerido. "; return; }
+            try {
+              await fetch(`/api/restaurant/${storeId}/orders/${id}`, {
+                method: "PUT", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: action.status }),
+              });
+              result += `✅ Estado del pedido actualizado a "${action.status}". `;
+            } catch { result += `⚠️ Error al actualizar pedido. `; }
+          })());
+          break;
+        case "addLoyaltyPoints":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!action.memberId || !action.points || !action.type) { result += "⚠️ Faltan campos requeridos: memberId, points, type. "; return; }
+            try {
+              await fetch(`/api/restaurant/${storeId}/loyalty/transactions`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  memberId: action.memberId, points: Number(action.points), type: action.type, description: action.description || "",
+                }),
+              });
+              result += `✅ ${action.points} puntos de lealtad registrados (${action.type}). `;
+            } catch { result += `⚠️ Error al registrar puntos. `; }
+          })());
+          break;
+        case "updateLoyaltySettings":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            try {
+              const body: any = {};
+              if (action.pointsPerDollar) body.pointsPerDollar = Number(action.pointsPerDollar);
+              if (action.rewardsThreshold) body.rewardsThreshold = Number(action.rewardsThreshold);
+              await fetch(`/api/restaurant/${storeId}/loyalty`, {
+                method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+              });
+              result += `✅ Configuración de lealtad actualizada. `;
+            } catch { result += `⚠️ Error al actualizar configuración de lealtad. `; }
+          })());
+          break;
+        case "updateWaiterCall":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            const id = action.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!id || !action.status) { result += "⚠️ Faltan campos requeridos: id, status. "; return; }
+            try {
+              await fetch(`/api/restaurant/${storeId}/waiter-calls/${id}`, {
+                method: "PUT", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: action.status }),
+              });
+              result += `✅ Llamada de mesero actualizada a "${action.status}". `;
+            } catch { result += `⚠️ Error al actualizar llamada de mesero. `; }
+          })());
+          break;
+        case "addBarber":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!action.name || !action.phone) { result += "⚠️ Faltan campos requeridos: name, phone. "; return; }
+            try {
+              const schedule: any = {};
+              const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+              days.forEach(d => { schedule[d] = { start: "09:00", end: "18:00", enabled: d !== "sunday" }; });
+              const res = await fetch(`/api/barbershop/${storeId}/barbers`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  name: action.name, phone: action.phone, email: action.email || "",
+                  photoUrl: action.photoUrl || "", specialties: action.specialties || [],
+                  bio: action.bio || "", schedule: action.schedule || schedule, active: true,
+                }),
+              });
+              const data = await res.json();
+              if (data.barber || data._id) result += `✅ Barbero "${action.name}" registrado. `;
+              else result += `⚠️ Error al registrar barbero. `;
+            } catch { result += `⚠️ Error al registrar barbero. `; }
+          })());
+          break;
+        case "updateBarber":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            const id = action.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!id) { result += "⚠️ Error: ID de barbero requerido. "; return; }
+            try {
+              const body: any = {};
+              if (action.name) body.name = action.name;
+              if (action.phone) body.phone = action.phone;
+              if (action.email) body.email = action.email;
+              if (action.photoUrl) body.photoUrl = action.photoUrl;
+              if (action.specialties) body.specialties = action.specialties;
+              if (action.bio) body.bio = action.bio;
+              if (action.schedule) body.schedule = action.schedule;
+              if (action.active !== undefined) body.active = action.active;
+              await fetch(`/api/barbershop/${storeId}/barbers/${id}`, {
+                method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+              });
+              result += `✅ Barbero actualizado. `;
+            } catch { result += `⚠️ Error al actualizar barbero. `; }
+          })());
+          break;
+        case "deleteBarber":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            const id = action.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!id) { result += "⚠️ Error: ID de barbero requerido. "; return; }
+            try {
+              await fetch(`/api/barbershop/${storeId}/barbers/${id}`, { method: "DELETE" });
+              result += `🗑️ Barbero eliminado. `;
+            } catch { result += `⚠️ Error al eliminar barbero. `; }
+          })());
+          break;
+        case "addToQueue":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!action.customerName || !action.serviceRequested) { result += "⚠️ Faltan campos requeridos: customerName, serviceRequested. "; return; }
+            try {
+              const res = await fetch(`/api/barbershop/${storeId}/queue`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  customerName: action.customerName, phone: action.phone || "",
+                  serviceRequested: action.serviceRequested, preferredBarber: action.preferredBarber || undefined, notes: action.notes || "",
+                }),
+              });
+              const data = await res.json();
+              if (data.entry || data._id) result += `✅ ${action.customerName} añadido a la cola. `;
+              else result += `⚠️ Error al añadir a la cola. `;
+            } catch { result += `⚠️ Error al añadir a la cola. `; }
+          })());
+          break;
+        case "updateQueueEntry":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            const id = action.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!id || !action.status) { result += "⚠️ Faltan campos requeridos: id, status. "; return; }
+            try {
+              await fetch(`/api/barbershop/${storeId}/queue/${id}`, {
+                method: "PUT", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: action.status }),
+              });
+              result += `✅ Estado de cola actualizado a "${action.status}". `;
+            } catch { result += `⚠️ Error al actualizar cola. `; }
+          })());
+          break;
+        case "addBarberHistoryEntry":
+          asyncOps.push((async () => {
+            const storeId = (store as any)?._id || (store as any)?.id;
+            if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
+            if (!action.barberName || !action.customerName || !action.service) { result += "⚠️ Faltan campos requeridos: barberName, customerName, service. "; return; }
+            try {
+              const res = await fetch(`/api/barbershop/${storeId}/history`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  barberId: action.barberId || "", barberName: action.barberName,
+                  customerName: action.customerName, phone: action.phone || "",
+                  service: action.service, price: Number(action.price) || 0,
+                  duration: Number(action.duration) || 30, rating: Number(action.rating) || 5,
+                  notes: action.notes || "", date: action.date || new Date().toISOString(),
+                }),
+              });
+              const data = await res.json();
+              if (data.entry || data._id) result += `✅ Historial registrado para ${action.customerName}. `;
+              else result += `⚠️ Error al registrar historial. `;
+            } catch { result += `⚠️ Error al registrar historial. `; }
+          })());
+          break;
       }
     }
     await Promise.all(asyncOps);
@@ -1045,7 +1367,16 @@ REGLAS:
 - Puedes gestionar el menú: crear (addMenuItem), modificar (updateMenuItem) y eliminar (deleteMenuItem). Los items de menú incluyen nombre, descripción, precio, categoría, ingredientes, calorías, info dietética, tiempo de preparación y si es destacado.
 - Puedes gestionar recetas: crear (addRecipe), modificar (updateRecipe) y eliminar (deleteRecipe). Las recetas incluyen nombre, ingredientes, instrucciones, tiempo de preparación, tiempo de cocción, dificultad, porciones, calorías y etiquetas.
 - Las entidades de restaurante (menú, recetas) se guardan en la configuración de la empresa y se reflejan automáticamente en sus paneles.
-- IMPORTANTE: SIEMPRE que el usuario te pida crear, modificar, eliminar o enviar algo (productos, servicios, clientes, pedidos, automatizaciones, campañas, citas, clientes legales, expedientes, audiencias, documentos, historiales médicos, recetas, doctores, inventario, galería, testimonios, clases, cursos, estudiantes, calificaciones, menú, recetas de cocina, correos electrónicos, etc.), DEBES incluir el bloque JSON con las acciones correspondientes. No te limites a decir "lo haré" sin generar el JSON.
+- Puedes gestionar reservaciones: crear (addReservation), modificar (updateReservation) y cancelar (cancelReservation). Las reservaciones incluyen customerName, phone, email, date, time, partySize, tableNumber y notes. Las reservaciones se crean directamente en la API del restaurante.
+- Puedes responder reseñas: usar replyToReview con reviewId y reply para responder a una reseña de cliente.
+- Puedes gestionar promociones: crear (addPromotion), modificar (updatePromotion) y eliminar (deletePromotion). Las promociones incluyen code, description, type (percentage/fixed/bogo/free_item), value, minOrder, maxUses, validFrom, validUntil y active.
+- Puedes gestionar pedidos del restaurante: crear (addRestaurantOrder) y actualizar estado (updateRestaurantOrder). Los pedidos incluyen type (dine_in/takeout/delivery), tableNumber, items (array con name/quantity/price), total, notes y couponCode.
+- Puedes gestionar lealtad: agregar puntos (addLoyaltyPoints) con memberId, points, type (earned/redeemed/adjusted) y description. También actualizar configuración (updateLoyaltySettings) con pointsPerDollar y rewardsThreshold.
+- Puedes gestionar llamadas de mesero: actualizar estado (updateWaiterCall) con id y status (acknowledged/resolved).
+- Puedes gestionar barberos: crear (addBarber), modificar (updateBarber) y eliminar (deleteBarber). Los barberos incluyen name, phone, email, photoUrl, specialties, bio y schedule.
+- Puedes gestionar la cola de barbershop: añadir (addToQueue) con customerName, phone, serviceRequested, preferredBarber y notes. Actualizar estado (updateQueueEntry) con id y status (in_progress/completed/cancelled).
+- Puedes registrar historial de barbero: crear (addBarberHistoryEntry) con barberName, customerName, phone, service, price, duration, rating, notes y date.
+- IMPORTANTE: SIEMPRE que el usuario te pida crear, modificar, eliminar o enviar algo (productos, servicios, clientes, pedidos, automatizaciones, campañas, citas, clientes legales, expedientes, audiencias, documentos, historiales médicos, recetas, doctores, inventario, galería, testimonios, clases, cursos, estudiantes, calificaciones, menú, recetas de cocina, reservaciones, promociones, pedidos de restaurante, puntos de lealtad, barberos, cola de barbershop, correos electrónicos, etc.), DEBES incluir el bloque JSON con las acciones correspondientes. No te limites a decir "lo haré" sin generar el JSON.
 
 LÍMITES ÉTICOS:
 - NO compartas, repitas ni expongas información personal de los clientes (emails, teléfonos, nombres completos) a menos que el usuario sea el dueño del negocio y esté consultando sus propios datos.
@@ -1056,7 +1387,9 @@ LÍMITES ÉTICOS:
 
       const systemContent = ac.systemPrompt
         ? `${ac.systemPrompt}\n\n${contextInfo}\n\nIMPORTANTE - Puedes MODIFICAR los datos del negocio actual. Para ello, incluye al final de tu respuesta un bloque JSON con las acciones a ejecutar, usando el formato estandar de Jandosoft.\n\nREGLAS:\n- **CREAR = ACCIÓN INMEDIATA**: Cuando el usuario te pida CREAR algo, genera el bloque JSON INMEDIATAMENTE. NO pidas confirmación, NO preguntes detalles que ya puedes inferir. Simplemente créalo y confirma después.\n- **ELIMINAR = CONFIRMACIÓN PREVIA**: Siempre confirma ANTES de eliminar algo. Si pide eliminar TODOS los elementos, lista lo que vas a eliminar y pide confirmación explícita.\n- **MODIFICAR = ACCIÓN INMEDIATA**: Si el usuario pide modificar datos, genera el JSON y explícale qué cambiaste.\n- Para fechas y horas: si el usuario no especifica, usa fecha de hoy o mañana según contexto. Si no especifica hora, usa 9:00 AM o 10:00 AM.\n- Precios y montos en dólares.\n- No inventes datos que no existan en el contexto.\n- Responde en español profesional y amigable, CONCISO.\n- Puedes enviar correos electrónicos (sendEmail) con los campos to, subject y content.
-- Puedes gestionar clientes legales (addClient/updateClient/deleteClient), expedientes (addCaseFile/updateCaseFile/deleteCaseFile), audiencias (addHearing/updateHearing/deleteHearing), documentos (addDocument/updateDocument/deleteDocument), historiales médicos (addMedicalRecord/updateMedicalRecord/deleteMedicalRecord), recetas (addPrescription/updatePrescription/deletePrescription), doctores (addDoctor/updateDoctor/deleteDoctor), inventario (addInventoryItem/updateInventoryItem/deleteInventoryItem), galería (addGalleryItem/updateGalleryItem/deleteGalleryItem), testimonios (addTestimonial/updateTestimonial/deleteTestimonial), clases (addClass/updateClass/deleteClass), cursos (addCourse/updateCourse/deleteCourse), estudiantes (addStudent/updateStudent/deleteStudent), calificaciones (addGrade/updateGrade/deleteGrade), menú (addMenuItem/updateMenuItem/deleteMenuItem) y recetas de cocina (addRecipe/updateRecipe/deleteRecipe).\n- Puedes crear automatizaciones (addAutomation) con triggers: new_order, new_customer, new_product, low_stock, payment_received y actionTypes: send_notification, send_email, webhook, send_telegram, send_discord, send_slack, post_to_social, ai_generate. También editarlas y eliminarlas.
+- Puedes gestionar clientes legales (addClient/updateClient/deleteClient), expedientes (addCaseFile/updateCaseFile/deleteCaseFile), audiencias (addHearing/updateHearing/deleteHearing), documentos (addDocument/updateDocument/deleteDocument), historiales médicos (addMedicalRecord/updateMedicalRecord/deleteMedicalRecord), recetas (addPrescription/updatePrescription/deletePrescription), doctores (addDoctor/updateDoctor/deleteDoctor), inventario (addInventoryItem/updateInventoryItem/deleteInventoryItem), galería (addGalleryItem/updateGalleryItem/deleteGalleryItem), testimonios (addTestimonial/updateTestimonial/deleteTestimonial), clases (addClass/updateClass/deleteClass), cursos (addCourse/updateCourse/deleteCourse), estudiantes (addStudent/updateStudent/deleteStudent), calificaciones (addGrade/updateGrade/deleteGrade), menú (addMenuItem/updateMenuItem/deleteMenuItem) y recetas de cocina (addRecipe/updateRecipe/deleteRecipe).
+- Puedes gestionar reservaciones (addReservation/updateReservation/cancelReservation), responder reseñas (replyToReview), promociones (addPromotion/updatePromotion/deletePromotion), pedidos de restaurante (addRestaurantOrder/updateRestaurantOrder), puntos de lealtad (addLoyaltyPoints/updateLoyaltySettings), llamadas de mesero (updateWaiterCall), barberos (addBarber/updateBarber/deleteBarber), cola de barbershop (addToQueue/updateQueueEntry) e historial de barbero (addBarberHistoryEntry).
+- Puedes crear automatizaciones (addAutomation) con triggers: new_order, new_customer, new_product, low_stock, payment_received y actionTypes: send_notification, send_email, webhook, send_telegram, send_discord, send_slack, post_to_social, ai_generate. También editarlas y eliminarlas.
 - También puedes crear Workflows (addWorkflow) con triggers avanzados: new_customer, new_order, new_appointment, payment_received, payment_failed, low_stock, customer_birthday, customer_inactive, webhook_received. Cada workflow tiene pasos con condiciones y acciones. También editarlos (updateWorkflow) y eliminarlos (deleteWorkflow).\n\nLÍMITES ÉTICOS:\n- NO compartas, repitas ni expongas información personal de los clientes (emails, teléfonos, nombres completos) a menos que el usuario sea el dueño del negocio y esté consultando sus propios datos.\n- NO des consejos financieros, contables, legales ni médicos.\n- NO generes contenido ofensivo, discriminatorio, engañoso o inapropiado.\n- NO inventes transacciones, productos o clientes que no existan en el contexto.`
         : defaultSystem;
 
