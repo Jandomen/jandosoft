@@ -431,9 +431,9 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
             const storeId = (store as any)?._id || (store as any)?.id;
             if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
             const existing = (store as any)?.caseFiles || [];
-            const newEntry = { id: uid(), title: action.title, clientName: action.clientName || "", type: action.type || "", status: action.status || "activo", ...(action.data || {}) };
+            const newEntry = { id: uid(), caseNumber: action.title || action.caseNumber || "Expediente", clientName: action.clientName || "", type: action.type || "", status: action.status || "active", description: action.description || "", court: action.court || "", judge: action.judge || "", filingDate: action.filingDate || "", opposingCounsel: action.opposingCounsel || "", outcome: action.outcome || "", ...(action.data || {}) };
             const _ok = await Promise.resolve(onSaveStore?.(storeId, { caseFiles: [...existing, newEntry] }));
-            if (_ok !== false) result += `✅ Expediente "${action.title}" creado. `;
+            if (_ok !== false) result += `✅ Expediente "${newEntry.caseNumber}" creado. `;
             else result += `⚠️ Error al guardar en el servidor.`;
           })());
           break;
@@ -462,9 +462,9 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
             const storeId = (store as any)?._id || (store as any)?.id;
             if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
             const existing = (store as any)?.hearings || [];
-            const newEntry = { id: uid(), title: action.title, date: action.date || "", time: action.time || "", type: action.type || "", status: action.status || "programada", ...(action.data || {}) };
+            const newEntry = { id: uid(), caseNumber: action.title || action.caseNumber || "Audiencia", date: action.date || "", time: action.time || "", court: action.court || "", judge: action.judge || "", notes: action.notes || "", room: action.room || "", hearingType: action.type || action.hearingType || "", duration: action.duration || 60, outcome: action.outcome || "", ...(action.data || {}) };
             const _ok = await Promise.resolve(onSaveStore?.(storeId, { hearings: [...existing, newEntry] }));
-            if (_ok !== false) result += `✅ Audiencia "${action.title}" creada. `;
+            if (_ok !== false) result += `✅ Audiencia "${newEntry.caseNumber}" creada. `;
             else result += `⚠️ Error al guardar en el servidor.`;
           })());
           break;
@@ -493,9 +493,9 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
             const storeId = (store as any)?._id || (store as any)?.id;
             if (!storeId) { result += "⚠️ Error: ID de empresa no disponible. "; return; }
             const existing = (store as any)?.documents || [];
-            const newEntry = { id: uid(), title: action.title, type: action.type || "", content: action.content || "", ...(action.data || {}) };
+            const newEntry = { id: uid(), name: action.title || action.name || "Documento", type: action.type || "", desc: action.content || action.desc || "", fileUrl: action.fileUrl || "", ...(action.data || {}) };
             const _ok = await Promise.resolve(onSaveStore?.(storeId, { documents: [...existing, newEntry] }));
-            if (_ok !== false) result += `✅ Documento "${action.title}" creado. `;
+            if (_ok !== false) result += `✅ Documento "${newEntry.name}" creado. `;
             else result += `⚠️ Error al guardar en el servidor.`;
           })());
           break;
@@ -963,7 +963,7 @@ Puedes MODIFICAR los datos del negocio actual. Para ello, incluye al final de tu
    {"type":"addCaseFile","title":"Caso González vs Pérez","clientName":"Carlos González","type":"civil","status":"activo"},
    {"type":"updateCaseFile","id":1,"data":{"status":"cerrado"}},
    {"type":"deleteCaseFile","id":1},
-   {"type":"addHearing","title":"Audiencia preliminar","date":"2026-07-15","time":"10:00","type":"virtual","status":"programada"},
+   {"type":"addHearing","caseNumber":"Audiencia preliminar","date":"2026-07-15","time":"10:00","hearingType":"virtual","court":"Juzgado 1","judge":"Juez Pérez","duration":60},
    {"type":"updateHearing","id":1,"data":{"date":"2026-07-16","time":"11:00"}},
    {"type":"deleteHearing","id":1},
    {"type":"addDocument","title":"Contrato de arrendamiento","type":"contrato","content":"Texto del documento..."},
@@ -1026,7 +1026,7 @@ REGLAS:
 - También puedes crear Workflows (addWorkflow) con triggers avanzados: new_customer, new_order, new_appointment, payment_received, payment_failed, low_stock, customer_birthday, customer_inactive, webhook_received. Cada workflow tiene pasos con condiciones y acciones. También editarlos (updateWorkflow) y eliminarlos (deleteWorkflow).
 - Puedes gestionar clientes legales: crear (addClient), modificar (updateClient) y eliminar (deleteClient). Los clientes legales son personas físicas o morales representadas por el despacho.
 - Puedes gestionar expedientes: crear (addCaseFile), modificar (updateCaseFile) y eliminar (deleteCaseFile). Los expedientes tienen título, cliente asociado, tipo (civil, penal, familiar, laboral, mercantil, administrativo) y estado (activo, cerrado, suspendido).
-- Puedes gestionar audiencias: crear (addHearing), modificar (updateHearing) y eliminar (deleteHearing). Las audiencias tienen título, fecha, hora, tipo (presencial, virtual) y estado (programada, realizada, cancelada).
+- Puedes gestionar audiencias: crear (addHearing), modificar (updateHearing) y eliminar (deleteHearing). Los campos son: caseNumber (número de caso/título), date (fecha), time (hora), hearingType (presencial/virtual), court (juzgado), judge (juez), room (sala), duration (duración en minutos), outcome (resultado), notes (notas).
 - Puedes gestionar documentos: crear (addDocument), modificar (updateDocument) y eliminar (deleteDocument). Los documentos tienen título, tipo (contrato, demanda, oficio, dictamen, escrito) y contenido.
 - Las entidades legales (clientes legales, expedientes, audiencias, documentos) se crean dentro de la configuración de la empresa y aparecen automáticamente en sus paneles correspondientes.
 - Puedes gestionar historiales médicos: crear (addMedicalRecord), modificar (updateMedicalRecord) y eliminar (deleteMedicalRecord). Los historiales médicos incluyen paciente, fecha, diagnóstico, doctor, tipo de visita, síntomas, tratamiento y fecha de seguimiento.
