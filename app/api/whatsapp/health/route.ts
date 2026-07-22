@@ -61,14 +61,26 @@ export async function GET(req: NextRequest) {
 
       let tokenValid = true;
       let tokenError = "";
+      let qualityRating = account.qualityRating || "unknown";
+      let messagingLimitTier = account.messagingLimitTier || 1;
+      let verifiedName = account.verifiedName || "";
       try {
         const testRes = await fetch(
-          `https://graph.facebook.com/v22.0/${account.phoneNumberId}?fields=verified_name,display_phone_number&access_token=${account.accessToken}`
+          `https://graph.facebook.com/v22.0/${account.phoneNumberId}?fields=verified_name,display_phone_number,quality_rating,messaging_limit_tier&access_token=${account.accessToken}`
         );
-        if (!testRes.ok) {
-          const errData = await testRes.json().catch(() => ({}));
+        const metaData = await testRes.json();
+        if (testRes.ok) {
+          qualityRating = (metaData.quality_rating || "unknown").toLowerCase();
+          messagingLimitTier = parseInt(metaData.messaging_limit_tier?.replace("TIER_", "") || "250");
+          verifiedName = metaData.verified_name || verifiedName;
+          await WhatsAppAccount.findByIdAndUpdate(account._id, {
+            qualityRating,
+            messagingLimitTier,
+            verifiedName,
+          }).catch(() => {});
+        } else {
           tokenValid = false;
-          tokenError = errData?.error?.message || `HTTP ${testRes.status}`;
+          tokenError = metaData?.error?.message || `HTTP ${testRes.status}`;
           issues.push(`Token invalido: ${tokenError}`);
         }
       } catch (e: any) {
@@ -77,9 +89,9 @@ export async function GET(req: NextRequest) {
         issues.push(`No se pudo verificar token: ${tokenError}`);
       }
 
-      if (account.qualityRating === "red") {
+      if (qualityRating === "red") {
         issues.push("Calidad RED: Meta ha restringido el envio");
-      } else if (account.qualityRating === "yellow") {
+      } else if (qualityRating === "yellow") {
         issues.push("Calidad AMARILLA: Calificacion en riesgo");
       }
 
@@ -94,16 +106,16 @@ export async function GET(req: NextRequest) {
       let overallStatus: "healthy" | "warning" | "error" | "disconnected" = "healthy";
       if (account.status !== "active" || !tokenValid) {
         overallStatus = "error";
-      } else if (account.qualityRating === "red" || account.qualityRating === "yellow" || account.messagesSentToday >= limits.maxWhatsAppMessagesPerDay) {
+      } else if (qualityRating === "red" || qualityRating === "yellow" || account.messagesSentToday >= limits.maxWhatsAppMessagesPerDay) {
         overallStatus = "warning";
       }
 
       healthChecks.push({
         accountId: account._id.toString(),
         phoneNumber: account.phoneNumber,
-        verifiedName: account.verifiedName,
+        verifiedName,
         status: account.status,
-        qualityRating: account.qualityRating,
+        qualityRating,
         messagesSentToday: account.messagesSentToday,
         dailyLimit: limits.maxWhatsAppMessagesPerDay,
         tokenValid,

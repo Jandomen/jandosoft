@@ -490,7 +490,7 @@ export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
                       h.qualityRating === "green" ? "bg-green-50 text-green-600" :
                       h.qualityRating === "yellow" ? "bg-amber-50 text-amber-600" :
                       h.qualityRating === "red" ? "bg-red-50 text-red-600" : "bg-zinc-100 text-zinc-400")}>
-                      {h.qualityRating}
+                      {h.qualityRating === "unknown" ? "nuevo" : h.qualityRating}
                     </span>
                   </div>
                 </div>
