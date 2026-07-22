@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { PLATFORM_INFO } from "@/lib/integration-platforms";
 import IntegrationCard, { type IntegrationStatus } from "@/components/ui/IntegrationCard";
+import WhatsAppPanel from "@/components/business/WhatsAppPanel";
 import IntegrationDrawer from "@/components/ui/IntegrationDrawer";
 import {
   SiStripe, SiPaypal, SiMercadopago, SiBitcoin,
@@ -310,6 +311,7 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
   const [stripeConnectStatus, setStripeConnectStatus] = useState<any>(null);
   const [stripeConnecting, setStripeConnecting] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
+  const [showWhatsApp, setShowWhatsApp] = useState(false);
 
   useEffect(() => {
     Promise.all([fetchIntegrations(), fetchPaymentIntegrations(), fetchAIProvider(), fetchStripeConnectStatus()]);
@@ -431,6 +433,10 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
 
   const openDrawer = (integration: IntegrationDef) => {
     if (integration.id === "stripe" && stripeConnectStatus?.connected) {
+      return;
+    }
+    if (integration.id === "plat_whatsapp_business") {
+      setShowWhatsApp(true);
       return;
     }
     setSelectedIntegration(integration);
@@ -612,6 +618,15 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
 
   return (
     <div className="space-y-4 md:space-y-8">
+      {showWhatsApp ? (
+        <div className="space-y-4">
+          <button onClick={() => setShowWhatsApp(false)} className="flex items-center gap-1.5 text-xs font-bold text-zinc-400 hover:text-red-600 transition-colors">
+            ← Volver a integraciones
+          </button>
+          <WhatsAppPanel storeId={storeId} />
+        </div>
+      ) : (
+      <>
       <div>
         <h3 className="text-lg md:text-2xl font-black italic text-zinc-950 uppercase tracking-tighter">
           <Plug className="w-6 h-6 max-[400px]:w-5 max-[400px]:h-5 inline mr-3 text-red-600" />{t("integrations.title")}
@@ -794,6 +809,8 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );
