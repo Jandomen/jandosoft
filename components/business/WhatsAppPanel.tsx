@@ -454,12 +454,6 @@ export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setSoundEnabled(!soundEnabled)}
-            className={cn("p-2 rounded-xl transition-colors",
-              soundEnabled ? "bg-green-50 hover:bg-green-100" : "bg-zinc-100 hover:bg-zinc-200")}
-            title={soundEnabled ? "Sonido activado" : "Sonido desactivado"}>
-            {soundEnabled ? <Volume2 className="w-4 h-4 text-green-600" /> : <VolumeX className="w-4 h-4 text-zinc-400" />}
-          </button>
           <button onClick={() => setShowSettings(!showSettings)}
             className="p-2 hover:bg-zinc-100 rounded-xl transition-colors">
             <Settings className="w-4 h-4 text-zinc-400" />
@@ -564,7 +558,17 @@ export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
       {showSettings && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-3">
-          <h4 className="text-xs font-black text-zinc-400 uppercase italic">Cuentas conectadas</h4>
+          <h4 className="text-xs font-black text-zinc-400 uppercase italic">Configuracion</h4>
+          <div className="flex items-center justify-between p-2 bg-zinc-50 rounded-xl">
+            <span className="text-[10px] font-bold text-zinc-700">Sonido de notificaciones</span>
+            <button onClick={() => setSoundEnabled(!soundEnabled)}
+              className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition-colors",
+                soundEnabled ? "bg-green-50 text-green-600 hover:bg-green-100" : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200")}>
+              {soundEnabled ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+              {soundEnabled ? "Activado" : "Silenciado"}
+            </button>
+          </div>
+          <h4 className="text-xs font-black text-zinc-400 uppercase italic mt-3">Cuentas conectadas</h4>
           <div className="space-y-2">
             {accounts.map(account => (
               <div key={account._id} className="flex items-center justify-between p-2 bg-zinc-50 rounded-xl">
