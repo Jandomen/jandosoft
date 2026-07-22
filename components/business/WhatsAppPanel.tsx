@@ -581,11 +581,27 @@ export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
                     <p className="text-[8px] text-zinc-400 font-medium">{account.phoneNumber}</p>
                   </div>
                 </div>
-                <span className={cn("px-2 py-0.5 rounded-full text-[8px] font-black italic uppercase", STATUS_COLORS[account.status])}>
-                  {account.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={cn("px-2 py-0.5 rounded-full text-[8px] font-black italic uppercase", STATUS_COLORS[account.status])}>
+                    {account.status}
+                  </span>
+                  {account.status === "active" && (
+                    <button onClick={async () => {
+                      if (!confirm(`Desconectar ${account.phoneNumber}?`)) return;
+                      await fetch(`/api/whatsapp/accounts?accountId=${account._id}&storeId=${storeId}`, { method: "DELETE" });
+                      fetchAccounts();
+                      fetchHealth();
+                    }}
+                      className="px-2 py-1 rounded-lg text-[8px] font-bold text-red-500 hover:bg-red-50 transition-colors">
+                      Desconectar
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
+            {accounts.length === 0 && (
+              <p className="text-[10px] text-zinc-400 font-medium text-center py-2">No hay cuentas conectadas</p>
+            )}
           </div>
         </motion.div>
       )}
