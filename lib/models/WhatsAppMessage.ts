@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IWhatsAppMessage extends Document {
   storeId: mongoose.Types.ObjectId;
+  accountId?: mongoose.Types.ObjectId;
   direction: "incoming" | "outgoing";
   from: string;
   to: string;
@@ -23,6 +24,7 @@ export interface IWhatsAppMessage extends Document {
 
 const WhatsAppMessageSchema = new Schema<IWhatsAppMessage>({
   storeId: { type: Schema.Types.ObjectId, ref: "Store", required: true, index: true },
+  accountId: { type: Schema.Types.ObjectId, ref: "WhatsAppAccount", index: true },
   direction: { type: String, enum: ["incoming", "outgoing"], required: true, index: true },
   from: { type: String, required: true },
   to: { type: String, required: true },

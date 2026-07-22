@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { Integration } from "@/lib/models/Integration";
 import { WhatsAppMessage } from "@/lib/models/WhatsAppMessage";
+import { getWhatsAppAccountByWabaId, getWhatsAppAccountByPhoneNumberId } from "@/lib/whatsapp-middleware";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,24 +62,16 @@ async function processMessages(wabaId: string, value: any) {
   const messages = value.messages || [];
   const statuses = value.statuses || [];
 
-  // Find store by WABA ID or phone number ID
-  const integration = await Integration.findOne({
-    platform: "whatsapp_business",
-    enabled: true,
-    $or: [
-      { "credentials.businessAccountId": wabaId },
-      { "credentials.phoneNumberId": phoneNumberId },
-    ],
-  });
+  const account = await getWhatsAppAccountByWabaId(wabaId, phoneNumberId)
+    || await getWhatsAppAccountByPhoneNumberId(phoneNumberId);
 
-  if (!integration) {
-    console.log("[WA Webhook] No integration found for WABA:", wabaId);
+  if (!account) {
+    console.log("[WA Webhook] No account found for WABA:", wabaId, "PhoneID:", phoneNumberId);
     return;
   }
 
-  const storeId = integration.storeId;
+  const storeId = account.storeId;
 
-  // Process incoming messages
   for (const msg of messages) {
     const contact = contacts.find((c: any) => c.wa_id === msg.from);
     const type = msg.type || "unknown";
@@ -88,39 +80,15 @@ async function processMessages(wabaId: string, value: any) {
     let caption = "";
 
     switch (type) {
-      case "text":
-        body = msg.text?.body || "";
-        break;
-      case "image":
-        mediaUrl = msg.image?.id || "";
-        caption = msg.image?.caption || "";
-        body = "[Imagen]";
-        break;
-      case "audio":
-        mediaUrl = msg.audio?.id || "";
-        body = "[Audio]";
-        break;
-      case "video":
-        mediaUrl = msg.video?.id || "";
-        caption = msg.video?.caption || "";
-        body = "[Video]";
-        break;
-      case "document":
-        mediaUrl = msg.document?.id || "";
-        caption = msg.document?.caption || "";
-        body = msg.document?.filename || "[Documento]";
-        break;
-      case "location":
-        body = `[Ubicación: ${msg.location?.latitude}, ${msg.location?.longitude}]`;
-        break;
-      case "interactive":
-        body = msg.interactive?.button_reply?.title || msg.interactive?.list_reply?.title || JSON.stringify(msg.interactive);
-        break;
-      case "reaction":
-        body = msg.reaction?.emoji || "";
-        break;
-      default:
-        body = JSON.stringify(msg);
+      case "text": body = msg.text?.body || ""; break;
+      case "image": mediaUrl = msg.image?.id || ""; caption = msg.image?.caption || ""; body = "[Imagen]"; break;
+      case "audio": mediaUrl = msg.audio?.id || ""; body = "[Audio]"; break;
+      case "video": mediaUrl = msg.video?.id || ""; caption = msg.video?.caption || ""; body = "[Video]"; break;
+      case "document": mediaUrl = msg.document?.id || ""; caption = msg.document?.caption || ""; body = msg.document?.filename || "[Documento]"; break;
+      case "location": body = `[Ubicación: ${msg.location?.latitude}, ${msg.location?.longitude}]`; break;
+      case "interactive": body = msg.interactive?.button_reply?.title || msg.interactive?.list_reply?.title || JSON.stringify(msg.interactive); break;
+      case "reaction": body = msg.reaction?.emoji || ""; break;
+      default: body = JSON.stringify(msg);
     }
 
     try {
@@ -128,6 +96,7 @@ async function processMessages(wabaId: string, value: any) {
         { messageId: msg.id },
         {
           storeId,
+          accountId: account._id,
           direction: "incoming",
           from: msg.from,
           to: phoneNumberId || "",
@@ -142,13 +111,12 @@ async function processMessages(wabaId: string, value: any) {
         },
         { upsert: true, new: true }
       );
-      console.log(`[WA Webhook] Message saved: ${msg.id} from ${msg.from}`);
+      console.log(`[WA Webhook] Message saved: ${msg.id} from ${msg.from} to account ${account._id}`);
     } catch (e: any) {
       console.error("[WA Webhook] Error saving message:", e?.message);
     }
   }
 
-  // Process status updates
   for (const status of statuses) {
     try {
       const updateData: any = { status: status.status };

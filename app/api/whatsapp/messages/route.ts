@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
 
     const url = new URL(req.url);
     const storeId = url.searchParams.get("storeId");
+    const accountId = url.searchParams.get("accountId");
     const waId = url.searchParams.get("waId");
     const direction = url.searchParams.get("direction");
     const status = url.searchParams.get("status");
@@ -24,6 +25,7 @@ export async function GET(req: NextRequest) {
     await connectDB();
 
     const query: any = { storeId };
+    if (accountId) query.accountId = accountId;
     if (waId) query.waId = waId;
     if (direction) query.direction = direction;
     if (status) query.status = status;
@@ -36,7 +38,15 @@ export async function GET(req: NextRequest) {
 
     const total = await WhatsAppMessage.countDocuments(query);
 
-    return NextResponse.json({ messages, total, hasMore: offset + messages.length < total });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayCount = await WhatsAppMessage.countDocuments({
+      storeId,
+      direction: "outgoing",
+      createdAt: { $gte: today },
+    });
+
+    return NextResponse.json({ messages, total, hasMore: offset + messages.length < total, todaySentCount: todayCount });
   } catch (error: any) {
     console.error("[WA Messages] Error:", error?.message);
     return NextResponse.json({ error: "Error al obtener mensajes" }, { status: 500 });
@@ -50,11 +60,15 @@ export async function DELETE(req: NextRequest) {
 
     const url = new URL(req.url);
     const storeId = url.searchParams.get("storeId");
+    const accountId = url.searchParams.get("accountId");
 
     if (!storeId) return NextResponse.json({ error: "storeId requerido" }, { status: 400 });
 
     await connectDB();
-    await WhatsAppMessage.deleteMany({ storeId });
+    const query: any = { storeId };
+    if (accountId) query.accountId = accountId;
+
+    await WhatsAppMessage.deleteMany(query);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

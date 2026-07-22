@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { Integration } from "@/lib/models/Integration";
 import { WhatsAppMessage } from "@/lib/models/WhatsAppMessage";
 import { getAuthFromHeaders } from "@/lib/auth";
+import { validateWhatsAppSend, getWhatsAppAccount, incrementDailyCounter, sendWhatsAppMessage } from "@/lib/whatsapp-middleware";
 
 export const runtime = "nodejs";
 
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const body = await req.json();
-    const { storeId, to, message, type = "text", templateName, templateParams, mediaUrl } = body;
+    const { storeId, accountId, to, message, type = "text", templateName, templateParams, mediaUrl } = body;
 
     if (!storeId || !to || (!message && !templateName)) {
       return NextResponse.json({ error: "storeId, to y message (o templateName) son requeridos" }, { status: 400 });
@@ -20,39 +20,32 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    const integration = await Integration.findOne({
-      storeId,
-      platform: "whatsapp_business",
-      enabled: true,
-    });
-
-    if (!integration) {
-      return NextResponse.json({ error: "WhatsApp Business no está configurado o habilitado para esta tienda" }, { status: 400 });
+    const permission = await validateWhatsAppSend(storeId, accountId);
+    if (!permission.allowed) {
+      return NextResponse.json({ error: permission.error, code: permission.code }, { status: 403 });
     }
 
-    const { phoneNumberId, accessToken } = integration.credentials;
-    if (!phoneNumberId || !accessToken) {
-      return NextResponse.json({ error: "Faltan credenciales de WhatsApp Business (phoneNumberId o accessToken)" }, { status: 400 });
+    if (!permission.account) {
+      return NextResponse.json({ error: "No se encontró la cuenta de WhatsApp" }, { status: 404 });
     }
 
-    // Build WhatsApp API payload
-    let payload: any = {
-      messaging_product: "whatsapp",
-      to: to.replace(/[^0-9]/g, ""),
-      recipient_type: "individual",
-    };
+    const account = permission.account;
+    const limits = permission.limits!;
+    const dailyRemaining = permission.dailyRemaining!;
+
+    let payload: any = {};
 
     if (templateName) {
       payload.type = "template";
       payload.template = {
         name: templateName,
-        language: { code: "es" },
+        language: { code: templateParams?.[0] || "es" },
       };
-      if (templateParams && templateParams.length > 0) {
+      if (templateParams && templateParams.length > 1) {
         payload.template.components = [
           {
             type: "body",
-            parameters: templateParams.map((p: string) => ({ type: "text", text: p })),
+            parameters: templateParams.slice(1).map((p: string) => ({ type: "text", text: p })),
           },
         ];
       }
@@ -70,66 +63,52 @@ export async function POST(req: NextRequest) {
       payload.text = { body: message };
     }
 
-    // Send via WhatsApp Cloud API
-    const res = await fetch(`https://graph.facebook.com/v22.0/${phoneNumberId}/messages`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(payload),
-    });
+    const result = await sendWhatsAppMessage(account, to, payload);
 
-    const data = await res.json();
+    const cleanTo = to.replace(/[^0-9]/g, "");
 
-    if (!res.ok) {
-      const errMsg = data.error?.message || `HTTP ${res.status}`;
-      console.error("[WA Send] Error:", errMsg);
-
-      // Log failed outgoing message
+    if (!result.success) {
       await WhatsAppMessage.create({
         storeId,
+        accountId: account._id,
         direction: "outgoing",
-        from: phoneNumberId,
-        to: to.replace(/[^0-9]/g, ""),
+        from: account.phoneNumberId,
+        to: cleanTo,
         messageId: `out_${Date.now()}`,
-        waId: to.replace(/[^0-9]/g, ""),
+        waId: cleanTo,
         type: templateName ? "template" : "text",
         body: message || templateName || "",
         templateName,
         templateParams,
         status: "failed",
-        errorMessage: errMsg,
-        rawPayload: data,
+        errorMessage: result.error,
       });
 
-      return NextResponse.json({ error: errMsg }, { status: 500 });
+      return NextResponse.json({ error: result.error }, { status: 500 });
     }
 
-    // Log successful outgoing message
-    const waMessage = data.messages?.[0];
-    if (waMessage) {
-      await WhatsAppMessage.create({
-        storeId,
-        direction: "outgoing",
-        from: phoneNumberId,
-        to: to.replace(/[^0-9]/g, ""),
-        messageId: waMessage.id,
-        waId: to.replace(/[^0-9]/g, ""),
-        type: templateName ? "template" : "text",
-        body: message || templateName || "",
-        templateName,
-        templateParams,
-        status: "sent",
-        providerMessageId: waMessage.id,
-        rawPayload: data,
-      });
-    }
+    await incrementDailyCounter(account._id.toString());
+
+    await WhatsAppMessage.create({
+      storeId,
+      accountId: account._id,
+      direction: "outgoing",
+      from: account.phoneNumberId,
+      to: cleanTo,
+      messageId: result.messageId || `out_${Date.now()}`,
+      waId: cleanTo,
+      type: templateName ? "template" : "text",
+      body: message || templateName || "",
+      templateName,
+      templateParams,
+      status: "sent",
+      providerMessageId: result.messageId,
+    });
 
     return NextResponse.json({
       success: true,
-      messageId: waMessage?.id,
-      contacts: data.contacts,
+      messageId: result.messageId,
+      dailyRemaining: (dailyRemaining || 0) - 1,
     });
   } catch (error: any) {
     console.error("[WA Send] Error:", error?.message || error);
