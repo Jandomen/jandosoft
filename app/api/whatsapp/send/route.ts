@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { WhatsAppMessage } from "@/lib/models/WhatsAppMessage";
 import { getAuthFromHeaders } from "@/lib/auth";
-import { validateWhatsAppSend, getWhatsAppAccount, incrementDailyCounter, sendWhatsAppMessage } from "@/lib/whatsapp-middleware";
+import { validateWhatsAppSend, incrementDailyCounter, sendWhatsAppMessage, upsertConversation } from "@/lib/whatsapp-middleware";
 
 export const runtime = "nodejs";
 
@@ -12,10 +12,10 @@ export async function POST(req: NextRequest) {
     if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const body = await req.json();
-    const { storeId, accountId, to, message, type = "text", templateName, templateParams, mediaUrl } = body;
+    const { storeId, accountId, to, message, type = "text", mediaUrl } = body;
 
-    if (!storeId || !to || (!message && !templateName)) {
-      return NextResponse.json({ error: "storeId, to y message (o templateName) son requeridos" }, { status: 400 });
+    if (!storeId || !to || !message) {
+      return NextResponse.json({ error: "storeId, to y message son requeridos" }, { status: 400 });
     }
 
     await connectDB();
@@ -26,33 +26,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (!permission.account) {
-      return NextResponse.json({ error: "No se encontró la cuenta de WhatsApp" }, { status: 404 });
+      return NextResponse.json({ error: "No se encontro la cuenta de WhatsApp" }, { status: 404 });
     }
 
     const account = permission.account;
-    const limits = permission.limits!;
     const dailyRemaining = permission.dailyRemaining!;
 
     let payload: any = {};
-
-    if (templateName) {
-      payload.type = "template";
-      payload.template = {
-        name: templateName,
-        language: { code: templateParams?.[0] || "es" },
-      };
-      if (templateParams && templateParams.length > 1) {
-        payload.template.components = [
-          {
-            type: "body",
-            parameters: templateParams.slice(1).map((p: string) => ({ type: "text", text: p })),
-          },
-        ];
-      }
-    } else if (type === "text" || !type) {
-      payload.type = "text";
-      payload.text = { body: message };
-    } else if (type === "image" && mediaUrl) {
+    if (type === "image" && mediaUrl) {
       payload.type = "image";
       payload.image = { link: mediaUrl, caption: message || "" };
     } else if (type === "document" && mediaUrl) {
@@ -64,52 +45,31 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await sendWhatsAppMessage(account, to, payload);
-
     const cleanTo = to.replace(/[^0-9]/g, "");
 
     if (!result.success) {
       await WhatsAppMessage.create({
-        storeId,
-        accountId: account._id,
-        direction: "outgoing",
-        from: account.phoneNumberId,
-        to: cleanTo,
-        messageId: `out_${Date.now()}`,
-        waId: cleanTo,
-        type: templateName ? "template" : "text",
-        body: message || templateName || "",
-        templateName,
-        templateParams,
-        status: "failed",
+        storeId, accountId: account._id, direction: "outgoing", from: account.phoneNumberId,
+        to: cleanTo, messageId: `out_${Date.now()}`, waId: cleanTo, type, body: message, status: "failed",
         errorMessage: result.error,
       });
-
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
 
     await incrementDailyCounter(account._id.toString());
 
+    const conversationId = await upsertConversation(
+      storeId, account._id.toString(), cleanTo, "", cleanTo, message, "outgoing"
+    );
+
     await WhatsAppMessage.create({
-      storeId,
-      accountId: account._id,
-      direction: "outgoing",
-      from: account.phoneNumberId,
-      to: cleanTo,
-      messageId: result.messageId || `out_${Date.now()}`,
-      waId: cleanTo,
-      type: templateName ? "template" : "text",
-      body: message || templateName || "",
-      templateName,
-      templateParams,
-      status: "sent",
-      providerMessageId: result.messageId,
+      storeId, accountId: account._id, conversationId, direction: "outgoing",
+      from: account.phoneNumberId, to: cleanTo,
+      messageId: result.messageId || `out_${Date.now()}`, waId: cleanTo,
+      type, body: message, status: "sent", providerMessageId: result.messageId,
     });
 
-    return NextResponse.json({
-      success: true,
-      messageId: result.messageId,
-      dailyRemaining: (dailyRemaining || 0) - 1,
-    });
+    return NextResponse.json({ success: true, messageId: result.messageId, dailyRemaining: dailyRemaining - 1 });
   } catch (error: any) {
     console.error("[WA Send] Error:", error?.message || error);
     return NextResponse.json({ error: "Error interno al enviar mensaje" }, { status: 500 });

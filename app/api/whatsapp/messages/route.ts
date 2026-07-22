@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { WhatsAppMessage } from "@/lib/models/WhatsAppMessage";
+import { WhatsAppConversation } from "@/lib/models/WhatsAppConversation";
 import { getAuthFromHeaders } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -14,6 +15,7 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const storeId = url.searchParams.get("storeId");
     const accountId = url.searchParams.get("accountId");
+    const conversationId = url.searchParams.get("conversationId");
     const waId = url.searchParams.get("waId");
     const direction = url.searchParams.get("direction");
     const status = url.searchParams.get("status");
@@ -26,6 +28,7 @@ export async function GET(req: NextRequest) {
 
     const query: any = { storeId };
     if (accountId) query.accountId = accountId;
+    if (conversationId) query.conversationId = conversationId;
     if (waId) query.waId = waId;
     if (direction) query.direction = direction;
     if (status) query.status = status;
@@ -38,17 +41,8 @@ export async function GET(req: NextRequest) {
 
     const total = await WhatsAppMessage.countDocuments(query);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayCount = await WhatsAppMessage.countDocuments({
-      storeId,
-      direction: "outgoing",
-      createdAt: { $gte: today },
-    });
-
-    return NextResponse.json({ messages, total, hasMore: offset + messages.length < total, todaySentCount: todayCount });
+    return NextResponse.json({ messages, total, hasMore: offset + messages.length < total });
   } catch (error: any) {
-    console.error("[WA Messages] Error:", error?.message);
     return NextResponse.json({ error: "Error al obtener mensajes" }, { status: 500 });
   }
 }
@@ -67,7 +61,6 @@ export async function DELETE(req: NextRequest) {
     await connectDB();
     const query: any = { storeId };
     if (accountId) query.accountId = accountId;
-
     await WhatsAppMessage.deleteMany(query);
 
     return NextResponse.json({ success: true });

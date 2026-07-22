@@ -20,7 +20,6 @@ export interface IPlanLimits {
   maxWhatsAppNumbers: number;
   maxWhatsAppMessagesPerDay: number;
   maxWhatsAppTemplates: number;
-  maxWhatsAppCampaigns: number;
 }
 
 export interface IPlan {
@@ -61,7 +60,6 @@ const PlanLimitsSchema = new Schema<IPlanLimits>({
   maxWhatsAppNumbers: { type: Number, default: 0 },
   maxWhatsAppMessagesPerDay: { type: Number, default: 0 },
   maxWhatsAppTemplates: { type: Number, default: 0 },
-  maxWhatsAppCampaigns: { type: Number, default: 0 },
 }, { _id: false });
 
 const PlanSchema = new Schema<IPlan>({
@@ -102,7 +100,7 @@ export const DEFAULT_PLANS: IPlan[] = [
     desc: "Pa' empezar con todo, sin miedo al éxito",
     popular: false,
     features: ["Productos", "Clientes", "Pedidos", "Facturación", "IA básica", "Correos automáticos"],
-    limits: { maxStores: 3, maxProductsPerStore: 50, maxMessages: 50, maxAutomations: 10, maxAppointments: 50, maxCampaigns: 20, maxCustomers: 200, maxWhatsAppNumbers: 1, maxWhatsAppMessagesPerDay: 100, maxWhatsAppTemplates: 5, maxWhatsAppCampaigns: 3 },
+    limits: { maxStores: 3, maxProductsPerStore: 50, maxMessages: 50, maxAutomations: 10, maxAppointments: 50, maxCampaigns: 20, maxCustomers: 200, maxWhatsAppNumbers: 1, maxWhatsAppMessagesPerDay: 100, maxWhatsAppTemplates: 5 },
   },
   {
     id: "business",
@@ -113,7 +111,7 @@ export const DEFAULT_PLANS: IPlan[] = [
     desc: "El que manda, el que decide, el que crece",
     popular: true,
     features: ["Todo El Gallito", "CRM avanzado", "WhatsApp Business", "Campañas", "Automatizaciones", "Analytics", "Clientes ilimitados"],
-    limits: { maxStores: 20, maxProductsPerStore: 500, maxMessages: 200, maxAutomations: 50, maxAppointments: 500, maxCampaigns: 100, maxCustomers: 5000, maxWhatsAppNumbers: 3, maxWhatsAppMessagesPerDay: 500, maxWhatsAppTemplates: 50, maxWhatsAppCampaigns: 20 },
+    limits: { maxStores: 20, maxProductsPerStore: 500, maxMessages: 200, maxAutomations: 50, maxAppointments: 500, maxCampaigns: 100, maxCustomers: 5000, maxWhatsAppNumbers: 3, maxWhatsAppMessagesPerDay: 500, maxWhatsAppTemplates: 50 },
   },
   {
     id: "enterprise",
@@ -124,7 +122,7 @@ export const DEFAULT_PLANS: IPlan[] = [
     desc: "El dueño de todo, sin límites, sin fronteras",
     popular: false,
     features: ["Todo El Jefe", "Multiusuario", "Roles y permisos", "API", "Integraciones avanzadas", "IA avanzada", "Soporte prioritario"],
-    limits: { maxStores: 999, maxProductsPerStore: 9999, maxMessages: 999, maxAutomations: 999, maxAppointments: 9999, maxCampaigns: 9999, maxCustomers: 99999, maxWhatsAppNumbers: 10, maxWhatsAppMessagesPerDay: 9999, maxWhatsAppTemplates: 999, maxWhatsAppCampaigns: 999 },
+    limits: { maxStores: 999, maxProductsPerStore: 9999, maxMessages: 999, maxAutomations: 999, maxAppointments: 9999, maxCampaigns: 9999, maxCustomers: 99999, maxWhatsAppNumbers: 10, maxWhatsAppMessagesPerDay: 9999, maxWhatsAppTemplates: 999 },
   },
 ];
 
@@ -132,5 +130,5 @@ export const DEFAULT_FREE_PLAN: IFreePlan = {
   id: "free",
   name: "Gratis",
   features: ["1 producto", "2 citas", "2 campañas", "10 mensajes IA"],
-  limits: { maxStores: 1, maxProductsPerStore: 1, maxMessages: 10, maxAutomations: 2, maxAppointments: 2, maxCampaigns: 2, maxCustomers: 0, maxWhatsAppNumbers: 0, maxWhatsAppMessagesPerDay: 0, maxWhatsAppTemplates: 0, maxWhatsAppCampaigns: 0 },
+  limits: { maxStores: 1, maxProductsPerStore: 1, maxMessages: 10, maxAutomations: 2, maxAppointments: 2, maxCampaigns: 2, maxCustomers: 0, maxWhatsAppNumbers: 0, maxWhatsAppMessagesPerDay: 0, maxWhatsAppTemplates: 0 },
 };

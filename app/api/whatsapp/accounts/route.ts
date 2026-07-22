@@ -48,7 +48,6 @@ export async function GET(req: NextRequest) {
         maxNumbers: limits.maxWhatsAppNumbers,
         maxPerDay: limits.maxWhatsAppMessagesPerDay,
         maxTemplates: limits.maxWhatsAppTemplates,
-        maxCampaigns: limits.maxWhatsAppCampaigns,
         numbersUsed: accountsUsed,
         numbersRemaining: Math.max(0, limits.maxWhatsAppNumbers - accountsUsed),
       },

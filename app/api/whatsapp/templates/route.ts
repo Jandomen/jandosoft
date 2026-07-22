@@ -5,7 +5,6 @@ import { WhatsAppAccount } from "@/lib/models/WhatsAppAccount";
 import { getAuthFromHeaders } from "@/lib/auth";
 import { getPlanLimits } from "@/lib/plans";
 import { Store } from "@/lib/models/Store";
-import { checkTemplatePermission } from "@/lib/whatsapp-middleware";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,14 +30,14 @@ export async function GET(req: NextRequest) {
     const store = await Store.findById(storeId).lean().select("subscription").catch(() => null);
     const subscription = (store as any)?.subscription || "free";
     const limits = getPlanLimits(subscription);
-    const permission = checkTemplatePermission(limits, templates.length);
+    const remaining = Math.max(0, limits.maxWhatsAppTemplates - templates.length);
 
     return NextResponse.json({
       templates,
       limits: {
         maxTemplates: limits.maxWhatsAppTemplates,
         used: templates.length,
-        remaining: permission.remaining,
+        remaining,
       },
     });
   } catch (error: any) {
