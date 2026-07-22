@@ -130,5 +130,5 @@ export const DEFAULT_FREE_PLAN: IFreePlan = {
   id: "free",
   name: "Gratis",
   features: ["1 producto", "2 citas", "2 campañas", "10 mensajes IA"],
-  limits: { maxStores: 1, maxProductsPerStore: 1, maxMessages: 10, maxAutomations: 2, maxAppointments: 2, maxCampaigns: 2, maxCustomers: 0, maxWhatsAppNumbers: 0, maxWhatsAppMessagesPerDay: 0, maxWhatsAppTemplates: 0 },
+  limits: { maxStores: 1, maxProductsPerStore: 1, maxMessages: 10, maxAutomations: 2, maxAppointments: 2, maxCampaigns: 2, maxCustomers: 0, maxWhatsAppNumbers: 1, maxWhatsAppMessagesPerDay: 10, maxWhatsAppTemplates: 2 },
 };

@@ -41,7 +41,7 @@ export const FREE_PLAN: FreePlanConfig = {
   name: "Gratis",
   nameKey: "plans.free_name",
   features: ["plans.feature.products", "plans.feature.customers", "plans.feature.orders", "plans.feature.invoicing"],
-  limits: { maxStores: 1, maxProductsPerStore: 1, maxMessages: 10, maxAutomations: 2, maxAppointments: 2, maxCampaigns: 2, maxCustomers: 0, maxWhatsAppNumbers: 0, maxWhatsAppMessagesPerDay: 0, maxWhatsAppTemplates: 0 },
+  limits: { maxStores: 1, maxProductsPerStore: 1, maxMessages: 10, maxAutomations: 2, maxAppointments: 2, maxCampaigns: 2, maxCustomers: 0, maxWhatsAppNumbers: 1, maxWhatsAppMessagesPerDay: 10, maxWhatsAppTemplates: 2 },
 };
 
 export const PLANS: PlanConfig[] = [
