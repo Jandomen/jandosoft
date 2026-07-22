@@ -7,6 +7,7 @@ import { WhatsAppContact } from "@/lib/models/WhatsAppContact";
 import { Store } from "@/lib/models/Store";
 import { Customer } from "@/lib/models/Customer";
 import { getPlanLimits, type PlanLimits } from "@/lib/plans";
+import type { JWTPayload } from "@/lib/auth";
 
 export interface WhatsAppPermissionResult {
   allowed: boolean;
@@ -16,6 +17,13 @@ export interface WhatsAppPermissionResult {
   limits?: PlanLimits;
   dailyRemaining?: number;
   accountsUsed?: number;
+}
+
+export async function verifyStoreOwnership(storeId: string, auth: JWTPayload): Promise<{ ok: boolean; error?: string }> {
+  await connectDB();
+  const store = await Store.findOne({ _id: storeId, organizationId: auth.organizationId }).lean().select("_id").catch(() => null);
+  if (!store) return { ok: false, error: "Tienda no encontrada o sin acceso" };
+  return { ok: true };
 }
 
 export async function getWhatsAppAccount(storeId: string, phoneNumberId?: string): Promise<IWhatsAppAccount | null> {
@@ -46,20 +54,11 @@ export async function validateWhatsAppSend(storeId: string, accountId?: string):
   const subscription = (store as any).subscription || "free";
   const limits = getPlanLimits(subscription);
 
-  if (limits.maxWhatsAppNumbers <= 0) {
-    return { allowed: false, error: "Tu plan no incluye WhatsApp Business. Actualiza tu plan para usar WhatsApp.", code: "PLAN_NO_WHATSAPP", limits };
-  }
-
-  const accountsUsed = await WhatsAppAccount.countDocuments({ storeId, status: { $in: ["active", "pending"] } });
-  if (accountsUsed >= limits.maxWhatsAppNumbers) {
-    return { allowed: false, error: `Has alcanzado el limite de ${limits.maxWhatsAppNumbers} numero(s) de WhatsApp en tu plan.`, code: "LIMIT_WHATSAPP_NUMBERS", limits, accountsUsed };
-  }
-
   let accountQuery: any = { storeId, status: "active" };
   if (accountId) accountQuery._id = accountId;
 
   const account = await WhatsAppAccount.findOne(accountQuery).lean();
-  if (!account) return { allowed: false, error: "No hay cuenta de WhatsApp Business conectada.", code: "NO_ACCOUNT", limits };
+  if (!account) return { allowed: false, error: "No hay cuenta de WhatsApp Business conectada. Conecta un numero desde Configuracion > WhatsApp.", code: "NO_ACCOUNT", limits };
 
   if (account.qualityRating === "red") {
     return { allowed: false, error: "Tu numero de WhatsApp tiene calidad RED. Meta ha restringido el envio.", code: "QUALITY_RED", limits, account };

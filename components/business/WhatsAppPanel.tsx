@@ -380,7 +380,9 @@ export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
             <input type="password" value={connectForm.accessToken} onChange={e => setConnectForm({ ...connectForm, accessToken: e.target.value })}
               placeholder="Access Token" className="bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-green-200 transition-all" />
             <input value={connectForm.phoneNumber} onChange={e => setConnectForm({ ...connectForm, phoneNumber: e.target.value })}
-              placeholder="Telefono (opcional)" className="bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-green-200 transition-all" />
+              placeholder="Telefono (ej: +521234567890)" className="bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-green-200 transition-all" />
+            <input value={connectForm.displayName} onChange={e => setConnectForm({ ...connectForm, displayName: e.target.value })}
+              placeholder="Nombre visible (opcional)" className="bg-zinc-50 p-2.5 rounded-xl border border-zinc-100 outline-none text-xs font-medium focus:bg-white focus:border-green-200 transition-all" />
           </div>
           <div className="flex gap-2">
             <motion.button whileTap={{ scale: 0.97 }} onClick={connectAccount} disabled={connecting}

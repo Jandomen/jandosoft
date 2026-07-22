@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { WhatsAppMessage } from "@/lib/models/WhatsAppMessage";
 import { WhatsAppConversation } from "@/lib/models/WhatsAppConversation";
 import { getAuthFromHeaders } from "@/lib/auth";
+import { verifyStoreOwnership } from "@/lib/whatsapp-middleware";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +24,9 @@ export async function GET(req: NextRequest) {
     const offset = parseInt(url.searchParams.get("offset") || "0");
 
     if (!storeId) return NextResponse.json({ error: "storeId requerido" }, { status: 400 });
+
+    const ownership = await verifyStoreOwnership(storeId, auth);
+    if (!ownership.ok) return NextResponse.json({ error: ownership.error }, { status: 403 });
 
     await connectDB();
 
@@ -57,6 +61,9 @@ export async function DELETE(req: NextRequest) {
     const accountId = url.searchParams.get("accountId");
 
     if (!storeId) return NextResponse.json({ error: "storeId requerido" }, { status: 400 });
+
+    const ownership = await verifyStoreOwnership(storeId, auth);
+    if (!ownership.ok) return NextResponse.json({ error: ownership.error }, { status: 403 });
 
     await connectDB();
     const query: any = { storeId };

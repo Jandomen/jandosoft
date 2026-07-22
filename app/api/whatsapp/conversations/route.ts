@@ -4,6 +4,7 @@ import { WhatsAppConversation } from "@/lib/models/WhatsAppConversation";
 import { WhatsAppMessage } from "@/lib/models/WhatsAppMessage";
 import { WhatsAppAccount } from "@/lib/models/WhatsAppAccount";
 import { getAuthFromHeaders } from "@/lib/auth";
+import { verifyStoreOwnership } from "@/lib/whatsapp-middleware";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +24,9 @@ export async function GET(req: NextRequest) {
     const offset = parseInt(url.searchParams.get("offset") || "0");
 
     if (!storeId) return NextResponse.json({ error: "storeId requerido" }, { status: 400 });
+
+    const ownership = await verifyStoreOwnership(storeId, auth);
+    if (!ownership.ok) return NextResponse.json({ error: ownership.error }, { status: 403 });
 
     await connectDB();
 
@@ -72,6 +76,9 @@ export async function PUT(req: NextRequest) {
     if (!storeId || !conversationId) {
       return NextResponse.json({ error: "storeId y conversationId son requeridos" }, { status: 400 });
     }
+
+    const ownership = await verifyStoreOwnership(storeId, auth);
+    if (!ownership.ok) return NextResponse.json({ error: ownership.error }, { status: 403 });
 
     await connectDB();
     const conversation = await WhatsAppConversation.findOne({ _id: conversationId, storeId });
@@ -138,6 +145,9 @@ export async function DELETE(req: NextRequest) {
     const storeId = url.searchParams.get("storeId");
 
     if (!conversationId || !storeId) return NextResponse.json({ error: "conversationId y storeId requeridos" }, { status: 400 });
+
+    const ownership = await verifyStoreOwnership(storeId, auth);
+    if (!ownership.ok) return NextResponse.json({ error: ownership.error }, { status: 403 });
 
     await connectDB();
     await WhatsAppConversation.findOneAndDelete({ _id: conversationId, storeId });

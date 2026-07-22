@@ -4,6 +4,7 @@ import { WhatsAppAccount } from "@/lib/models/WhatsAppAccount";
 import { getAuthFromHeaders } from "@/lib/auth";
 import { getPlanLimits } from "@/lib/plans";
 import { Store } from "@/lib/models/Store";
+import { verifyStoreOwnership } from "@/lib/whatsapp-middleware";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,9 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const storeId = url.searchParams.get("storeId");
     if (!storeId) return NextResponse.json({ error: "storeId requerido" }, { status: 400 });
+
+    const ownership = await verifyStoreOwnership(storeId, auth);
+    if (!ownership.ok) return NextResponse.json({ error: ownership.error }, { status: 403 });
 
     await connectDB();
     const accounts = await WhatsAppAccount.find({ storeId })
@@ -68,6 +72,9 @@ export async function POST(req: NextRequest) {
     if (!storeId || !wabaId || !phoneNumberId || !accessToken) {
       return NextResponse.json({ error: "storeId, wabaId, phoneNumberId y accessToken son requeridos" }, { status: 400 });
     }
+
+    const ownership = await verifyStoreOwnership(storeId, auth);
+    if (!ownership.ok) return NextResponse.json({ error: ownership.error }, { status: 403 });
 
     await connectDB();
 
@@ -149,6 +156,9 @@ export async function DELETE(req: NextRequest) {
     const storeId = url.searchParams.get("storeId");
 
     if (!accountId || !storeId) return NextResponse.json({ error: "accountId y storeId requeridos" }, { status: 400 });
+
+    const ownership = await verifyStoreOwnership(storeId, auth);
+    if (!ownership.ok) return NextResponse.json({ error: ownership.error }, { status: 403 });
 
     await connectDB();
 

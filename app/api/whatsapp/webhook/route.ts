@@ -3,11 +3,20 @@ import { connectDB } from "@/lib/mongodb";
 import { WhatsAppMessage } from "@/lib/models/WhatsAppMessage";
 import { WhatsAppConversation } from "@/lib/models/WhatsAppConversation";
 import { getWhatsAppAccountByWabaId, getWhatsAppAccountByPhoneNumberId, upsertConversation } from "@/lib/whatsapp-middleware";
+import crypto from "crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || "jandosoft-wa-verify-2026";
+const APP_SECRET = process.env.META_APP_SECRET || "";
+const MAX_AI_INPUT_LENGTH = 2000;
+
+function verifySignature(rawBody: string, signature: string | null): boolean {
+  if (!APP_SECRET || !signature) return !APP_SECRET;
+  const expected = "sha256=" + crypto.createHmac("sha256", APP_SECRET).update(rawBody).digest("hex");
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+}
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -23,7 +32,21 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const rawBody = await req.text();
+    const signature = req.headers.get("x-hub-signature-256");
+
+    if (APP_SECRET && !verifySignature(rawBody, signature)) {
+      console.warn("[WA Webhook] Invalid signature");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
+    }
+
+    let body: any;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
     if (!body.object || body.object !== "whatsapp_business_account") {
       return NextResponse.json({ received: true });
     }
@@ -67,6 +90,10 @@ async function processMessages(wabaId: string, value: any) {
   const storeId = account.storeId.toString();
 
   for (const msg of messages) {
+    if (msg.context && msg.context.from === phoneNumberId) {
+      continue;
+    }
+
     const contact = contacts.find((c: any) => c.wa_id === msg.from);
     const type = msg.type || "unknown";
     let body = "";
@@ -120,7 +147,8 @@ async function processMessages(wabaId: string, value: any) {
 
     const conversation = await WhatsAppConversation.findById(conversationId).lean();
     if (conversation?.aiAutoReply && body && type === "text" && !body.startsWith("[")) {
-      triggerAIReply(storeId, account._id.toString(), conversationId, waId, body, customerName).catch(err =>
+      const truncatedBody = body.slice(0, MAX_AI_INPUT_LENGTH);
+      triggerAIReply(storeId, account._id.toString(), conversationId, waId, truncatedBody, customerName).catch(err =>
         console.error("[WA Webhook] AI reply error:", err?.message)
       );
     }
