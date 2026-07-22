@@ -97,9 +97,27 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    const existing = await WhatsAppAccount.findOne({ storeId, phoneNumberId });
+    const existing = await WhatsAppAccount.findOne({ storeId, phoneNumberId, status: "active" });
     if (existing) {
-      return NextResponse.json({ error: "Este número de teléfono ya está conectado" }, { status: 409 });
+      return NextResponse.json({ error: "Este numero ya esta conectado activamente" }, { status: 409 });
+    }
+
+    // Reactivate if previously disconnected
+    const disconnected = await WhatsAppAccount.findOne({ storeId, phoneNumberId, status: "disconnected" });
+    if (disconnected) {
+      let verifiedName = "";
+      try {
+        const metaRes = await fetch(
+          `https://graph.facebook.com/v22.0/${phoneNumberId}?fields=verified_name,display_phone_number&access_token=${accessToken}`
+        );
+        const metaData = await metaRes.json();
+        if (metaRes.ok) verifiedName = metaData.verified_name || "";
+      } catch {}
+      await WhatsAppAccount.findByIdAndUpdate(disconnected._id, {
+        accessToken, wabaId, status: "active", verifiedName,
+        qualityRating: "unknown", connectedAt: new Date(), disconnectedAt: null,
+      });
+      return NextResponse.json({ success: true, account: { _id: disconnected._id, phoneNumberId, phoneNumber: disconnected.phoneNumber, verifiedName, status: "active" } });
     }
 
     let verifiedName = "";
