@@ -6,6 +6,37 @@ import { getPlanLimits } from "@/lib/plans";
 import { Store } from "@/lib/models/Store";
 import { verifyStoreOwnership } from "@/lib/whatsapp-middleware";
 
+const META_APP_ID = process.env.META_APP_ID || "4108729842750456";
+const META_APP_SECRET = process.env.META_APP_SECRET || "";
+const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || "jandosoft-wa-verify-2026";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://jandosoft.vercel.app";
+
+async function autoSubscribeWebhook(wabaId: string, accessToken: string) {
+  try {
+    const appAccessToken = `${META_APP_ID}|${META_APP_SECRET}`;
+
+    // 1. Configure webhook URL on the app
+    const webhookUrl = `${BASE_URL}/api/whatsapp/webhook`;
+    await fetch(`https://graph.facebook.com/v22.0/${META_APP_ID}/subscriptions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        callback_url: webhookUrl,
+        verify_token: VERIFY_TOKEN,
+        fields: "messages",
+        access_token: appAccessToken,
+      }),
+    }).catch(() => {});
+
+    // 2. Subscribe the app to this WABA
+    await fetch(`https://graph.facebook.com/v22.0/${wabaId}/subscribed_apps`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ access_token: accessToken }),
+    }).catch(() => {});
+  } catch {}
+}
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -117,6 +148,7 @@ export async function POST(req: NextRequest) {
         accessToken, wabaId, status: "active", verifiedName,
         qualityRating: "unknown", connectedAt: new Date(), disconnectedAt: null,
       });
+      autoSubscribeWebhook(wabaId, accessToken);
       return NextResponse.json({ success: true, account: { _id: disconnected._id, phoneNumberId, phoneNumber: disconnected.phoneNumber, verifiedName, status: "active" } });
     }
 
@@ -147,6 +179,8 @@ export async function POST(req: NextRequest) {
       messagingLimitTier: 1,
       connectedAt: new Date(),
     });
+
+    autoSubscribeWebhook(wabaId, accessToken);
 
     return NextResponse.json({
       success: true,
