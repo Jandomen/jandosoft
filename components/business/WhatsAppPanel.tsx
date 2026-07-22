@@ -101,6 +101,41 @@ const STATUS_ICONS: Record<string, any> = {
 
 type InboxFilter = "all" | "open" | "pending" | "closed" | "unassigned";
 
+function playErrorSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.type = "sine";
+    o.frequency.setValueAtTime(330, ctx.currentTime);
+    o.frequency.setValueAtTime(220, ctx.currentTime + 0.15);
+    g.gain.setValueAtTime(0.3, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    o.start(ctx.currentTime);
+    o.stop(ctx.currentTime + 0.3);
+  } catch {}
+}
+
+function playSuccessSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.type = "sine";
+    o.frequency.setValueAtTime(523, ctx.currentTime);
+    o.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
+    o.frequency.setValueAtTime(784, ctx.currentTime + 0.2);
+    g.gain.setValueAtTime(0.3, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+    o.start(ctx.currentTime);
+    o.stop(ctx.currentTime + 0.4);
+  } catch {}
+}
+
 export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
   const [conversations, setConversations] = useState<WAConversation[]>([]);
   const [stats, setStats] = useState<WAStats | null>(null);
@@ -252,7 +287,10 @@ export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
   };
 
   const connectAccount = async () => {
-    if (!connectForm.wabaId || !connectForm.phoneNumberId || !connectForm.accessToken) return;
+    if (!connectForm.wabaId || !connectForm.phoneNumberId || !connectForm.accessToken) {
+      playErrorSound();
+      return;
+    }
     setConnecting(true);
     try {
       const res = await fetch("/api/whatsapp/accounts", {
@@ -262,9 +300,12 @@ export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
       });
       const data = await res.json();
       if (data.success) {
+        playSuccessSound();
         setShowConnect(false);
         setConnectForm({ wabaId: "", phoneNumberId: "", accessToken: "", phoneNumber: "", displayName: "" });
         fetchAccounts();
+      } else {
+        playErrorSound();
       }
     } catch {} finally { setConnecting(false); }
   };
