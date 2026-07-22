@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { WhatsAppMessage } from "@/lib/models/WhatsAppMessage";
-import { getAuthFromHeaders } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import { validateWhatsAppSend, incrementDailyCounter, sendWhatsAppMessage, upsertConversation } from "@/lib/whatsapp-middleware";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = getAuthFromHeaders(req);
+    const auth = await getAuth(req);
     if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const body = await req.json();

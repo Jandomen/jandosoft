@@ -49,8 +49,17 @@ export async function getAuthFromCookies(): Promise<JWTPayload | null> {
 
 export function getAuthFromHeaders(req: Request): JWTPayload | null {
   const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) return null;
-  return verifyToken(authHeader.slice(7));
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = verifyToken(authHeader.slice(7));
+    if (token) return token;
+  }
+  return null;
+}
+
+export async function getAuth(req: Request): Promise<JWTPayload | null> {
+  const fromHeader = getAuthFromHeaders(req);
+  if (fromHeader) return fromHeader;
+  return getAuthFromCookies();
 }
 
 export async function getAuthVerified(req: Request): Promise<{ auth: JWTPayload } | { error: string; status: number }> {

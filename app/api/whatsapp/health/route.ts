@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { WhatsAppAccount } from "@/lib/models/WhatsAppAccount";
-import { getAuthFromHeaders } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import { verifyStoreOwnership } from "@/lib/whatsapp-middleware";
 
 export const runtime = "nodejs";
@@ -24,7 +24,7 @@ interface HealthCheck {
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = getAuthFromHeaders(req);
+    const auth = await getAuth(req);
     if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const url = new URL(req.url);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { WhatsAppAccount } from "@/lib/models/WhatsAppAccount";
-import { getAuthFromHeaders } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import { getPlanLimits } from "@/lib/plans";
 import { Store } from "@/lib/models/Store";
 import { verifyStoreOwnership } from "@/lib/whatsapp-middleware";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = getAuthFromHeaders(req);
+    const auth = await getAuth(req);
     if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const url = new URL(req.url);
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = getAuthFromHeaders(req);
+    const auth = await getAuth(req);
     if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const body = await req.json();
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const auth = getAuthFromHeaders(req);
+    const auth = await getAuth(req);
     if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const url = new URL(req.url);

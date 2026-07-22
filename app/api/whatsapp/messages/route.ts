@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { WhatsAppMessage } from "@/lib/models/WhatsAppMessage";
 import { WhatsAppConversation } from "@/lib/models/WhatsAppConversation";
-import { getAuthFromHeaders } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import { verifyStoreOwnership } from "@/lib/whatsapp-middleware";
 
 export const runtime = "nodejs";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = getAuthFromHeaders(req);
+    const auth = await getAuth(req);
     if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const url = new URL(req.url);
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const auth = getAuthFromHeaders(req);
+    const auth = await getAuth(req);
     if (!auth) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const url = new URL(req.url);
