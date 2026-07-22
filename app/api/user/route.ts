@@ -189,10 +189,20 @@ export async function DELETE(req: NextRequest) {
         cleanupPromises.push(db.collection("pageviews").deleteMany({ storeId: { $in: storeIds } }));
         cleanupPromises.push(db.collection("communications").deleteMany({ storeId: { $in: storeIds } }));
         cleanupPromises.push(db.collection("nowpaymentspayments").deleteMany({ storeId: { $in: storeIds } }));
+        cleanupPromises.push(db.collection("nowpaymentspayments").deleteMany({ customerEmail: userEmail }));
         cleanupPromises.push(db.collection("payments").deleteMany({ storeId: { $in: storeIds } }));
+        cleanupPromises.push(db.collection("payments").deleteMany({ customerEmail: userEmail }));
+        cleanupPromises.push(db.collection("payments").deleteMany({ ownerEmail: userEmail }));
         cleanupPromises.push(db.collection("apikeys").deleteMany({ storeId: { $in: storeIds } }));
         cleanupPromises.push(db.collection("emaillogs").deleteMany({ storeId: { $in: storeIds } }));
         cleanupPromises.push(db.collection("scheduledtasks").deleteMany({ storeId: { $in: storeIds } }));
+
+        // WhatsApp collections
+        cleanupPromises.push(db.collection("whatsappaccounts").deleteMany({ storeId: { $in: storeIds } }));
+        cleanupPromises.push(db.collection("whatsappconversations").deleteMany({ storeId: { $in: storeIds } }));
+        cleanupPromises.push(db.collection("whatsappmessages").deleteMany({ storeId: { $in: storeIds } }));
+        cleanupPromises.push(db.collection("whatsappcontacts").deleteMany({ storeId: { $in: storeIds } }));
+        cleanupPromises.push(db.collection("whatsapptemplates").deleteMany({ storeId: { $in: storeIds } }));
       }
 
       // Collections linked by storeId (String)
