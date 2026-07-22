@@ -189,10 +189,17 @@ export async function DELETE(req: NextRequest) {
         cleanupPromises.push(db.collection("pageviews").deleteMany({ storeId: { $in: storeIds } }));
         cleanupPromises.push(db.collection("communications").deleteMany({ storeId: { $in: storeIds } }));
         cleanupPromises.push(db.collection("nowpaymentspayments").deleteMany({ storeId: { $in: storeIds } }));
-        cleanupPromises.push(db.collection("nowpaymentspayments").deleteMany({ customerEmail: userEmail }));
         cleanupPromises.push(db.collection("payments").deleteMany({ storeId: { $in: storeIds } }));
-        cleanupPromises.push(db.collection("payments").deleteMany({ customerEmail: userEmail }));
-        cleanupPromises.push(db.collection("payments").deleteMany({ ownerEmail: userEmail }));
+
+        // Anonymize payments where user was a customer (keep for admin backup)
+        cleanupPromises.push(db.collection("payments").updateMany(
+          { customerEmail: userEmail },
+          { $set: { customerEmail: "[eliminado]", customerName: "[usuario eliminado]" } }
+        ));
+        cleanupPromises.push(db.collection("nowpaymentspayments").updateMany(
+          { customerEmail: userEmail },
+          { $set: { customerEmail: "[eliminado]", customerName: "[usuario eliminado]" } }
+        ));
         cleanupPromises.push(db.collection("apikeys").deleteMany({ storeId: { $in: storeIds } }));
         cleanupPromises.push(db.collection("emaillogs").deleteMany({ storeId: { $in: storeIds } }));
         cleanupPromises.push(db.collection("scheduledtasks").deleteMany({ storeId: { $in: storeIds } }));
