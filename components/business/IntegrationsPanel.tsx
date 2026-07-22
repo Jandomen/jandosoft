@@ -203,6 +203,8 @@ function buildIntegrationsList(
   integrations: Integration[],
   paymentIntegrations: PaymentIntegration[],
   aiProvider: any,
+  whatsappConnected: boolean,
+  whatsappInfo: string,
 ): IntegrationDef[] {
   const list: IntegrationDef[] = [];
 
@@ -278,14 +280,15 @@ function buildIntegrationsList(
     else if (["youtube", "tiktok", "linkedin", "pinterest", "twitch", "reddit", "snapchat", "tumblr"].includes(platform)) category = "social";
 
     const subTag = MESSAGING_SUB[platform] ? ` — ${MESSAGING_SUB[platform]}` : "";
+    const isWhatsApp = platform === "whatsapp_business";
     list.push({
       id: `plat_${platform}`, category, label: info.label,
       desc: `Integra ${info.label} con tu negocio${subTag}`,
       icon: REACT_ICONS[info.icon] || Plug,
       iconColor: ICON_COLORS[platform] || "#71717a",
       docsUrl: info.docs,
-      status: getPlatStatus(platform),
-      connectedInfo: getPlatInfo(platform),
+      status: isWhatsApp ? (whatsappConnected ? "connected" as const : "disconnected" as const) : getPlatStatus(platform),
+      connectedInfo: isWhatsApp ? whatsappInfo : getPlatInfo(platform),
       fields: info.fields,
     });
   }
@@ -312,9 +315,11 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
   const [stripeConnecting, setStripeConnecting] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
+  const [whatsappConnected, setWhatsappConnected] = useState(false);
+  const [whatsappInfo, setWhatsappInfo] = useState("");
 
   useEffect(() => {
-    Promise.all([fetchIntegrations(), fetchPaymentIntegrations(), fetchAIProvider(), fetchStripeConnectStatus()]);
+    Promise.all([fetchIntegrations(), fetchPaymentIntegrations(), fetchAIProvider(), fetchStripeConnectStatus(), fetchWhatsAppStatus()]);
   }, [storeId]);
 
   const fetchStripeConnectStatus = async () => {
@@ -322,6 +327,21 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
       const res = await fetch(`/api/stripe/account-status?storeId=${storeId}`);
       const data = await res.json();
       setStripeConnectStatus(data);
+    } catch {}
+  };
+
+  const fetchWhatsAppStatus = async () => {
+    try {
+      const res = await fetch(`/api/whatsapp/accounts?storeId=${storeId}`);
+      const data = await res.json();
+      const active = (data.accounts || []).filter((a: any) => a.status === "active");
+      setWhatsappConnected(active.length > 0);
+      if (active.length > 0) {
+        const names = active.map((a: any) => a.verifiedName || a.phoneNumber).join(", ");
+        setWhatsappInfo(`${active.length} numero(s): ${names}`);
+      } else {
+        setWhatsappInfo("");
+      }
     } catch {}
   };
 
@@ -414,8 +434,8 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
   };
 
   const allIntegrations = useMemo(
-    () => buildIntegrationsList(integrations, paymentIntegrations, aiProvider),
-    [integrations, paymentIntegrations, aiProvider]
+    () => buildIntegrationsList(integrations, paymentIntegrations, aiProvider, whatsappConnected, whatsappInfo),
+    [integrations, paymentIntegrations, aiProvider, whatsappConnected, whatsappInfo]
   );
 
   const filteredIntegrations = useMemo(() => {

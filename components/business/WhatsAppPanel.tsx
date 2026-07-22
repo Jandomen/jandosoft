@@ -6,7 +6,7 @@ import {
   MessageSquare, Send, Phone, Check, X, Loader2, RefreshCw,
   ArrowLeft, MessageCircle, CheckCircle, XCircle, Clock,
   Plus, Users, Search, Bot, UserCheck, Eye, EyeOff,
-  MoreVertical, Archive, RotateCcw, Settings, Hash
+  MoreVertical, Archive, RotateCcw, Settings, Hash, Volume2, VolumeX, AlertTriangle, Wifi, WifiOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -58,12 +58,36 @@ interface WAStats {
   total: number;
 }
 
+interface WAHealth {
+  connected: boolean;
+  overallStatus: "healthy" | "warning" | "error" | "disconnected";
+  accounts: {
+    accountId: string;
+    phoneNumber: string;
+    verifiedName: string;
+    qualityRating: string;
+    messagesSentToday: number;
+    dailyLimit: number;
+    tokenValid: boolean;
+    overallStatus: "healthy" | "warning" | "error" | "disconnected";
+    issues: string[];
+  }[];
+  issues: string[];
+}
+
 const STATUS_COLORS: Record<string, string> = {
   open: "bg-green-50 text-green-600",
   pending: "bg-amber-50 text-amber-600",
   closed: "bg-zinc-100 text-zinc-400",
   active: "bg-green-50 text-green-600",
   disconnected: "bg-zinc-100 text-zinc-400",
+};
+
+const HEALTH_CONFIG: Record<string, { dot: string; bg: string; label: string; icon: any }> = {
+  healthy: { dot: "bg-emerald-500", bg: "bg-emerald-50", label: "Conectado", icon: Wifi },
+  warning: { dot: "bg-amber-500", bg: "bg-amber-50", label: "Advertencia", icon: AlertTriangle },
+  error: { dot: "bg-red-500", bg: "bg-red-50", label: "Error", icon: WifiOff },
+  disconnected: { dot: "bg-zinc-300", bg: "bg-zinc-50", label: "Desconectado", icon: WifiOff },
 };
 
 const STATUS_ICONS: Record<string, any> = {
@@ -90,11 +114,16 @@ export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
   const [sending, setSending] = useState(false);
   const [showConnect, setShowConnect] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showHealth, setShowHealth] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [sendingAccountId, setSendingAccountId] = useState<string | null>(null);
   const [connectForm, setConnectForm] = useState({ wabaId: "", phoneNumberId: "", accessToken: "", phoneNumber: "", displayName: "" });
   const [connecting, setConnecting] = useState(false);
+  const [health, setHealth] = useState<WAHealth | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [prevUnreadTotal, setPrevUnreadTotal] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -119,17 +148,48 @@ export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
     } catch {}
   }, [storeId]);
 
+  const fetchHealth = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/whatsapp/health?storeId=${storeId}`);
+      const data = await res.json();
+      setHealth(data);
+    } catch {}
+  }, [storeId]);
+
+  const playNotificationSound = () => {
+    try {
+      if (!audioRef.current) {
+        audioRef.current = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH+JkZaGfnBxdH2FjZKGf3NwdH2GjZKGf3NxdH2GjZKGf3NxdH2GjZKGf3NxdH2GjZKGf3NxdH2GjZKGf3NxdA==");
+        audioRef.current.volume = 0.3;
+      }
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(() => {});
+    } catch {}
+  };
+
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchConversations(), fetchAccounts()]).finally(() => setLoading(false));
-  }, [fetchConversations, fetchAccounts]);
+    Promise.all([fetchConversations(), fetchAccounts(), fetchHealth()]).finally(() => setLoading(false));
+  }, [fetchConversations, fetchAccounts, fetchHealth]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!selectedConversation) fetchConversations();
+      if (!selectedConversation) {
+        fetchConversations();
+        fetchHealth();
+      }
     }, 10000);
     return () => clearInterval(interval);
-  }, [fetchConversations, selectedConversation]);
+  }, [fetchConversations, selectedConversation, fetchHealth]);
+
+  useEffect(() => {
+    if (!stats || !soundEnabled) return;
+    const currentTotal = stats.open + stats.pending;
+    if (prevUnreadTotal > 0 && currentTotal > prevUnreadTotal) {
+      playNotificationSound();
+    }
+    setPrevUnreadTotal(currentTotal);
+  }, [stats, soundEnabled, prevUnreadTotal]);
 
   const fetchChatMessages = async (conversationId: string) => {
     try {
@@ -332,11 +392,33 @@ export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
             <MessageSquare className="w-5 h-5 text-green-600" />
           </div>
           <div>
-            <h3 className="text-sm font-black italic text-zinc-950 uppercase tracking-tight">Bandeja de WhatsApp</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-black italic text-zinc-950 uppercase tracking-tight">Bandeja de WhatsApp</h3>
+              {health && (
+                <button onClick={() => setShowHealth(!showHealth)}
+                  className={cn("flex items-center gap-1 px-2 py-0.5 rounded-full transition-all",
+                    HEALTH_CONFIG[health.overallStatus].bg)}>
+                  <span className={cn("w-1.5 h-1.5 rounded-full", HEALTH_CONFIG[health.overallStatus].dot,
+                    health.overallStatus === "healthy" && "animate-pulse")} />
+                  <span className={cn("text-[8px] font-black italic uppercase",
+                    health.overallStatus === "healthy" ? "text-emerald-600" :
+                    health.overallStatus === "warning" ? "text-amber-600" :
+                    health.overallStatus === "error" ? "text-red-600" : "text-zinc-400")}>
+                    {HEALTH_CONFIG[health.overallStatus].label}
+                  </span>
+                </button>
+              )}
+            </div>
             <p className="text-[9px] font-bold text-zinc-400 uppercase italic">Atencion al cliente</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setSoundEnabled(!soundEnabled)}
+            className={cn("p-2 rounded-xl transition-colors",
+              soundEnabled ? "bg-green-50 hover:bg-green-100" : "bg-zinc-100 hover:bg-zinc-200")}
+            title={soundEnabled ? "Sonido activado" : "Sonido desactivado"}>
+            {soundEnabled ? <Volume2 className="w-4 h-4 text-green-600" /> : <VolumeX className="w-4 h-4 text-zinc-400" />}
+          </button>
           <button onClick={() => setShowSettings(!showSettings)}
             className="p-2 hover:bg-zinc-100 rounded-xl transition-colors">
             <Settings className="w-4 h-4 text-zinc-400" />
@@ -347,6 +429,50 @@ export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
           </motion.button>
         </div>
       </div>
+
+      {showHealth && health && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl border border-zinc-100 p-4 space-y-3">
+          <h4 className="text-xs font-black text-zinc-400 uppercase italic">Estado de la conexion</h4>
+          {health.accounts.length === 0 ? (
+            <p className="text-[10px] text-zinc-400 font-medium">No hay cuentas conectadas</p>
+          ) : (
+            <div className="space-y-2">
+              {health.accounts.map(h => (
+                <div key={h.accountId} className="flex items-center justify-between p-2 bg-zinc-50 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <span className={cn("w-2 h-2 rounded-full", HEALTH_CONFIG[h.overallStatus].dot)} />
+                    <div>
+                      <p className="text-[10px] font-bold text-zinc-950">{h.verifiedName || h.phoneNumber}</p>
+                      <p className="text-[8px] text-zinc-400 font-medium">{h.phoneNumber}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[8px] text-zinc-400 font-medium">
+                      {h.messagesSentToday}/{h.dailyLimit} msg/dia
+                    </span>
+                    <span className={cn("px-1.5 py-0.5 rounded-full text-[7px] font-black italic uppercase",
+                      h.qualityRating === "green" ? "bg-green-50 text-green-600" :
+                      h.qualityRating === "yellow" ? "bg-amber-50 text-amber-600" :
+                      h.qualityRating === "red" ? "bg-red-50 text-red-600" : "bg-zinc-100 text-zinc-400")}>
+                      {h.qualityRating}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {health.issues.length > 0 && (
+            <div className="space-y-1">
+              {health.issues.map((issue, i) => (
+                <p key={i} className="text-[9px] text-amber-600 font-medium flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> {issue}
+                </p>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {stats && (
         <div className="flex gap-2">
