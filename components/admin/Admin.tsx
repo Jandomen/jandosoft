@@ -44,10 +44,9 @@ const cn = (...classes: string[]) => classes.filter(Boolean).join(' ');
 
 interface AdminProps {
   currency: string;
-  setCurrency: (c: any) => void;
 }
 
-export default function Admin({ currency, setCurrency, onLogout }: AdminProps & { onLogout?: () => void }) {
+export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: () => void }) {
   const { t } = useLanguage();
   const [newProduct, setNewProduct] = useState<{ name: string; price: string; desc: string; images: string[] }>({ name: "", price: "", desc: "", images: [] });
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -100,6 +99,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
   const [totalInvoicesPages, setTotalInvoicesPages] = useState(1);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevPaymentCount = useRef(0);
+  const plansRef = useRef<HTMLDivElement>(null);
 
   const [planConfig, setPlanConfig] = useState<{ plans: any[]; freePlan: any } | null>(null);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
@@ -558,20 +558,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                <p className="text-[8px] md:text-[10px] font-wallpoet text-zinc-400 uppercase tracking-[0.2em] italic truncate">{t("admin.subtitle")}</p>
             </div>
          </div>
-         <div className="hidden md:flex items-center gap-6">
-             <div className="flex items-center gap-2 px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-xl">
-                <span className="text-[10px] font-black text-zinc-400 uppercase italic">Moneda:</span>
-                <select 
-                   value={currency} 
-                   onChange={(e) => setCurrency(e.target.value as any)}
-                   className="bg-transparent text-xs font-black italic text-red-600 outline-none cursor-pointer"
-                >
-                   <option value="USD">USD ($)</option>
-                   <option value="MXN">MXN ($)</option>
-                   <option value="COP">COP ($)</option>
-                   <option value="ARS">ARS ($)</option>
-                </select>
-             </div>
+          <div className="hidden md:flex items-center gap-6">
               <LanguageCarousel />
               <NotificationPanel token={null} />
               <button onClick={() => fetchDashboard()} className="p-2.5 hover:bg-zinc-50 rounded-xl transition-all" title="Actualizar datos">
@@ -1532,9 +1519,10 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                             const current = planConfig || { plans: [], freePlan: { id: "free", name: "Gratis", features: [], limits: { maxStores: 1, maxProductsPerStore: 10, maxMessages: 10, maxAutomations: 2 } } };
                             const newId = `plan_${Date.now()}`;
                             const newPlan = { id: newId, name: "Nuevo Plan", price: 0, currency: "usd", desc: "", popular: false, features: [], limits: { maxStores: 1, maxProductsPerStore: 10, maxMessages: 10, maxAutomations: 2 } };
-                            setPlanConfig({ ...current, plans: [...current.plans, newPlan] });
+                            setPlanConfig({ ...current, plans: [newPlan, ...current.plans] });
                             setEditingPlanId(newId);
                             setEditForm(newPlan);
+                            setTimeout(() => plansRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
                           }}
                           className="px-4 md:px-6 py-2 md:py-3 bg-zinc-950 text-white rounded-xl font-black italic text-[10px] md:text-xs hover:bg-zinc-800 transition-all shadow-lg flex items-center gap-2"
                         >
@@ -1552,7 +1540,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
 
                     {/* Free Plan */}
                     {planConfig && (
-                      <div className="bg-zinc-50 max-[400px]:p-5 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 space-y-5 md:space-y-6 shadow-sm">
+                      <div id="plan-free" className="bg-zinc-50 max-[400px]:p-5 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 space-y-5 md:space-y-6 shadow-sm scroll-mt-4">
                         <div className="flex items-center justify-between">
                           <h4 className="text-sm md:text-base font-black italic text-zinc-950 uppercase tracking-tighter">
                             <span className="text-zinc-400">Plan</span> {planConfig.freePlan.name}
@@ -1566,6 +1554,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                               } else {
                                 setEditingPlanId("free");
                                 setEditForm({ ...planConfig.freePlan });
+                                setTimeout(() => document.getElementById("plan-free")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
                               }
                             }}
                             className="p-2 hover:bg-white rounded-xl transition-all"
@@ -1616,9 +1605,9 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                     )}
 
                     {/* Paid Plans */}
-                    <div className="grid grid-cols-1 gap-6">
+                    <div ref={plansRef} className="grid grid-cols-1 gap-6 scroll-mt-4">
                       {planConfig?.plans.map((plan: any) => (
-                        <div key={plan.id} className={cn("bg-white rounded-[2rem] md:rounded-[2.5rem] border-2 p-5 md:p-8 space-y-5 transition-all", plan.popular ? "border-red-600 shadow-2xl shadow-red-600/5" : "border-zinc-100")}>
+                        <div id={`plan-${plan.id}`} key={plan.id} className={cn("bg-white rounded-[2rem] md:rounded-[2.5rem] border-2 p-5 md:p-8 space-y-5 transition-all scroll-mt-4", plan.popular ? "border-red-600 shadow-2xl shadow-red-600/5" : "border-zinc-100")}>
                           <div className="flex items-start justify-between gap-4">
                             <div className="space-y-1">
                               <div className="flex items-center gap-3">
@@ -1641,6 +1630,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                                   } else {
                                     setEditingPlanId(plan.id);
                                     setEditForm({ ...plan });
+                                    setTimeout(() => document.getElementById(`plan-${plan.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
                                   }
                                 }}
                                 className="p-2 hover:bg-zinc-50 rounded-xl transition-all shrink-0"
@@ -1687,7 +1677,7 @@ export default function Admin({ currency, setCurrency, onLogout }: AdminProps & 
                               </div>
 
                               <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Precio (USD/mes)</label>
+                               <label className="text-[9px] font-black text-zinc-400 uppercase italic ml-1 tracking-widest">Precio (USD/mes)</label>
                                 <input type="number" step="0.01" value={(editForm.price || 0).toString()} onChange={(e) => {
                                   const price = parseFloat(e.target.value) || 0;
                                   setEditForm({...editForm, price, priceUsd: price});

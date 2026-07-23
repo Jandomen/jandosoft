@@ -52,7 +52,6 @@ export default function AdminDashboardPage() {
     <div className="min-h-screen bg-white">
       <AdminView
         currency={currency}
-        setCurrency={setCurrency}
         onLogout={handleLogout}
       />
     </div>

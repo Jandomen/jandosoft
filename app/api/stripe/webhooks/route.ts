@@ -51,7 +51,7 @@ async function sendReceiptForPayment(payment: any) {
         customerName: payment.customerName || payment.customerEmail,
         amount: payment.amount,
         currency: payment.currency?.toUpperCase() || "USD",
-        date: new Date().toLocaleDateString(),
+        date: new Date().toLocaleDateString("es-MX", { timeZone: "America/Mexico_City" }),
         storeId: payment.storeId?.toString(),
       }).catch((err) => console.error("[Receipt] Error notifying owner:", err));
     }

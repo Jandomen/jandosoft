@@ -97,10 +97,11 @@ export async function generatePaymentReceiptPDF(transaction: {
   doc.line(20, 56, 100, 56);
 
   const now = new Date();
+  const tz = "America/Mexico_City";
   const fullDate = transaction.date
     ? transaction.date
-    : now.toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" });
-  const fullTime = now.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    : now.toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric", timeZone: tz });
+  const fullTime = now.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: tz });
 
   const infoBoxY = 65;
   doc.setFillColor(248, 248, 250);
@@ -262,7 +263,7 @@ export const generateInvoicePDF = async (transaction: {
   };
 
   y = emit("Factura:", `${transaction.series ? transaction.series + "-" : ""}${transaction.invoiceNumber || transaction.id || "N/A"}`, leftX, y);
-  y = emit("Fecha:", transaction.date || new Date().toLocaleDateString(), leftX, y);
+  y = emit("Fecha:", transaction.date || new Date().toLocaleDateString("es-MX", { timeZone: "America/Mexico_City" }), leftX, y);
   y = emit("NIF Emisor:", transaction.taxId || "PENDIENTE", leftX, y);
   y = emit("Cliente:", transaction.recipientName || transaction.userName || transaction.userEmail, leftX, y);
   y = emit("NIF Cliente:", transaction.recipientTaxId || "---", leftX, y);

@@ -240,7 +240,7 @@ export async function sendPaymentReceiptEmail(params: EmailBase & {
     amount: params.amount,
     currency: params.currency,
     description: params.description,
-    date: new Date().toLocaleDateString(),
+    date: new Date().toLocaleDateString("es-MX", { timeZone: "America/Mexico_City" }),
     storeName: params.storeName,
   });
   const result = await sendEmail({
