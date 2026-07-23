@@ -24,9 +24,21 @@ export async function getPublicStore(slug: string) {
       store = await Store.findOne({ slugHistory: slug }).lean();
     }
     if (!store) return null;
+
+    // Fetch active WhatsApp number for this store
+    let whatsappPhone = "";
+    try {
+      const { WhatsAppAccount } = await import("@/lib/models/WhatsAppAccount");
+      const waAccount = await WhatsAppAccount.findOne({ storeId: store._id, status: "active" })
+        .select("phoneNumber")
+        .lean();
+      if (waAccount?.phoneNumber) whatsappPhone = waAccount.phoneNumber.replace(/[^0-9+]/g, "");
+    } catch {}
+
     const { customers, orders, platformFeePercent, ...publicData } = store as any;
-    // Serialize to plain object to safely pass to Client Components
-    return JSON.parse(JSON.stringify(publicData));
+    const result = JSON.parse(JSON.stringify(publicData));
+    if (whatsappPhone) result.whatsappPhone = whatsappPhone;
+    return result;
   } catch {
     return null;
   }
