@@ -94,8 +94,8 @@ export const PLANS: PlanConfig[] = [
     inherits: "starter",
     durationDays: 3,
     priceUsd: 1.5,
-    features: ["plans.feature.products", "plans.feature.customers"],
-    limits: { maxStores: 1, maxProductsPerStore: 10, maxMessages: 10, maxAutomations: 1, maxAppointments: 5, maxCampaigns: 1, maxCustomers: 50, maxWhatsAppNumbers: 0, maxWhatsAppMessagesPerDay: 0, maxWhatsAppTemplates: 0 },
+    features: ["plans.feature.products", "plans.feature.customers", "plans.feature.orders", "plans.feature.basic_ai"],
+    limits: { maxStores: 1, maxProductsPerStore: 25, maxMessages: 30, maxAutomations: 2, maxAppointments: 10, maxCampaigns: 2, maxCustomers: 100, maxWhatsAppNumbers: 1, maxWhatsAppMessagesPerDay: 30, maxWhatsAppTemplates: 3 },
   },
   {
     id: "tacos",
@@ -108,8 +108,8 @@ export const PLANS: PlanConfig[] = [
     inherits: "starter",
     durationDays: 5,
     priceUsd: 2.5,
-    features: ["plans.feature.products", "plans.feature.customers", "plans.feature.orders", "plans.feature.basic_ai"],
-    limits: { maxStores: 1, maxProductsPerStore: 25, maxMessages: 20, maxAutomations: 3, maxAppointments: 10, maxCampaigns: 3, maxCustomers: 100, maxWhatsAppNumbers: 0, maxWhatsAppMessagesPerDay: 0, maxWhatsAppTemplates: 0 },
+    features: ["plans.feature.products", "plans.feature.customers", "plans.feature.orders", "plans.feature.invoicing", "plans.feature.basic_ai"],
+    limits: { maxStores: 1, maxProductsPerStore: 35, maxMessages: 40, maxAutomations: 3, maxAppointments: 15, maxCampaigns: 3, maxCustomers: 150, maxWhatsAppNumbers: 1, maxWhatsAppMessagesPerDay: 50, maxWhatsAppTemplates: 5 },
   },
   {
     id: "siesta",
@@ -122,8 +122,8 @@ export const PLANS: PlanConfig[] = [
     inherits: "starter",
     durationDays: 7,
     priceUsd: 5,
-    features: ["plans.feature.products", "plans.feature.customers", "plans.feature.orders", "plans.feature.invoicing", "plans.feature.basic_ai"],
-    limits: { maxStores: 2, maxProductsPerStore: 50, maxMessages: 30, maxAutomations: 5, maxAppointments: 20, maxCampaigns: 5, maxCustomers: 200, maxWhatsAppNumbers: 1, maxWhatsAppMessagesPerDay: 50, maxWhatsAppTemplates: 3 },
+    features: ["plans.feature.products", "plans.feature.customers", "plans.feature.orders", "plans.feature.invoicing", "plans.feature.basic_ai", "plans.feature.auto_emails"],
+    limits: { maxStores: 2, maxProductsPerStore: 50, maxMessages: 60, maxAutomations: 5, maxAppointments: 25, maxCampaigns: 5, maxCustomers: 250, maxWhatsAppNumbers: 1, maxWhatsAppMessagesPerDay: 80, maxWhatsAppTemplates: 8 },
   },
   {
     id: "mandado",
@@ -137,7 +137,7 @@ export const PLANS: PlanConfig[] = [
     durationDays: 15,
     priceUsd: 7.5,
     features: ["plans.feature.products", "plans.feature.customers", "plans.feature.orders", "plans.feature.invoicing", "plans.feature.basic_ai", "plans.feature.auto_emails", "plans.feature.appointments"],
-    limits: { maxStores: 3, maxProductsPerStore: 100, maxMessages: 50, maxAutomations: 10, maxAppointments: 50, maxCampaigns: 10, maxCustomers: 500, maxWhatsAppNumbers: 1, maxWhatsAppMessagesPerDay: 100, maxWhatsAppTemplates: 5 },
+    limits: { maxStores: 3, maxProductsPerStore: 100, maxMessages: 100, maxAutomations: 10, maxAppointments: 50, maxCampaigns: 10, maxCustomers: 500, maxWhatsAppNumbers: 2, maxWhatsAppMessagesPerDay: 150, maxWhatsAppTemplates: 10 },
   },
   {
     id: "huevito",
@@ -151,7 +151,7 @@ export const PLANS: PlanConfig[] = [
     durationDays: 21,
     priceUsd: 12.5,
     features: ["plans.feature.products", "plans.feature.customers", "plans.feature.orders", "plans.feature.invoicing", "plans.feature.basic_ai", "plans.feature.auto_emails", "plans.feature.appointments", "plans.feature.communications", "plans.feature.integrations"],
-    limits: { maxStores: 5, maxProductsPerStore: 200, maxMessages: 100, maxAutomations: 20, maxAppointments: 100, maxCampaigns: 20, maxCustomers: 1000, maxWhatsAppNumbers: 2, maxWhatsAppMessagesPerDay: 200, maxWhatsAppTemplates: 15 },
+    limits: { maxStores: 5, maxProductsPerStore: 200, maxMessages: 150, maxAutomations: 20, maxAppointments: 100, maxCampaigns: 20, maxCustomers: 1000, maxWhatsAppNumbers: 2, maxWhatsAppMessagesPerDay: 250, maxWhatsAppTemplates: 20 },
   },
   {
     id: "comal",
@@ -165,7 +165,7 @@ export const PLANS: PlanConfig[] = [
     durationDays: 90,
     priceUsd: 63,
     features: ["plans.feature.products", "plans.feature.customers", "plans.feature.orders", "plans.feature.invoicing", "plans.feature.basic_ai", "plans.feature.auto_emails", "plans.feature.appointments", "plans.feature.communications", "plans.feature.integrations", "plans.feature.whatsapp", "plans.feature.knowledge_base", "plans.feature.analytics"],
-    limits: { maxStores: 10, maxProductsPerStore: 500, maxMessages: 200, maxAutomations: 50, maxAppointments: 200, maxCampaigns: 50, maxCustomers: 3000, maxWhatsAppNumbers: 3, maxWhatsAppMessagesPerDay: 500, maxWhatsAppTemplates: 50 },
+    limits: { maxStores: 10, maxProductsPerStore: 500, maxMessages: 300, maxAutomations: 50, maxAppointments: 200, maxCampaigns: 50, maxCustomers: 3000, maxWhatsAppNumbers: 3, maxWhatsAppMessagesPerDay: 500, maxWhatsAppTemplates: 50 },
   },
   {
     id: "hacienda",
@@ -179,7 +179,7 @@ export const PLANS: PlanConfig[] = [
     durationDays: 365,
     priceUsd: 244,
     features: ["plans.feature.products", "plans.feature.customers", "plans.feature.orders", "plans.feature.invoicing", "plans.feature.basic_ai", "plans.feature.auto_emails", "plans.feature.appointments", "plans.feature.communications", "plans.feature.integrations", "plans.feature.whatsapp", "plans.feature.knowledge_base", "plans.feature.analytics", "plans.feature.social_media", "plans.feature.campaigns"],
-    limits: { maxStores: 20, maxProductsPerStore: 1000, maxMessages: 500, maxAutomations: 100, maxAppointments: 500, maxCampaigns: 100, maxCustomers: 10000, maxWhatsAppNumbers: 5, maxWhatsAppMessagesPerDay: 1000, maxWhatsAppTemplates: 1000 },
+    limits: { maxStores: 20, maxProductsPerStore: 1000, maxMessages: 500, maxAutomations: 100, maxAppointments: 500, maxCampaigns: 100, maxCustomers: 10000, maxWhatsAppNumbers: 5, maxWhatsAppMessagesPerDay: 1000, maxWhatsAppTemplates: 100 },
   },
 ];
 
