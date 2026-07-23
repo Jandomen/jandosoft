@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Plan sin precio configurado" }, { status: 400 });
     }
 
-    const mxnAmount = Math.round(usdPrice * USD_TO_MXN);
+    const mxnAmount = (plan as any).price && (plan as any).price > 0 ? (plan as any).price : Math.round(usdPrice * USD_TO_MXN);
     if (mxnAmount < 10) {
       return NextResponse.json({ error: "El monto mínimo de pago es $10 pesos mexicanos." }, { status: 400 });
     }

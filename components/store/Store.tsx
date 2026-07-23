@@ -317,7 +317,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
                   <div className="flex items-baseline gap-1.5 ml-9">
                     {geo.currencyCode === "MXN" ? (
                       <>
-                        <span className="text-3xl md:text-4xl font-black italic text-zinc-950 tracking-tighter">MX${Math.round((plan.priceUsd || plan.price) * 20.5).toLocaleString()}</span>
+                        <span className="text-3xl md:text-4xl font-black italic text-zinc-950 tracking-tighter">MX${plan.price.toLocaleString()}</span>
                         <span className="text-[10px] text-zinc-400 font-medium ml-1">MXN</span>
                       </>
                     ) : plan.currency && plan.currency !== "usd" ? (
@@ -538,7 +538,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
                   <div className="flex items-baseline gap-1.5">
                     {geo.currencyCode === "MXN" ? (
                       <>
-                        <span className="text-2xl md:text-3xl font-black italic text-zinc-950 tracking-tighter">MX${Math.round((plan.priceUsd || plan.price) * 20.5).toLocaleString()}</span>
+                        <span className="text-2xl md:text-3xl font-black italic text-zinc-950 tracking-tighter">MX${plan.price.toLocaleString()}</span>
                         <span className="text-[10px] text-zinc-400 font-medium ml-1">MXN</span>
                       </>
                     ) : (
@@ -613,7 +613,7 @@ export default function Plans({ currency, isLogged, userEmail, onPaymentSuccess,
                     if (!plan) return "";
                     const usdPrice = plan.priceUsd || plan.price || 0;
                     if (geo.currencyCode === "MXN") {
-                      return `MX$${Math.round(usdPrice * 20.5).toLocaleString()} MXN/mes`;
+                      return `MX$${plan.price.toLocaleString()} MXN`;
                     }
                     if (plan.priceUsd && plan.priceUsd > 0) return `$${plan.priceUsd} USD/mes`;
                     return `$${plan.price} USD/mes`;
