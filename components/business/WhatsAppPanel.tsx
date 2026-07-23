@@ -194,12 +194,19 @@ export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
 
   const playNotificationSound = () => {
     try {
-      if (!audioRef.current) {
-        audioRef.current = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH+JkZaGfnBxdH2FjZKGf3NwdH2GjZKGf3NxdH2GjZKGf3NxdH2GjZKGf3NxdH2GjZKGf3NxdH2GjZKGf3NxdA==");
-        audioRef.current.volume = 0.3;
-      }
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(() => {});
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.type = "sine";
+      o.frequency.setValueAtTime(880, ctx.currentTime);
+      o.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
+      o.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
+      g.gain.setValueAtTime(0.4, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+      o.start(ctx.currentTime);
+      o.stop(ctx.currentTime + 0.4);
     } catch {}
   };
 
@@ -220,11 +227,11 @@ export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
 
   useEffect(() => {
     if (!stats || !soundEnabled) return;
-    const currentTotal = stats.open + stats.pending;
-    if (prevUnreadTotal > 0 && currentTotal > prevUnreadTotal) {
+    const currentUnread = (stats as any).totalUnread || 0;
+    if (currentUnread > prevUnreadTotal) {
       playNotificationSound();
     }
-    setPrevUnreadTotal(currentTotal);
+    setPrevUnreadTotal(currentUnread);
   }, [stats, soundEnabled, prevUnreadTotal]);
 
   const fetchChatMessages = async (conversationId: string) => {

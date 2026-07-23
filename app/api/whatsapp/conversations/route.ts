@@ -55,10 +55,16 @@ export async function GET(req: NextRequest) {
     const pendingCount = await WhatsAppConversation.countDocuments({ storeId, status: "pending" });
     const closedCount = await WhatsAppConversation.countDocuments({ storeId, status: "closed" });
 
+    const unreadAgg = await WhatsAppConversation.aggregate([
+      { $match: { storeId: new (await import("mongoose")).default.Types.ObjectId(storeId), unreadCount: { $gt: 0 } } },
+      { $group: { _id: null, total: { $sum: "$unreadCount" } } },
+    ]);
+    const totalUnread = unreadAgg[0]?.total || 0;
+
     return NextResponse.json({
       conversations, total,
       hasMore: offset + conversations.length < total,
-      stats: { open: openCount, pending: pendingCount, closed: closedCount, total },
+      stats: { open: openCount, pending: pendingCount, closed: closedCount, total, totalUnread },
     });
   } catch (error: any) {
     return NextResponse.json({ error: "Error al obtener conversaciones" }, { status: 500 });
