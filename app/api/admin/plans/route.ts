@@ -5,6 +5,7 @@ import { invalidatePlanCache } from "@/lib/plan-config";
 import { verifyAdminAuth } from "@/lib/admin-middleware";
 import { stripe } from "@/lib/stripe";
 import { User } from "@/lib/models/User";
+import { PLANS as CODE_PLANS } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +26,10 @@ export async function GET(req: Request) {
 
     const plans = (config as any).plans.map((p: any) => {
       const defaultPlan = DEFAULT_PLANS.find((d) => d.id === p.id);
-      if (defaultPlan) {
-        return { ...p, name: defaultPlan.name, desc: defaultPlan.desc };
-      }
-      return p;
+      const codePlan = CODE_PLANS.find((c) => c.id === p.id);
+      const price = codePlan?.price ?? defaultPlan?.price ?? p.price;
+      const priceUsd = codePlan?.priceUsd ?? defaultPlan?.priceUsd ?? p.priceUsd;
+      return { ...p, name: defaultPlan?.name ?? p.name, desc: defaultPlan?.desc ?? p.desc, price, priceUsd };
     });
 
     const freePlan = { ...(config as any).freePlan, name: DEFAULT_FREE_PLAN.name };

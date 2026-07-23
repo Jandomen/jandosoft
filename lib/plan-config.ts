@@ -1,5 +1,6 @@
 import { connectDB } from "@/lib/mongodb";
 import { PlanConfig, DEFAULT_PLANS, DEFAULT_FREE_PLAN, type IPlan, type IFreePlan } from "@/lib/models/PlanConfig";
+import { PLANS as CODE_PLANS } from "@/lib/plans";
 
 export interface PlanConfigResult {
   plans: IPlan[];
@@ -19,7 +20,16 @@ export async function getPlanConfig(): Promise<PlanConfigResult> {
     if (doc && (doc as any).plans?.length > 0) {
       const plans = ((doc as any).plans as IPlan[]).map((p) => {
         const def = DEFAULT_PLANS.find((d) => d.id === p.id);
-        return def ? { ...p, name: def.name, desc: def.desc } : p;
+        const codePlan = CODE_PLANS.find((c) => c.id === p.id);
+        const price = codePlan?.price ?? def?.price ?? p.price;
+        const priceUsd = codePlan?.priceUsd ?? def?.priceUsd ?? p.priceUsd;
+        return {
+          ...p,
+          name: def?.name ?? p.name,
+          desc: def?.desc ?? p.desc,
+          price,
+          priceUsd,
+        };
       });
       const freePlan = { ...((doc as any).freePlan as IFreePlan || DEFAULT_FREE_PLAN), name: DEFAULT_FREE_PLAN.name };
       cached = { plans, freePlan };

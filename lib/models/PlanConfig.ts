@@ -94,8 +94,8 @@ export const DEFAULT_PLANS: IPlan[] = [
   {
     id: "starter",
     name: "El Gallito",
-    price: 29,
-    priceUsd: 29,
+    price: 299,
+    priceUsd: 15,
     currency: "usd",
     desc: "Pa' empezar con todo, sin miedo al éxito",
     popular: false,
@@ -105,8 +105,8 @@ export const DEFAULT_PLANS: IPlan[] = [
   {
     id: "business",
     name: "El Jefe",
-    price: 79,
-    priceUsd: 79,
+    price: 599,
+    priceUsd: 29,
     currency: "usd",
     desc: "El que manda, el que decide, el que crece",
     popular: true,
@@ -116,8 +116,8 @@ export const DEFAULT_PLANS: IPlan[] = [
   {
     id: "enterprise",
     name: "El Patrón",
-    price: 199,
-    priceUsd: 199,
+    price: 1499,
+    priceUsd: 73,
     currency: "usd",
     desc: "El dueño de todo, sin límites, sin fronteras",
     popular: false,
