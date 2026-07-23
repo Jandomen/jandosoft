@@ -116,17 +116,17 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
   };
 
   const GATED_SECTIONS: Record<string, { requiredPlan: string; message: string }> = {
-    analytics:        { requiredPlan: "El Gallito", message: "Analytics está disponible desde el plan El Gallito ($29/mes)" },
-    campaigns:        { requiredPlan: "El Gallito", message: "Las campañas están disponibles desde el plan El Gallito ($29/mes)" },
-    customers:        { requiredPlan: "El Gallito", message: "Los clientes están disponibles desde el plan El Gallito ($29/mes)" },
-    agentconfig:      { requiredPlan: "El Gallito", message: "La configuración del agente IA está disponible desde el plan El Gallito ($29/mes)" },
-    gallery:          { requiredPlan: "El Gallito", message: "La galería está disponible desde el plan El Gallito ($29/mes)" },
-    knowledgebase:    { requiredPlan: "El Gallito", message: "La base de conocimiento está disponible desde el plan El Gallito ($29/mes)" },
-    messages:         { requiredPlan: "El Gallito", message: "La mensajería inteligente está disponible desde el plan El Gallito ($29/mes)" },
-    widget:           { requiredPlan: "El Gallito", message: "La configuración del widget está disponible desde el plan El Gallito ($29/mes)" },
-    appointments:     { requiredPlan: "El Gallito", message: "Las citas están disponibles desde el plan El Gallito ($29/mes)" },
-    team:             { requiredPlan: "El Jefe", message: "El equipo está disponible desde el plan El Jefe ($79/mes)" },
-    smartforms:       { requiredPlan: "El Jefe", message: "Los formularios inteligentes están disponibles desde el plan El Jefe ($79/mes)" },
+    analytics:        { requiredPlan: "El Gallito", message: "Analytics está disponible desde el plan El Gallito ($29 MXN/mes)" },
+    campaigns:        { requiredPlan: "El Gallito", message: "Las campañas están disponibles desde el plan El Gallito ($29 MXN/mes)" },
+    customers:        { requiredPlan: "El Gallito", message: "Los clientes están disponibles desde el plan El Gallito ($29 MXN/mes)" },
+    agentconfig:      { requiredPlan: "El Gallito", message: "La configuración del agente IA está disponible desde el plan El Gallito ($29 MXN/mes)" },
+    gallery:          { requiredPlan: "El Gallito", message: "La galería está disponible desde el plan El Gallito ($29 MXN/mes)" },
+    knowledgebase:    { requiredPlan: "El Gallito", message: "La base de conocimiento está disponible desde el plan El Gallito ($29 MXN/mes)" },
+    messages:         { requiredPlan: "El Gallito", message: "La mensajería inteligente está disponible desde el plan El Gallito ($29 MXN/mes)" },
+    widget:           { requiredPlan: "El Gallito", message: "La configuración del widget está disponible desde el plan El Gallito ($29 MXN/mes)" },
+    appointments:     { requiredPlan: "El Gallito", message: "Las citas están disponibles desde el plan El Gallito ($29 MXN/mes)" },
+    team:             { requiredPlan: "El Jefe", message: "El equipo está disponible desde el plan El Jefe ($79 MXN/mes)" },
+    smartforms:       { requiredPlan: "El Jefe", message: "Los formularios inteligentes están disponibles desde el plan El Jefe ($79 MXN/mes)" },
   };
 
   const gatedKeys = Object.keys(GATED_SECTIONS);
@@ -773,7 +773,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 <motion.button whileTap={{ scale: 0.95 }} onClick={onNavigateToPricing} className="mt-auto p-4 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-2xl text-center space-y-2 hover:from-red-600 hover:to-red-700 transition-all shadow-lg shadow-red-200">
                   <TrendingUp className="w-5 h-5 mx-auto" />
                   <p className="text-[10px] font-black italic uppercase">{isExpiredPaid ? "Reactivar plan" : "Desbloquear todo"}</p>
-                  <p className="text-[8px] font-bold opacity-80">Planes desde $29/mes</p>
+                  <p className="text-[8px] font-bold opacity-80">Planes desde $29 MXN/mes</p>
                 </motion.button>
               )}
             </aside>
@@ -3182,7 +3182,7 @@ function FreePlanBlock({ feature, plan, price, onUpgrade, expired }: { feature: 
         ) : (
           <>
             <h3 className="text-xl md:text-2xl font-black italic text-zinc-950">{feature} son premium</h3>
-            <p className="text-sm text-zinc-400 font-bold italic">Disponible desde el plan <span className="text-red-600">{plan}</span> (${price}/mes)</p>
+            <p className="text-sm text-zinc-400 font-bold italic">Disponible desde el plan <span className="text-red-600">{plan}</span> (${price} MXN/mes)</p>
           </>
         )}
       </div>
