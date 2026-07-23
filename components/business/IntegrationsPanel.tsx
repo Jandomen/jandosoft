@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Plug, Search, Brain, Zap, CreditCard, MessageSquare, Mail, MapPin, Share2, Cloud, AlertCircle,
 } from "lucide-react";
@@ -321,6 +321,15 @@ export default function IntegrationsPanel({ storeId, userEmail }: { storeId: str
   useEffect(() => {
     Promise.all([fetchIntegrations(), fetchPaymentIntegrations(), fetchAIProvider(), fetchStripeConnectStatus(), fetchWhatsAppStatus()]);
   }, [storeId]);
+
+  // Re-fetch WhatsApp status when closing WhatsApp panel
+  const prevShowWhatsApp = useRef(showWhatsApp);
+  useEffect(() => {
+    if (prevShowWhatsApp.current && !showWhatsApp) {
+      fetchWhatsAppStatus();
+    }
+    prevShowWhatsApp.current = showWhatsApp;
+  }, [showWhatsApp]);
 
   const fetchStripeConnectStatus = async () => {
     try {
