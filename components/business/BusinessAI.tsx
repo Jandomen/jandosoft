@@ -7,6 +7,7 @@ import {
 import { motion } from "framer-motion";
 import { cn, searchKnowledgeBase } from "@/lib/utils";
 import { useVoiceInput } from "@/lib/hooks/useVoiceInput";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import MarkdownRenderer from "@/components/chat/MarkdownRenderer";
 import { convertToUSD } from "./currency";
 import { CATEGORIES, type CategoryId } from "@/lib/categories/registry";
@@ -75,6 +76,7 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
   planLimits?: { maxProductsPerStore?: number; maxCustomers?: number; maxMessages?: number; maxAutomations?: number; maxCampaigns?: number; maxAppointments?: number };
 }) {
   const storageKey = `jandosoft_business_ai_${agentName.replace(/[^a-zA-Z0-9]/g, "_")}`;
+  const { setLanguage: setPlatformLanguage } = useLanguage();
   const [messages, setMessages] = useState<{ role: string; content: string; timestamp: number }[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -1316,8 +1318,9 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
             try {
               const currentConfig = (store as any)?.agentConfig || {};
               const _ok = await Promise.resolve(onSaveStore?.(storeId, { agentConfig: { ...currentConfig, lang } }));
-              if (_ok !== false) result += `✅ Idioma del chat widget cambiado a ${lang}. `;
-              else result += `⚠️ Error al cambiar idioma. `;
+              setPlatformLanguage(lang as any);
+              if (_ok !== false) result += `✅ Idioma de la plataforma y del chat widget cambiado a ${lang}. `;
+              else result += `⚠️ Idioma del widget cambiado. Error al guardar configuración. `;
             } catch { result += `⚠️ Error al cambiar idioma. `; }
           })());
           break;
@@ -1508,8 +1511,8 @@ REGLAS:
 - Puedes enviar correos electrónicos (sendEmail) con los campos to, subject y content.
 - Puedes enviar mensajes (sendMessage) con los campos to y content.
 - Puedes añadir contactos (addContact) con el campo email.
-- Puedes cambiar el idioma del chat widget (changeLanguage) con el campo language. Idiomas válidos: es, en, fr, zh, hi, ko, ja, it, pt, ru.
-- Puedes cambiar el idioma del chat widget (changeLanguage) con el campo language. Idiomas válidos: es, en, fr, zh, hi, ko, ja, it, pt, ru.
+- Puedes cambiar el idioma de la plataforma Y del chat widget (changeLanguage) con el campo language. Idiomas válidos: es, en, fr, zh, hi, ko, ja, it, pt, ru.
+- Puedes cambiar el idioma de la plataforma Y del chat widget (changeLanguage) con el campo language. Idiomas válidos: es, en, fr, zh, hi, ko, ja, it, pt, ru.
 ${activeDescriptions}
 - IMPORTANTE: SIEMPRE que el usuario te pida crear, modificar, eliminar o enviar algo, DEBES incluir el bloque JSON con las acciones correspondientes. No te limites a decir "lo haré" sin generar el JSON.
 
