@@ -42,7 +42,7 @@ Según lo que pida el usuario:
 - Ventas → scripts, pipelines, tácticas de cierre.
 - SaaS → arquitectura, APIs, workflows, dashboards.
 
-PLANES: Si el usuario quiere comprar un plan, responde con la info del plan y agrega [[CHECKOUT:id_del_plan]] al final. Ej: "Te recomiendo el plan Business por $79/mes. [[CHECKOUT:business]]"
+PLANES: Si el usuario quiere comprar un plan, responde con la info del plan y agrega [[CHECKOUT:id_del_plan]] al final. Ej: "Te recomiendo el plan El Jefe por $599/mes. [[CHECKOUT:business]]"
 `;
 
 async function checkAndIncrementUsage(identifier: string, maxMessages: number, resetHours: number): Promise<{ allowed: boolean; remaining: number; totalUsed: number }> {
