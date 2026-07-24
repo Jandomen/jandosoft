@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { getPlanLabel } from "@/lib/plans";
 import { LanguageCarousel } from "@/components/ui/LanguageCarousel";
 import {
   BarChart3, 
@@ -2307,7 +2308,7 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-zinc-50 rounded-xl p-3">
                   <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Plan Actual</p>
-                  <p className={cn("text-sm font-black italic", viewingUser.subscription ? "text-emerald-600" : "text-zinc-500")}>{viewingUser.subscription || "Free"}</p>
+                  <p className={cn("text-sm font-black italic", viewingUser.subscription ? "text-emerald-600" : "text-zinc-500")}>{getPlanLabel(viewingUser.subscription)}</p>
                 </div>
                 <div className="bg-zinc-50 rounded-xl p-3">
                   <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-1">Estado</p>
@@ -2345,7 +2346,7 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
                     </div>
                     <div>
                       <p className="text-[8px] font-bold text-zinc-400 italic">Migrado a</p>
-                      <p className="text-sm font-black italic text-emerald-600">{viewingUser.subscription || "Free"}</p>
+                      <p className="text-sm font-black italic text-emerald-600">{getPlanLabel(viewingUser.subscription)}</p>
                     </div>
                   </div>
                 </div>

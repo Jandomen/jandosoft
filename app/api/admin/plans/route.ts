@@ -171,6 +171,7 @@ export async function DELETE(req: NextRequest) {
 
     // Migrate users on this plan to "starter" (or free if starter doesn't exist)
     const fallbackPlan = config.plans.find((p: any) => p.id === "starter") ? "starter" : null;
+    const fallbackPlanName = fallbackPlan === "starter" ? "El Gallito" : "Gratis";
     const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const migrateResult = await User.updateMany(
       { subscription: planId },
@@ -195,7 +196,7 @@ export async function DELETE(req: NextRequest) {
       success: true,
       deletedPlan: planId,
       migratedUsers: migrateResult.modifiedCount,
-      fallbackPlan: fallbackPlan || "free",
+      fallbackPlan: fallbackPlanName,
     });
   } catch (error) {
     console.error("DELETE plan error:", error);
