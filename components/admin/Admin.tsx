@@ -426,6 +426,9 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
       });
       if (res.ok) {
         fetchDashboard();
+        if (viewingUser?._id === userId) {
+          setViewingUser({ ...viewingUser, subscription: plan });
+        }
       }
     } catch {}
     setChangingPlanUserId(null);
@@ -866,24 +869,25 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
                           <div className="flex items-center gap-1.5 md:gap-4 shrink-0">
                             <div className="text-right hidden md:block">
                               <p className="text-[9px] md:text-[10px] font-black italic text-zinc-950">                              {t("biz.total_stores").replace("{n}", String(u.storeCount || 0))}</p>
-                              {changingPlanUserId === u._id ? (
+                               {changingPlanUserId === u._id ? (
                                 <div className="flex items-center gap-1 mt-1">
                                    <select
                                      value={changingPlanValue || u.subscription || "free"}
                                      onChange={(e) => setChangingPlanValue(e.target.value)}
-                                     className="text-[8px] font-black italic bg-white border border-zinc-200 rounded-lg px-1.5 py-1 outline-none focus:ring-1 focus:ring-red-600"
+                                     className="text-[9px] font-black italic bg-white border border-zinc-200 rounded-lg px-2 py-1.5 outline-none focus:ring-1 focus:ring-red-600 min-w-[120px]"
                                    >
-                                     <option value="free">Free</option>
+                                     <option value="free">Free (Gratis)</option>
                                      {planConfig?.plans.map((p: any) => (
-                                       <option key={p.id} value={p.id}>{p.name}</option>
+                                       <option key={p.id} value={p.id}>{p.name} — ${p.price || 0}</option>
                                      ))}
                                    </select>
-                                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleChangeUserPlan(u._id, changingPlanValue)} className="p-1 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition-all"><Check className="w-3 h-3" /></motion.button>
+                                  <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleChangeUserPlan(u._id, changingPlanValue)} className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition-all"><Check className="w-3 h-3" /></motion.button>
+                                  <button onClick={() => { setChangingPlanUserId(null); setChangingPlanValue(""); }} className="p-1.5 bg-zinc-100 text-zinc-400 rounded-lg hover:bg-zinc-200 hover:text-zinc-600 transition-all"><X className="w-3 h-3" /></button>
                                 </div>
                               ) : (
                                 <button onClick={() => { setChangingPlanUserId(u._id); setChangingPlanValue(u.subscription || "free"); }} className={cn("text-[8px] md:text-[9px] font-bold uppercase italic hover:text-red-600 transition-colors", u.subscription ? "text-emerald-600" : "text-zinc-400")}>
-                                  {u.subscription || "Free"} <Edit3 className="w-2.5 h-2.5 inline ml-0.5 opacity-40" />
-                                  {u.originalPlan && <span className="text-[7px] bg-amber-100 text-amber-600 px-1 py-0.5 rounded-full font-black ml-1">↑{u.originalPlanName || u.originalPlan}</span>}
+                                  {getPlanLabel(u.subscription)} <Edit3 className="w-2.5 h-2.5 inline ml-0.5 opacity-40" />
+                                  {u.originalPlan && <span className="text-[7px] bg-amber-100 text-amber-600 px-1 py-0.5 rounded-full font-black ml-1">↑{u.originalPlanName || getPlanLabel(u.originalPlan)}</span>}
                                 </button>
                               )}
                             </div>
@@ -2338,7 +2342,7 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
                   <div className="grid grid-cols-3 gap-2">
                     <div>
                       <p className="text-[8px] font-bold text-zinc-400 italic">Plan</p>
-                      <p className="text-sm font-black italic text-zinc-950">{viewingUser.originalPlanName || viewingUser.originalPlan}</p>
+                      <p className="text-sm font-black italic text-zinc-950">{viewingUser.originalPlanName || getPlanLabel(viewingUser.originalPlan)}</p>
                     </div>
                     <div>
                       <p className="text-[8px] font-bold text-zinc-400 italic">Precio</p>
@@ -2351,6 +2355,29 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
                   </div>
                 </div>
               )}
+
+              <div className="bg-zinc-50 rounded-xl p-4">
+                <p className="text-[8px] font-black text-zinc-400 uppercase italic mb-2">Cambiar Plan</p>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={viewingUser.subscription || "free"}
+                    onChange={(e) => setViewingUser({ ...viewingUser, subscription: e.target.value })}
+                    className="flex-1 text-[10px] font-black italic bg-white border border-zinc-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-red-600"
+                  >
+                    <option value="free">Free (Gratis)</option>
+                    {planConfig?.plans.map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.name} — ${p.price || 0}</option>
+                    ))}
+                  </select>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleChangeUserPlan(viewingUser._id, viewingUser.subscription)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg font-black italic text-[10px] hover:bg-red-700 transition-all shrink-0"
+                  >
+                    APLICAR
+                  </motion.button>
+                </div>
+              </div>
 
               <div className="flex gap-2">
                 <motion.button

@@ -31,6 +31,12 @@ export async function getPlanConfig(): Promise<PlanConfigResult> {
           priceUsd,
         };
       });
+      const planIds = new Set(plans.map((p) => p.id));
+      for (const def of DEFAULT_PLANS) {
+        if (!planIds.has(def.id)) {
+          plans.push({ ...def } as any);
+        }
+      }
       const freePlan = { ...((doc as any).freePlan as IFreePlan || DEFAULT_FREE_PLAN), name: DEFAULT_FREE_PLAN.name };
       cached = { plans, freePlan };
       lastFetch = Date.now();
@@ -45,7 +51,9 @@ export function getPlanLimitsFromConfig(config: PlanConfigResult, subscription: 
   const sub = subscription || "free";
   if (sub === "free") return config.freePlan.limits;
   const plan = config.plans.find((p) => p.id === sub);
-  return plan?.limits || config.freePlan.limits;
+  if (plan) return plan.limits;
+  const codePlan = CODE_PLANS.find((c) => c.id === sub);
+  return codePlan?.limits || config.freePlan.limits;
 }
 
 export function invalidatePlanCache() {

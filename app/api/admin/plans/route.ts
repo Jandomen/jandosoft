@@ -5,7 +5,7 @@ import { invalidatePlanCache } from "@/lib/plan-config";
 import { verifyAdminAuth } from "@/lib/admin-middleware";
 import { stripe } from "@/lib/stripe";
 import { User } from "@/lib/models/User";
-import { PLANS as CODE_PLANS } from "@/lib/plans";
+import { PLANS as CODE_PLANS, getPlanLabel } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -170,8 +170,12 @@ export async function DELETE(req: NextRequest) {
     }
 
     // Migrate users on this plan to "starter" (or free if starter doesn't exist)
-    const fallbackPlan = config.plans.find((p: any) => p.id === "starter") ? "starter" : null;
-    const fallbackPlanName = fallbackPlan === "starter" ? "El Gallito" : "Gratis";
+    const fallbackPlan = config.plans.find((p: any) => p.id === "starter")
+      ? "starter"
+      : DEFAULT_PLANS.find((p) => p.id === "starter")
+        ? "starter"
+        : null;
+    const fallbackPlanName = getPlanLabel(fallbackPlan);
     const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const migrateResult = await User.updateMany(
       { subscription: planId },
