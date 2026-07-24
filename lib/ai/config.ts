@@ -3,12 +3,12 @@ export const AI_CONFIG = {
   model: process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini",
   maxTokens: parseInt(process.env.OPENROUTER_MAX_TOKENS || "512", 10),
   temperature: parseFloat(process.env.OPENROUTER_TEMPERATURE || "0.7"),
-  maxHistoryMessages: 5,
+  maxHistoryMessages: 30,
   fallbackModel: "openai/gpt-4o-mini",
-  agentMaxTokens: 512,
+  agentMaxTokens: 1024,
   quickMaxTokens: 256,
-  maxContextTokens: 1800,
-  summarizationThreshold: 12,
+  maxContextTokens: 10000,
+  summarizationThreshold: 40,
   maxListItems: 10,
 };
 
@@ -100,7 +100,17 @@ export function trimHistory(messages: any[]): any[] {
 
   const systemMessages = unique.filter((m) => m.role === "system");
   const nonSystem = unique.filter((m) => m.role !== "system");
-  const trimmed = nonSystem.slice(-AI_CONFIG.maxHistoryMessages);
 
-  return trimContextByTokens([...systemMessages, ...trimmed]);
+  // Sliding window: keep first user message + last N messages for context continuity
+  if (nonSystem.length > AI_CONFIG.maxHistoryMessages) {
+    const firstUserIdx = nonSystem.findIndex((m) => m.role === "user");
+    const firstUser = firstUserIdx >= 0 ? nonSystem[firstUserIdx] : null;
+    const recent = nonSystem.slice(-AI_CONFIG.maxHistoryMessages);
+    const trimmed = firstUser && !recent.includes(firstUser)
+      ? [firstUser, ...recent]
+      : recent;
+    return trimContextByTokens([...systemMessages, ...trimmed]);
+  }
+
+  return trimContextByTokens([...systemMessages, ...nonSystem]);
 }

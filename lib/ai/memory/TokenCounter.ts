@@ -1,6 +1,6 @@
-export const MAX_CONTEXT_TOKENS = 1800;
-export const RECENT_MESSAGE_COUNT = 15;
-export const SUMMARIZE_THRESHOLD = 20;
+export const MAX_CONTEXT_TOKENS = 10000;
+export const RECENT_MESSAGE_COUNT = 30;
+export const SUMMARIZE_THRESHOLD = 40;
 
 export function estimateTokens(text: string): number {
   return Math.ceil((text?.length || 0) / 4);

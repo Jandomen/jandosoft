@@ -3,7 +3,7 @@ import { Store } from "@/lib/models/Store";
 import ChatUsage from "@/lib/models/ChatUsage";
 import WidgetConversation from "@/lib/models/WidgetConversation";
 import WidgetMessage from "@/lib/models/WidgetMessage";
-import { AI_CONFIG, trimHistory } from "@/lib/ai/config";
+import { AI_CONFIG } from "@/lib/ai/config";
 import { callLLM, executeTool, AGENT_TOOLS } from "@/lib/ai/agent";
 import { filterToolsForCustomer, filterToolsByStoreModules, filterCustomerToolsByStoreModules } from "@/lib/ai/tools";
 import { getModulesDescription } from "@/lib/ai/modules";
@@ -20,6 +20,7 @@ import {
   type TrackerDecision,
 } from "@/lib/ai/intent-tracker";
 import { contextIsolator, requireIsolation, buildCognitiveContext, injectCognitiveContextHeader } from "@/lib/ai/cognitive";
+import { MemoryService } from "@/lib/ai/memory";
 
 const GUEST_MAX_MESSAGES = 70;
 const STORE_OWN_PROVIDER_MAX_MESSAGES = 70;
@@ -468,12 +469,18 @@ Responde SIEMPRE en español, de forma amable y profesional. Si no puedes hacer 
 
 ${taskContext}`;
 
-    // ── 5. Build messages array from server history only ──
-    const messages: any[] = trimHistory([
-      { role: "system", content: systemPrompt },
+    // ── 5. Build messages array with memory + summarization ──
+    const memoryService = new MemoryService(`widget:${store._id}`);
+    const allHistory = [
       ...serverHistory,
       { role: "user", content: message },
-    ]);
+    ];
+    const { messages } = await memoryService.buildOptimizedContext({
+      systemPrompt,
+      allMessages: allHistory,
+    });
+    // Widen type so tool-calling loop can push tool messages with tool_call_id
+    const msgs: any[] = messages as any[];
 
     // ── 6. Execute tool directly if planner determined it ──
     const actions: any[] = [];
@@ -578,7 +585,7 @@ ${taskContext}`;
       }
 
       // Add tool result and ask LLM to format a response
-      messages.push({
+      msgs.push({
         role: "system",
         content: `La herramienta "${name}" fue ejecutada exitosamente con resultado: ${toolResultStr}. Ahora responde al usuario confirmando qué se hizo, de forma breve y clara. NO vuelvas a ejecutar ninguna herramienta.`,
       });
@@ -587,7 +594,7 @@ ${taskContext}`;
     // ── 7. Tool-calling loop (with max 4 additional turns) ──
     for (let turn = 0; turn < 4; turn++) {
       const data = await callLLM(
-        messages,
+        msgs,
         customerTools,
         AI_CONFIG.agentMaxTokens,
         AI_CONFIG.temperature,
@@ -606,7 +613,7 @@ ${taskContext}`;
       if (msg.tool_calls && msg.tool_calls.length > 0) {
         // Only execute ONE tool per turn (Rule 7)
         const tc = msg.tool_calls[0];
-        messages.push(msg);
+        msgs.push(msg);
 
         // ── TOOL GUARD: Validate LLM tool call against current goal ──
         if (goalManager) {
@@ -615,7 +622,7 @@ ${taskContext}`;
           const validation = goalManager.validateTool(tc.function.name, llmToolArgs);
           if (!validation.allowed) {
             console.log(`[GoalGuard] BLOCKED LLM tool ${tc.function.name}: ${validation.reason}`);
-            messages.push({
+            msgs.push({
               role: "tool",
               tool_call_id: tc.id,
               content: JSON.stringify({ success: false, error: validation.reason, suggestion: validation.suggestion }),
@@ -629,7 +636,7 @@ ${taskContext}`;
           const wfValidation = workflowManager.validateTool(tc.function.name);
           if (!wfValidation.allowed) {
             console.log(`[WorkflowGuard] BLOCKED LLM tool ${tc.function.name}: ${wfValidation.reason}`);
-            messages.push({
+            msgs.push({
               role: "tool",
               tool_call_id: tc.id,
               content: JSON.stringify({ success: false, error: wfValidation.reason }),
@@ -666,7 +673,7 @@ ${taskContext}`;
           workflowManager.onToolExecuted(tc.function.name, result);
         }
 
-        messages.push({
+        msgs.push({
           role: "tool",
           tool_call_id: tc.id,
           content: JSON.stringify(result),
@@ -760,5 +767,34 @@ ${taskContext}`;
       { error: errorMsg },
       { status: 500 }
     );
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { storeId, guestId } = await req.json();
+    if (!storeId || !guestId) {
+      return Response.json({ error: "storeId and guestId required" }, { status: 400 });
+    }
+
+    await connectDB();
+    const store = await Store.findById(storeId).lean();
+    if (!store) return Response.json({ error: "Store not found" }, { status: 404 });
+
+    const conversation = await WidgetConversation.findOne({ storeId: store._id, guestId });
+    if (conversation) {
+      await WidgetMessage.deleteMany({ conversationId: conversation._id });
+      await WidgetConversation.deleteOne({ _id: conversation._id });
+    }
+
+    const ConversationMemory = (await import("@/lib/models/ConversationMemory")).default;
+    const ConversationSummary = (await import("@/lib/models/ConversationSummary")).default;
+    await ConversationMemory.deleteOne({ storeId: `widget:${store._id}` });
+    await ConversationSummary.deleteMany({ storeId: `widget:${store._id}` });
+
+    return Response.json({ success: true, message: "Conversación y memoria eliminadas" });
+  } catch (error: any) {
+    console.error("Chat Agent DELETE error:", error?.message || error);
+    return Response.json({ error: "Error al limpiar conversación" }, { status: 500 });
   }
 }

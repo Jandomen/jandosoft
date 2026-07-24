@@ -171,9 +171,19 @@ export async function DELETE(req: NextRequest) {
 
     // Migrate users on this plan to "starter" (or free if starter doesn't exist)
     const fallbackPlan = config.plans.find((p: any) => p.id === "starter") ? "starter" : null;
+    const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const migrateResult = await User.updateMany(
       { subscription: planId },
-      { $set: { subscription: fallbackPlan } }
+      {
+        $set: {
+          subscription: fallbackPlan,
+          plan: fallbackPlan,
+          planStatus: "active",
+          subscriptionStatus: "active",
+          subscriptionExpiry: newExpiry,
+          expiresAt: newExpiry,
+        },
+      }
     );
 
     // Remove plan from config

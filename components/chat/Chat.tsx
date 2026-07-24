@@ -654,10 +654,17 @@ Después de ejecutar, SIEMPRE confirma el resultado en tu mensaje.`;
     setMenuOpenId(null);
   };
 
-  const handleClear = () => {
+  const handleClear = async () => {
     const firstBot = messages.length > 0 && messages[0]?.role === "bot" ? messages[0] : { role: "bot" as const, content: t("chat.welcome"), timestamp: Date.now() };
     setMessages([firstBot as StoredMessage]);
     if (activeId) saveMessages(activeId, [firstBot as StoredMessage]);
+    try {
+      await fetch("/api/chat", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: context?.email, guestId: guestId.current }),
+      });
+    } catch {}
   };
 
   return (

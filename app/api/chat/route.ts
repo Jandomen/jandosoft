@@ -380,3 +380,24 @@ ${context.email ? `- Usuario: ${context.email}` : ""}${plansBlock}
     return Response.json({ error: friendlyMsg }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const { email, guestId } = await req.json();
+    const identifier = email || `guest:${guestId}`;
+    if (!identifier) {
+      return Response.json({ error: "email or guestId required" }, { status: 400 });
+    }
+
+    await connectDB();
+    const ConversationMemory = (await import("@/lib/models/ConversationMemory")).default;
+    const ConversationSummary = (await import("@/lib/models/ConversationSummary")).default;
+    await ConversationMemory.deleteOne({ storeId: identifier });
+    await ConversationSummary.deleteMany({ storeId: identifier });
+
+    return Response.json({ success: true, message: "Memoria de conversación eliminada" });
+  } catch (error: any) {
+    console.error("Chat DELETE error:", error?.message || error);
+    return Response.json({ error: "Error al limpiar memoria" }, { status: 500 });
+  }
+}

@@ -82,9 +82,16 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
   const [isLoading, setIsLoading] = useState(false);
   const [lastProvider, setLastProvider] = useState<string>("");
   const voice = useVoiceInput({ autoSend: true, onResult: (text) => handleSend(text) });
-  const clearChat = () => {
+  const clearChat = async () => {
     localStorage.removeItem(storageKey);
     setMessages([{ role: "bot", content: `¡Hola! Soy el agente IA de ${agentName || "tu negocio"}. Puedo ayudarte a gestionar productos, clientes, pedidos y citas. Solo dime qué necesitas crear, modificar o eliminar.`, timestamp: Date.now() }]);
+    try {
+      await fetch("/api/chat/agent", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeId: (store as any)?._id, guestId: (store as any)?._id }),
+      });
+    } catch {}
   };
   const [loaded, setLoaded] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
