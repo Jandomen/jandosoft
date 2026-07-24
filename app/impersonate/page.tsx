@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, useEffect, useState, useCallback, type ReactNode } from "react";
+import { Component, Suspense, useEffect, useState, useCallback, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import UserDashboard from "@/components/user/UserDashboard";
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
@@ -12,7 +12,7 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean}
   render() { return this.state.hasError ? null : this.props.children; }
 }
 
-export default function ImpersonatePage() {
+function ImpersonateInner() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
@@ -127,5 +127,20 @@ export default function ImpersonatePage() {
         )}
       </div>
     </LanguageProvider>
+  );
+}
+
+export default function ImpersonatePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="flex items-center gap-3 px-6 py-4 bg-zinc-50 rounded-2xl text-zinc-400 italic font-black text-sm">
+          <div className="w-5 h-5 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+          Cargando...
+        </div>
+      </div>
+    }>
+      <ImpersonateInner />
+    </Suspense>
   );
 }
