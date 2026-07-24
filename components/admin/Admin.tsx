@@ -35,6 +35,7 @@ import {
   Save,
   Edit3,
   X,
+  Eye,
 } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/pdf-utils";
 import EmailAdminSection from "./EmailAdminSection";
@@ -88,6 +89,7 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
   const [resetResult, setResetResult] = useState<any>(null);
   const [filterPlan, setFilterPlan] = useState("");
   const [revenueData, setRevenueData] = useState<any>(null);
+  const [revenueLoading, setRevenueLoading] = useState(true);
   const [paymentToast, setPaymentToast] = useState<{ message: string; amount: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -123,6 +125,10 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
   const [savingWidget, setSavingWidget] = useState(false);
   const [widgetToast, setWidgetToast] = useState("");
   const [widgetCopied, setWidgetCopied] = useState(false);
+
+  const [impersonateToken, setImpersonateToken] = useState<string | null>(null);
+  const [impersonateUser, setImpersonateUser] = useState<any>(null);
+  const [impersonateLoading, setImpersonateLoading] = useState(false);
 
   const fetchDashboard = async (overrides?: {
     searchUsers?: string; usersPage?: number;
@@ -295,6 +301,25 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
     setEditingPlanId(null);
     setEditForm(null);
     setTimeout(() => setPlanToast(""), 4000);
+  };
+
+  const handleImpersonate = async (userId: string, userName: string) => {
+    setImpersonateLoading(true);
+    setImpersonateUser({ name: userName });
+    try {
+      const res = await fetch(`/api/admin/impersonate/${userId}`, { method: "POST", credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setImpersonateToken(data.token);
+        setImpersonateUser({ name: userName, email: data.user?.email });
+      } else {
+        setImpersonateLoading(false);
+        setImpersonateUser(null);
+      }
+    } catch {
+      setImpersonateLoading(false);
+      setImpersonateUser(null);
+    }
   };
 
   const handleResetDatabase = async () => {
@@ -490,12 +515,15 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
 
   const fetchRevenue = async () => {
     try {
+      setRevenueLoading(true);
       const res = await fetch("/api/stripe/platform-revenue", { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setRevenueData(data);
       }
-    } catch {}
+    } catch {} finally {
+      setRevenueLoading(false);
+    }
   };
 
   const exportCSV = (data: any[], filename: string) => {
@@ -668,7 +696,7 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-6">
                           <StatCard icon={<Users className="text-red-500" />} label={t("admin.user_total")} value={dashboardStats.totalUsers.toString()} change={t("admin.this_month").replace("{n}", String(dashboardStats.newUsersThisMonth))} />
                           <StatCard icon={<Store className="text-emerald-500" />} label={t("admin.stores_title")} value={dashboardStats.totalStores.toString()} change={`${dashboardStats.totalProducts} ${t("admin.productos")}`} />
-                          <StatCard icon={<ShoppingBag className="text-amber-500" />} label={t("nav.orders")} value={dashboardStats.totalOrders.toString()} change={`$${dashboardStats.totalRevenue}`} />
+                           <StatCard icon={<ShoppingBag className="text-amber-500" />} label="Pagos Recibidos" value={totalPaymentsCount.toString()} change={`$${(revenueData?.totalProcessed || 0).toLocaleString()}`} />
                           <StatCard icon={<TrendingUp className="text-blue-500" />} label={t("admin.today")} value={dashboardStats.activeUsersToday.toString()} change={t("admin.new_today")} />
                           <StatCard icon={<DollarSign className="text-purple-500" />} label="Stripe Connect" value={allStores.filter((s: any) => s.stripeConnectStatus === "active").length.toString()} change={`${allStores.filter((s: any) => s.stripeConnectStatus === "pending").length} pendientes`} />
                         </div>
@@ -858,6 +886,14 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
                                 </button>
                               )}
                             </div>
+                            <motion.button
+                              whileTap={{ scale: 0.9 }}
+                              onClick={(e) => { e.stopPropagation(); handleImpersonate(u._id, u.name || u.email); }}
+                              className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-100 transition-all"
+                              title="Ver como usuario"
+                            >
+                              <Eye className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                            </motion.button>
                             <motion.button
                               whileTap={{ scale: 0.9 }}
                               onClick={() => {
@@ -1418,14 +1454,14 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
                        </div>
                        <div className="bg-zinc-50 max-[400px]:p-5 p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-zinc-100 space-y-2 md:space-y-4">
                          <p className="text-[8px] md:text-[10px] font-black text-zinc-400 uppercase italic">Ingresos Totales</p>
-                         <p className="max-[400px]:text-3xl text-4xl md:text-5xl font-black italic text-zinc-950">${dashboardStats.totalRevenue}</p>
+                          <p className="max-[400px]:text-3xl text-4xl md:text-5xl font-black italic text-zinc-950">${(revenueData?.totalProcessed || 0).toLocaleString()}</p>
                        </div>
                      </div>
                    </motion.div>
                 )}
 
                 {activeTab === "revenue" && (
-                  <AdminRevenuePanel />
+                  <AdminRevenuePanel revenueData={revenueData} loading={revenueLoading} onRefresh={() => { fetchRevenue(); fetchDashboard(); }} payments={allPayments} />
                 )}
 
                 {activeTab === "commercials" && (
@@ -2471,6 +2507,51 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Impersonation Overlay */}
+      <AnimatePresence>
+        {(impersonateToken || impersonateLoading) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-white flex flex-col"
+          >
+            <div className="flex items-center justify-between px-4 md:px-8 py-3 bg-zinc-950 text-white shrink-0">
+              <div className="flex items-center gap-3">
+                <Eye className="w-4 h-4 text-blue-400" />
+                <span className="text-xs md:text-sm font-black italic">
+                  Modo Admin — Viendo como: <span className="text-blue-400">{impersonateUser?.name || impersonateUser?.email || "Usuario"}</span>
+                </span>
+              </div>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => { setImpersonateToken(null); setImpersonateUser(null); setImpersonateLoading(false); }}
+                className="px-4 py-2 bg-red-600 text-white rounded-xl font-black italic text-[10px] md:text-xs hover:bg-red-700 transition-all flex items-center gap-2"
+              >
+                <X className="w-3.5 h-3.5" /> SALIR
+              </motion.button>
+            </div>
+            <div className="flex-1 relative">
+              {impersonateLoading && !impersonateToken && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+                  <div className="flex items-center gap-3 px-6 py-4 bg-zinc-50 rounded-2xl text-zinc-400 italic font-black text-sm">
+                    <div className="w-5 h-5 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+                    Abriendo vista del usuario...
+                  </div>
+                </div>
+              )}
+              {impersonateToken && (
+                <iframe
+                  src={`/impersonate?token=${impersonateToken}`}
+                  className="w-full h-full border-0"
+                  title="Vista del usuario"
+                />
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -2554,25 +2635,9 @@ function AdminInput({ label, placeholder, type ="text", value, onChange }: any) 
    );
 }
 
-function AdminRevenuePanel() {
+function AdminRevenuePanel({ revenueData, loading, onRefresh, payments }: { revenueData: any; loading: boolean; onRefresh: () => void; payments: any[] }) {
   const { t } = useLanguage();
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/stripe/platform-revenue", { credentials: "include" });
-      const d = await res.json();
-      setData(d);
-    } catch {} finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const recentPayments = payments.filter((p: any) => p.status === "completed" || p.status === "succeeded" || p.paymentStatus === "finished").slice(0, 10);
 
   if (loading) {
     return (
@@ -2588,7 +2653,7 @@ function AdminRevenuePanel() {
     <motion.div key="revenue" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 md:space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h3 className="max-[400px]:text-2xl text-3xl font-black italic text-zinc-950 uppercase tracking-tighter">{t("admin.revenue")} de <span className="text-red-600">Plataforma</span></h3>
-        <motion.button whileTap={{ scale: 0.9 }} onClick={fetchData} className="p-2 hover:md:p-2.5 hover:bg-zinc-50 rounded-xl transition-all">
+        <motion.button whileTap={{ scale: 0.9 }} onClick={onRefresh} className="p-2 hover:md:p-2.5 hover:bg-zinc-50 rounded-xl transition-all">
           <RefreshCw className="w-4 h-4 md:w-5 md:h-5 text-zinc-400" />
         </motion.button>
       </div>
@@ -2597,25 +2662,25 @@ function AdminRevenuePanel() {
         <div className="bg-white max-[400px]:p-5 p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-4">
           <div className="p-2 md:p-3 bg-red-50 rounded-lg md:rounded-xl w-fit"><DollarSign className="w-5 h-5 md:w-6 md:h-6 text-red-600" /></div>
           <p className="text-[8px] md:text-[9px] font-wallpoet text-zinc-400 uppercase italic">Comisiones Jandosoft</p>
-          <p className="max-[400px]:text-2xl text-3xl md:text-4xl font-black italic text-zinc-950">${(data?.totalPlatformRevenue || 0).toFixed(2)}</p>
+          <p className="max-[400px]:text-2xl text-3xl md:text-4xl font-black italic text-zinc-950">${(revenueData?.totalPlatformRevenue || 0).toFixed(2)}</p>
         </div>
         <div className="bg-white max-[400px]:p-5 p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-4">
           <div className="p-2 md:p-3 bg-emerald-50 rounded-lg md:rounded-xl w-fit"><TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-emerald-600" /></div>
           <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">Volumen Procesado</p>
-          <p className="max-[400px]:text-2xl text-3xl md:text-4xl font-black italic text-zinc-950">${(data?.totalProcessed || 0).toFixed(2)}</p>
+          <p className="max-[400px]:text-2xl text-3xl md:text-4xl font-black italic text-zinc-950">${(revenueData?.totalProcessed || 0).toFixed(2)}</p>
         </div>
         <div className="bg-white max-[400px]:p-5 p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-zinc-100 shadow-sm space-y-2 md:space-y-4">
           <div className="p-2 md:p-3 bg-blue-50 rounded-lg md:rounded-xl w-fit"><ShoppingBag className="w-5 h-5 md:w-6 md:h-6 text-blue-600" /></div>
           <p className="text-[8px] md:text-[9px] font-black text-zinc-400 uppercase italic">Transacciones</p>
-          <p className="max-[400px]:text-2xl text-3xl md:text-4xl font-black italic text-zinc-950">{data?.totalPayments || 0}</p>
+          <p className="max-[400px]:text-2xl text-3xl md:text-4xl font-black italic text-zinc-950">{revenueData?.totalPayments || 0}</p>
         </div>
       </div>
 
-      {data?.byStore && Object.keys(data.byStore).length > 0 && (
+      {revenueData?.byStore && Object.keys(revenueData.byStore).length > 0 && (
         <div className="bg-zinc-50 max-[400px]:p-5 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 space-y-4 md:space-y-6">
           <h4 className="max-[400px]:text-lg text-xl font-black italic text-zinc-950 uppercase tracking-tighter">Desglose por <span className="text-red-600">Empresa</span></h4>
           <div className="space-y-2 md:space-y-3">
-            {Object.entries(data.byStore).map(([name, info]: any) => (
+            {Object.entries(revenueData.byStore).map(([name, info]: any) => (
               <div key={name} className="flex items-center justify-between max-[400px]:p-3.5 p-5 bg-white rounded-2xl border border-zinc-100 hover:border-red-200 transition-all">
                 <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
                   <div className="w-8 h-8 md:w-10 md:h-10 bg-red-50 rounded-xl flex items-center justify-center text-red-600 shrink-0"><Store className="w-4 h-4 md:w-5 md:h-5" /></div>
@@ -2634,7 +2699,30 @@ function AdminRevenuePanel() {
         </div>
       )}
 
-      {(!data?.byStore || Object.keys(data.byStore).length === 0) && (
+      {recentPayments.length > 0 && (
+        <div className="bg-zinc-50 max-[400px]:p-5 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-zinc-100 space-y-4 md:space-y-6">
+          <h4 className="max-[400px]:text-lg text-xl font-black italic text-zinc-950 uppercase tracking-tighter">Pagos <span className="text-red-600">Recientes</span></h4>
+          <div className="space-y-2 md:space-y-3">
+            {recentPayments.map((p: any) => (
+              <div key={p._id} className="flex items-center justify-between max-[400px]:p-3.5 p-5 bg-white rounded-2xl border border-zinc-100 hover:border-red-200 transition-all">
+                <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 shrink-0"><DollarSign className="w-4 h-4 md:w-5 md:h-5" /></div>
+                  <div className="min-w-0">
+                    <p className="font-black italic text-xs md:text-sm text-zinc-950 truncate">{p.customerName || p.customerEmail || "Cliente"}</p>
+                    <p className="text-[9px] md:text-[10px] text-zinc-400 font-bold italic">{p.displayDescription || p.description || "Pago"} · {p.displayPaymentMethod || "Stripe"}</p>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-xs md:text-sm font-black italic text-emerald-600">${(p.displayAmount || p.amount || 0).toFixed(2)} {(p.displayCurrency || p.currency || "USD").toUpperCase()}</p>
+                  <p className="text-[8px] md:text-[9px] text-zinc-400 font-bold italic">{p.createdAt ? new Date(p.createdAt).toLocaleDateString("es-MX", { timeZone: "America/Mexico_City" }) : ""}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(!revenueData?.byStore || Object.keys(revenueData.byStore).length === 0) && recentPayments.length === 0 && (
         <div className="py-12 md:py-16 text-center italic font-black uppercase tracking-widest text-zinc-200">No hay transacciones registradas</div>
       )}
     </motion.div>
