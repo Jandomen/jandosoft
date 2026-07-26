@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { Affiliate } from "@/lib/models/Affiliate";
 import { Commission } from "@/lib/models/Commission";
 import { AffiliatePayout } from "@/lib/models/AffiliatePayout";
+import { User } from "@/lib/models/User";
 import { stripe } from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
@@ -22,6 +23,11 @@ export async function POST(req: NextRequest) {
     const affiliate = await Affiliate.findById(affiliateId);
     if (!affiliate) {
       return NextResponse.json({ error: "Affiliate not found" }, { status: 404 });
+    }
+
+    const user = await User.findById(affiliate.userId);
+    if (!user || !user.emailVerified) {
+      return NextResponse.json({ error: "Email not verified. Please verify your email before withdrawing." }, { status: 403 });
     }
 
     if (affiliate.pendingBalance < amount) {

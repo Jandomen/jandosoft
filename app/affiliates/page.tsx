@@ -387,9 +387,16 @@ export default function AffiliatesPage() {
                 />
               </div>
 
+              {emailVerified === false && (
+                <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg p-3 mb-2">
+                  <p className="text-rose-700 dark:text-rose-400 text-sm font-bold">{t("affiliate.verify_to_register")}</p>
+                </div>
+              )}
+
               <button
                 onClick={handleRegister}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors shadow-sm"
+                disabled={emailVerified === false}
+                className="w-full bg-red-600 hover:bg-red-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white font-bold py-3 rounded-lg transition-colors shadow-sm disabled:cursor-not-allowed"
               >
                 {t("affiliate.register")}
               </button>
@@ -665,18 +672,24 @@ export default function AffiliatesPage() {
                 >
                   <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 border border-zinc-100 dark:border-zinc-800 shadow-sm">
                     <h3 className="text-lg font-black text-zinc-950 dark:text-zinc-100 mb-4">{t("affiliate.request_withdrawal")}</h3>
+                    {emailVerified === false && (
+                      <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg p-3 mb-4">
+                        <p className="text-rose-700 dark:text-rose-400 text-sm font-bold">{t("affiliate.verify_to_withdraw")}</p>
+                      </div>
+                    )}
                     <div className="flex items-center gap-4">
                       <input
                         type="number"
                         value={withdrawAmount}
                         onChange={(e) => setWithdrawAmount(e.target.value)}
                         placeholder={t("affiliate.min_withdrawal")}
-                        className="flex-1 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-4 py-3 text-zinc-950 dark:text-zinc-100 focus:bg-white dark:focus:bg-zinc-700 focus:border-red-200 dark:focus:border-red-700 outline-none transition-all"
+                        disabled={emailVerified === false}
+                        className="flex-1 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-4 py-3 text-zinc-950 dark:text-zinc-100 focus:bg-white dark:focus:bg-zinc-700 focus:border-red-200 dark:focus:border-red-700 outline-none transition-all disabled:opacity-50"
                         min="50"
                       />
                       <button
                         onClick={handleWithdraw}
-                        disabled={withdrawing || !affiliate?.stripeAccountStatus}
+                        disabled={withdrawing || !affiliate?.stripeAccountStatus || emailVerified === false}
                         className="bg-green-600 hover:bg-green-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
                       >
                         {withdrawing ? t("affiliate.processing") : t("affiliate.withdraw")}

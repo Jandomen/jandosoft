@@ -28,6 +28,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found. Please register first." }, { status: 404 });
     }
 
+    if (!user.emailVerified) {
+      return NextResponse.json({ error: "Email not verified. Please verify your email first." }, { status: 403 });
+    }
+
     const userId = user._id;
 
     const existingAffiliate = await Affiliate.findOne({ userId });

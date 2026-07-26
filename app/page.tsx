@@ -794,7 +794,7 @@ export default function Page() {
                   <SideNavItem2 icon={<UserCircle className="w-4 h-4" />} label={t("nav.team")} active={activeTab === "business" && businessSection === "team"} onClick={() => { if (activeStoreId) { setBusinessSection("team"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
                   <SideNavItem2 icon={<Settings className="w-4 h-4" />} label={t("nav.config")} active={activeTab === "business" && businessSection === "orgsettings"} onClick={() => { if (activeStoreId) { setBusinessSection("orgsettings"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
                   <SideNavItem2 icon={<User className="w-4 h-4" />} label={t("nav.profile")} active={activeTab === "profile"} onClick={() => setActiveTab("profile")} />
-                  <SideNavItem2 icon={<Users className="w-4 h-4" />} label={t("affiliate.nav")} active={false} onClick={() => window.location.href = "/affiliates"} />
+                  <SideNavItem2 icon={<Users className="w-4 h-4" />} label={t("affiliate.nav")} active={false} onClick={() => { if (!user.emailVerified) { showToast(t("affiliate.verify_to_register"), "error"); return; } window.location.href = "/affiliates"; }} />
                 </div>
               </>
             )}
@@ -916,7 +916,7 @@ export default function Page() {
                       <MobileDrawerItem icon={<UserCircle className="w-4 h-4" />} label={t("nav.team")} active={activeTab === "business" && businessSection === "team"} onClick={() => { setMobileDrawerOpen(false); if (activeStoreId) { setBusinessSection("team"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
                       <MobileDrawerItem icon={<Settings className="w-4 h-4" />} label={t("nav.config")} active={activeTab === "business" && businessSection === "orgsettings"} onClick={() => { setMobileDrawerOpen(false); if (activeStoreId) { setBusinessSection("orgsettings"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
                       <MobileDrawerItem icon={<User className="w-4 h-4" />} label={t("nav.profile")} active={activeTab === "profile"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("profile"); }} />
-                      <MobileDrawerItem icon={<Users className="w-4 h-4" />} label={t("affiliate.nav")} active={false} onClick={() => { setMobileDrawerOpen(false); window.location.href = "/affiliates"; }} />
+                      <MobileDrawerItem icon={<Users className="w-4 h-4" />} label={t("affiliate.nav")} active={false} onClick={() => { setMobileDrawerOpen(false); if (!user.emailVerified) { showToast(t("affiliate.verify_to_register"), "error"); return; } window.location.href = "/affiliates"; }} />
                     </MobileDrawerGroup>
                     <MobileDrawerItem icon={<Package className="w-4 h-4" />} label={user.subscription ? (t("nav.update_plan") || "Actualizar Plan") : t("nav.plans")} active={activeTab === "pricing"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("pricing"); }} dataTour="explore" />
                   </>
