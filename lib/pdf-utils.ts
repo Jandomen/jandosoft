@@ -1,8 +1,6 @@
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
 import { getCurrencySymbol } from "@/lib/utils/currency";
-import fs from "fs";
-import path from "path";
 
 let wallpoetBase64: string | null = null;
 let wallpoetLoaded = false;
@@ -509,28 +507,16 @@ export const generateInvoicePDF = async (transaction: {
   }
 };
 
-export async function generateAffiliateManualPDF(): Promise<Uint8Array> {
+export async function generateAffiliateManualPDF(images?: { img1?: string | null; img2?: string | null; img3?: string | null }): Promise<Uint8Array> {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = 210;
   const margin = 20;
   const contentW = pageW - margin * 2;
   let y = 0;
 
-  // Load images from filesystem
-  let img1: string | null = null;
-  let img2: string | null = null;
-  let img3: string | null = null;
-  try {
-    const publicDir = path.join(process.cwd(), "public", "images", "affiliate-manual");
-    const f1 = path.join(publicDir, "step1-register.jpg");
-    const f2 = path.join(publicDir, "step2-verify.jpg");
-    const f3 = path.join(publicDir, "step3-link.jpg");
-    if (fs.existsSync(f1)) img1 = fs.readFileSync(f1).toString("base64");
-    if (fs.existsSync(f2)) img2 = fs.readFileSync(f2).toString("base64");
-    if (fs.existsSync(f3)) img3 = fs.readFileSync(f3).toString("base64");
-  } catch (e) {
-    console.error("[PDF] Error loading images:", e);
-  }
+  const img1 = images?.img1 || null;
+  const img2 = images?.img2 || null;
+  const img3 = images?.img3 || null;
 
   await addBrandHeader(doc);
   y = 52;
