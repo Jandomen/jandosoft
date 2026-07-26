@@ -571,6 +571,47 @@ export default function AffiliatesPage() {
                     <p className="text-zinc-400 dark:text-zinc-500 text-xs mt-2">{t("affiliate.code")}: <span className="font-mono font-bold">{affiliate?.code}</span></p>
                   </div>
 
+                  {/* What you're promoting */}
+                  <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 rounded-xl p-6 border border-red-100 dark:border-red-900/30">
+                    <h3 className="text-lg font-black text-red-700 dark:text-red-400 mb-4">{t("affiliate.what_you_promote")}</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white dark:bg-zinc-900 rounded-lg p-4 border border-zinc-100 dark:border-zinc-800">
+                        <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-sm mb-2">JANDOSOFT</h4>
+                        <p className="text-zinc-500 dark:text-zinc-400 text-xs leading-relaxed">{t("affiliate.platform_desc")}</p>
+                      </div>
+                      <div className="bg-white dark:bg-zinc-900 rounded-lg p-4 border border-zinc-100 dark:border-zinc-800">
+                        <h4 className="font-bold text-zinc-900 dark:text-zinc-100 text-sm mb-2">{t("affiliate.how_it_works")}</h4>
+                        <ul className="text-zinc-500 dark:text-zinc-400 text-xs space-y-1.5">
+                          <li className="flex items-start gap-2"><span className="text-red-500 mt-0.5">1.</span> {t("affiliate.step_share_link")}</li>
+                          <li className="flex items-start gap-2"><span className="text-red-500 mt-0.5">2.</span> {t("affiliate.step_customer_registers")}</li>
+                          <li className="flex items-start gap-2"><span className="text-red-500 mt-0.5">3.</span> {t("affiliate.step_customer_pays")}</li>
+                          <li className="flex items-start gap-2"><span className="text-red-500 mt-0.5">4.</span> {t("affiliate.step_you_earn")}</li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="text-center p-3 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-100 dark:border-zinc-800">
+                        <div className="text-lg font-black text-red-600">CRM</div>
+                        <div className="text-[10px] text-zinc-400">{t("affiliate.feature_crm")}</div>
+                      </div>
+                      <div className="text-center p-3 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-100 dark:border-zinc-800">
+                        <div className="text-lg font-black text-red-600">IA</div>
+                        <div className="text-[10px] text-zinc-400">{t("affiliate.feature_ai")}</div>
+                      </div>
+                      <div className="text-center p-3 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-100 dark:border-zinc-800">
+                        <div className="text-lg font-black text-red-600">Booking</div>
+                        <div className="text-[10px] text-zinc-400">{t("affiliate.feature_booking")}</div>
+                      </div>
+                      <div className="text-center p-3 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-100 dark:border-zinc-800">
+                        <div className="text-lg font-black text-red-600">Tienda</div>
+                        <div className="text-[10px] text-zinc-400">{t("affiliate.feature_store")}</div>
+                      </div>
+                    </div>
+                    <a href="https://jandosoft.vercel.app" target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center justify-center gap-2 text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors">
+                      {t("affiliate.know_more")} <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+
                   {affiliate?.stripeAccountStatus === "active" ? (
                     <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
                       <div className="flex items-center justify-between">

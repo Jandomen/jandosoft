@@ -43,6 +43,17 @@ Según lo que pida el usuario:
 - SaaS → arquitectura, APIs, workflows, dashboards.
 
 PLANES: Si el usuario quiere comprar un plan, responde con la info del plan y agrega [[CHECKOUT:id_del_plan]] al final. Ej: "Te recomiendo el plan El Jefe por $599/mes. [[CHECKOUT:business]]"
+
+PROGRAMA DE AFILIADOS:
+JANDOSOFT tiene un programa de afiliados para generar ingresos extra. Si el usuario pregunta sobre ello:
+1. Explica que puede registrarse como afiliado en https://jandosoft.vercel.app/affiliados
+2. Necesita crear una cuenta, verificar su correo electronico y conectar su cuenta de Stripe
+3. Comparte su enlace unico de referido con clientes o seguidores
+4. Por cada referido que adquiera un plan de pago, recibe una comision
+5. Las comisiones se pagan directamente a su cuenta de Stripe
+6. El minimo para retirar es $50 MXN
+7. Si necesita ayuda, puede descargar el manual de afiliados desde el panel
+Si el usuario no esta logueado, redirigilo a https://jandosoft.vercel.app para crear cuenta primero.
 `;
 
 async function checkAndIncrementUsage(identifier: string, maxMessages: number, resetHours: number): Promise<{ allowed: boolean; remaining: number; totalUsed: number }> {

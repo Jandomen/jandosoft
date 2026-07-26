@@ -69,6 +69,7 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
   const [allStores, setAllStores] = useState<any[]>([]);
   const [allInvoices, setAllInvoices] = useState<any[]>([]);
   const [allPayments, setAllPayments] = useState<any[]>([]);
+  const [allAffiliates, setAllAffiliates] = useState<any[]>([]);
   const [paymentSearch, setPaymentSearch] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("all");
   const [paymentsPage, setPaymentsPage] = useState(1);
@@ -157,13 +158,14 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
       if (pStatus && pStatus !== "all") paymentsParams.set("status", pStatus);
       if (pSearch) paymentsParams.set("search", pSearch);
 
-      const [dashRes, usersRes, storesRes, invRes, commRes, payRes] = await Promise.all([
+      const [dashRes, usersRes, storesRes, invRes, commRes, payRes, affRes] = await Promise.all([
         fetch("/api/admin/dashboard", { credentials: "include" }),
         fetch(`/api/admin/users?search=${encodeURIComponent(uSearch)}&page=${uPage}&limit=20`, { credentials: "include" }),
         fetch(`/api/admin/stores?search=${encodeURIComponent(sSearch)}&page=${sPage}&limit=20`, { credentials: "include" }),
         fetch(`/api/invoices?page=${iPage}&limit=20`, { credentials: "include" }),
         fetch("/api/admin/commercials", { credentials: "include" }),
         fetch(`/api/stripe/payments?${paymentsParams.toString()}`, { credentials: "include" }),
+        fetch("/api/admin/affiliates", { credentials: "include" }),
       ]);
       if (dashRes.ok) {
         const data = await dashRes.json();
@@ -188,6 +190,26 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
       if (commRes.ok) {
         const data = await commRes.json();
         setCommercials(data.commercials || []);
+      }
+      if (affRes.ok) {
+        const data = await affRes.json();
+        const affiliates = data.affiliates || [];
+        setAllAffiliates(affiliates);
+        if (usersRes.ok) {
+          const userData = await usersRes.json();
+          const users = (userData.users || []).map((u: any) => {
+            const aff = affiliates.find((a: any) => a.email === u.email);
+            return {
+              ...u,
+              isAffiliate: !!aff,
+              affiliateCode: aff?.code || null,
+              affiliateStatus: aff?.status || null,
+              affiliateEarnings: aff?.totalEarnings || 0,
+            };
+          });
+          setAllUsers(users);
+          setTotalUsersPages(userData.totalPages || 1);
+        }
       }
       if (payRes.ok) {
         const data = await payRes.json();
@@ -864,8 +886,14 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
                                 {u.isSuspended && (
                                   <span className="px-1 py-0.5 bg-rose-200 text-rose-700 rounded-full text-[6px] md:text-[7px] font-black uppercase italic leading-none">{t("biz.suspended_user")}</span>
                                 )}
+                                {u.isAffiliate && (
+                                  <span className="px-1.5 py-0.5 bg-red-100 text-red-600 rounded-full text-[6px] md:text-[7px] font-black uppercase italic leading-none border border-red-200">AFILIADO</span>
+                                )}
                               </div>
                               <p className="text-[8px] md:text-[10px] text-zinc-400 font-bold italic truncate">{u.email}</p>
+                              {u.isAffiliate && (
+                                <p className="text-[7px] md:text-[8px] text-red-500 font-bold italic">Afiliado — Ganancias: ${u.affiliateEarnings?.toFixed(2) || "0.00"}</p>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5 md:gap-4 shrink-0">
