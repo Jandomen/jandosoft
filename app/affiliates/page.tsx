@@ -223,6 +223,51 @@ export default function AffiliatesPage() {
     }
   };
 
+  const handleResumeOnboarding = async () => {
+    try {
+      const affiliateId = affiliate?.id;
+      if (!affiliateId) return;
+
+      const res = await fetch("/api/affiliates/onboarding-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ affiliateId }),
+      });
+
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        showToast(data.error || t("affiliate.stripe_connect_error"), "error");
+      }
+    } catch (error) {
+      showToast(t("affiliate.stripe_connect_error"), "error");
+    }
+  };
+
+  const handleDisconnectStripe = async () => {
+    try {
+      const affiliateId = affiliate?.id;
+      if (!affiliateId) return;
+
+      const res = await fetch("/api/affiliates/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ affiliateId }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast(t("affiliate.stripe_disconnected"), "success");
+        await fetchDashboard(affiliateId);
+      } else {
+        showToast(data.error || t("affiliate.stripe_disconnect_error"), "error");
+      }
+    } catch (error) {
+      showToast(t("affiliate.stripe_disconnect_error"), "error");
+    }
+  };
+
   const handleWithdraw = async () => {
     try {
       const amount = parseFloat(withdrawAmount);
@@ -464,14 +509,22 @@ export default function AffiliatesPage() {
 
                   {affiliate?.stripeAccountStatus === "active" ? (
                     <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-                          <Link2 className="w-5 h-5" />
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                            <Link2 className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-black text-green-700 dark:text-green-500">{t("affiliate.stripe_connected")}</h3>
+                            <p className="text-green-600 dark:text-green-400 text-sm">{t("affiliate.stripe_connected_desc")}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-lg font-black text-green-700 dark:text-green-500">{t("affiliate.stripe_connected")}</h3>
-                          <p className="text-green-600 dark:text-green-400 text-sm">{t("affiliate.stripe_connected_desc")}</p>
-                        </div>
+                        <button
+                          onClick={handleDisconnectStripe}
+                          className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 font-bold text-sm rounded-lg transition-colors flex items-center gap-2 border border-zinc-200 dark:border-zinc-700 hover:border-red-200 dark:hover:border-red-800"
+                        >
+                          <Unlink className="w-4 h-4" /> {t("affiliate.disconnect")}
+                        </button>
                       </div>
                     </div>
                   ) : affiliate?.stripeAccountStatus === "pending" ? (
@@ -481,12 +534,20 @@ export default function AffiliatesPage() {
                           <h3 className="text-lg font-black text-yellow-700 dark:text-yellow-500 mb-1">{t("affiliate.stripe_pending")}</h3>
                           <p className="text-zinc-500 dark:text-zinc-400 text-sm">{t("affiliate.stripe_pending_desc")}</p>
                         </div>
-                        <button
-                          onClick={handleConnectStripe}
-                          className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2"
-                        >
-                          <ExternalLink className="w-4 h-4" /> {t("affiliate.complete_setup")}
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleResumeOnboarding}
+                            className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2"
+                          >
+                            <ExternalLink className="w-4 h-4" /> {t("affiliate.complete_setup")}
+                          </button>
+                          <button
+                            onClick={handleDisconnectStripe}
+                            className="px-4 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 font-bold rounded-lg transition-colors border border-zinc-200 dark:border-zinc-700 hover:border-red-200 dark:hover:border-red-800"
+                          >
+                            <Unlink className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
