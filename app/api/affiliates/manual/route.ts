@@ -6,6 +6,7 @@ export const runtime = "nodejs";
 export async function GET() {
   try {
     const pdf = await generateAffiliateManualPDF();
+    console.log(`[Manual] PDF generated: ${pdf.length} bytes`);
     return new NextResponse(Buffer.from(pdf), {
       headers: {
         "Content-Type": "application/pdf",

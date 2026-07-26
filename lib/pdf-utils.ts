@@ -1,6 +1,8 @@
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
 import { getCurrencySymbol } from "@/lib/utils/currency";
+import fs from "fs";
+import path from "path";
 
 let wallpoetBase64: string | null = null;
 let wallpoetLoaded = false;
@@ -514,20 +516,21 @@ export async function generateAffiliateManualPDF(): Promise<Uint8Array> {
   const contentW = pageW - margin * 2;
   let y = 0;
 
-  // Load images
+  // Load images from filesystem
   let img1: string | null = null;
   let img2: string | null = null;
   let img3: string | null = null;
   try {
-    const [r1, r2, r3] = await Promise.all([
-      fetch("/images/affiliate-manual/step1-register.jpg"),
-      fetch("/images/affiliate-manual/step2-verify.jpg"),
-      fetch("/images/affiliate-manual/step3-link.jpg"),
-    ]);
-    if (r1.ok) { const b = await r1.arrayBuffer(); img1 = Buffer.from(b).toString("base64"); }
-    if (r2.ok) { const b = await r2.arrayBuffer(); img2 = Buffer.from(b).toString("base64"); }
-    if (r3.ok) { const b = await r3.arrayBuffer(); img3 = Buffer.from(b).toString("base64"); }
-  } catch {}
+    const publicDir = path.join(process.cwd(), "public", "images", "affiliate-manual");
+    const f1 = path.join(publicDir, "step1-register.jpg");
+    const f2 = path.join(publicDir, "step2-verify.jpg");
+    const f3 = path.join(publicDir, "step3-link.jpg");
+    if (fs.existsSync(f1)) img1 = fs.readFileSync(f1).toString("base64");
+    if (fs.existsSync(f2)) img2 = fs.readFileSync(f2).toString("base64");
+    if (fs.existsSync(f3)) img3 = fs.readFileSync(f3).toString("base64");
+  } catch (e) {
+    console.error("[PDF] Error loading images:", e);
+  }
 
   await addBrandHeader(doc);
   y = 52;
@@ -736,9 +739,12 @@ function drawStep(
     const imgH = imgW * 0.55;
     const imgX = margin + (contentW - imgW) / 2;
     try {
-      doc.addImage(imageBase64, "JPEG", imgX, y, imgW, imgH);
+      const dataUrl = "data:image/jpeg;base64," + imageBase64;
+      doc.addImage(dataUrl, "JPEG", imgX, y, imgW, imgH);
       y += imgH + 4;
-    } catch {}
+    } catch (e) {
+      console.error("[PDF] Error embedding image:", e);
+    }
   }
 
   // Separator line
