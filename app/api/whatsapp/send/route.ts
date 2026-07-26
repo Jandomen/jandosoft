@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { WhatsAppMessage } from "@/lib/models/WhatsAppMessage";
 import { getAuth } from "@/lib/auth";
 import { validateWhatsAppSend, incrementDailyCounter, sendWhatsAppMessage, upsertConversation } from "@/lib/whatsapp-middleware";
+import { emitWhatsAppEvent } from "@/lib/socket-server";
 
 export const runtime = "nodejs";
 
@@ -67,6 +68,15 @@ export async function POST(req: NextRequest) {
       from: account.phoneNumberId, to: cleanTo,
       messageId: result.messageId || `out_${Date.now()}`, waId: cleanTo,
       type, body: message, status: "sent", providerMessageId: result.messageId,
+    });
+
+    emitWhatsAppEvent(storeId, "new-whatsapp-message", {
+      storeId,
+      conversationId,
+      waId: cleanTo,
+      body: message,
+      type,
+      direction: "outgoing",
     });
 
     return NextResponse.json({ success: true, messageId: result.messageId, dailyRemaining: dailyRemaining - 1 });

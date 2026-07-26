@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAdminSocket } from "@/lib/socket-client";
 
 interface Affiliate {
   _id: string;
@@ -54,13 +55,11 @@ export default function AffiliatesAdminSection() {
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<"overview" | "affiliates" | "commissions">("overview");
   const [selectedAffiliate, setSelectedAffiliate] = useState<Affiliate | null>(null);
+  const [editingRate, setEditingRate] = useState<string | null>(null);
+  const [rateValue, setRateValue] = useState("");
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  useEffect(() => {
-    fetchAffiliates();
-    fetchCommissions();
-  }, []);
-
-  const fetchAffiliates = async () => {
+  const fetchAffiliates = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/affiliates");
       const data = await res.json();
@@ -73,15 +72,16 @@ export default function AffiliatesAdminSection() {
           pendingPayouts: 0,
           totalReferrals: 0,
         });
+        setLastUpdate(new Date());
       }
     } catch (error) {
       console.error("Error fetching affiliates:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchCommissions = async () => {
+  const fetchCommissions = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/affiliates/commissions");
       const data = await res.json();
@@ -91,7 +91,21 @@ export default function AffiliatesAdminSection() {
     } catch (error) {
       console.error("Error fetching commissions:", error);
     }
-  };
+  }, []);
+
+  const fetchAll = useCallback(() => {
+    fetchAffiliates();
+    fetchCommissions();
+  }, [fetchAffiliates, fetchCommissions]);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  useAdminSocket((event, data) => {
+    console.log("[WS] Received:", event, data);
+    fetchAll();
+  });
 
   const handleStatusChange = async (affiliateId: string, newStatus: string) => {
     try {
@@ -106,6 +120,23 @@ export default function AffiliatesAdminSection() {
       }
     } catch (error) {
       console.error("Error updating affiliate:", error);
+    }
+  };
+
+  const handleCommissionRateChange = async (affiliateId: string, newRate: number) => {
+    try {
+      const res = await fetch("/api/admin/affiliates", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ affiliateId, commissionRate: newRate }),
+      });
+
+      if (res.ok) {
+        setEditingRate(null);
+        await fetchAffiliates();
+      }
+    } catch (error) {
+      console.error("Error updating commission rate:", error);
     }
   };
 
@@ -144,20 +175,37 @@ export default function AffiliatesAdminSection() {
       </div>
 
       {/* View Tabs */}
-      <div className="flex gap-2">
-        {["overview", "affiliates", "commissions"].map((view) => (
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          {["overview", "affiliates", "commissions"].map((view) => (
+            <button
+              key={view}
+              onClick={() => setActiveView(view as any)}
+              className={`px-4 py-2 rounded-lg font-bold text-sm capitalize transition-colors ${
+                activeView === view
+                  ? "bg-red-600 text-white"
+                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+              }`}
+            >
+              {view}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-xs text-zinc-400">Tiempo real (WebSocket)</span>
+          </div>
+          <span className="text-[10px] text-zinc-300">
+            Última actualización: {lastUpdate.toLocaleTimeString("es-MX")}
+          </span>
           <button
-            key={view}
-            onClick={() => setActiveView(view as any)}
-            className={`px-4 py-2 rounded-lg font-bold text-sm capitalize transition-colors ${
-              activeView === view
-                ? "bg-red-600 text-white"
-                : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-            }`}
+            onClick={fetchAll}
+            className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-xs font-bold rounded-lg transition-colors"
           >
-            {view}
+            Refresh manual
           </button>
-        ))}
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
@@ -249,6 +297,7 @@ export default function AffiliatesAdminSection() {
                     <th className="text-left p-4 text-zinc-500 text-xs font-bold">Code</th>
                     <th className="text-left p-4 text-zinc-500 text-xs font-bold">Status</th>
                     <th className="text-left p-4 text-zinc-500 text-xs font-bold">Stripe</th>
+                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">Commission</th>
                     <th className="text-left p-4 text-zinc-500 text-xs font-bold">Referrals</th>
                     <th className="text-left p-4 text-zinc-500 text-xs font-bold">Earnings</th>
                     <th className="text-left p-4 text-zinc-500 text-xs font-bold">Actions</th>
@@ -287,6 +336,48 @@ export default function AffiliatesAdminSection() {
                           {affiliate.stripeAccountStatus || "Not connected"}
                         </span>
                       </td>
+                      <td className="p-4">
+                        {editingRate === affiliate._id ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              value={rateValue}
+                              onChange={(e) => setRateValue(e.target.value)}
+                              className="w-14 text-xs bg-white border border-zinc-200 rounded px-2 py-1 text-center"
+                              min="0"
+                              max="100"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  handleCommissionRateChange(affiliate._id, parseFloat(rateValue));
+                                }
+                                if (e.key === "Escape") setEditingRate(null);
+                              }}
+                            />
+                            <span className="text-xs text-zinc-400">%</span>
+                            <button
+                              onClick={() => handleCommissionRateChange(affiliate._id, parseFloat(rateValue))}
+                              className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold"
+                            >
+                              ✓
+                            </button>
+                            <button
+                              onClick={() => setEditingRate(null)}
+                              className="text-xs bg-zinc-100 text-zinc-500 px-1.5 py-0.5 rounded font-bold"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setEditingRate(affiliate._id); setRateValue(String(affiliate.commissionRate)); }}
+                            className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold hover:bg-purple-200 transition-colors cursor-pointer"
+                            title="Click to edit"
+                          >
+                            {affiliate.commissionRate}%
+                          </button>
+                        )}
+                      </td>
                       <td className="p-4 text-sm text-zinc-600">
                         {affiliate.activeReferrals} / {affiliate.totalReferrals}
                       </td>
@@ -306,7 +397,7 @@ export default function AffiliatesAdminSection() {
                   ))}
                   {affiliates.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-zinc-400 italic">No affiliates found</td>
+                      <td colSpan={8} className="p-8 text-center text-zinc-400 italic">No affiliates found</td>
                     </tr>
                   )}
                 </tbody>

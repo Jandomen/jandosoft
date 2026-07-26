@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { verifyAdminAuth } from "@/lib/admin-middleware";
+import { emitUserEvent } from "@/lib/socket-server";
 
 function parseDuration(duration: string): Date | null {
   if (!duration || duration === "permanent") return null;
@@ -44,6 +45,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       user.suspendedUntil = suspendedUntil;
     }
     await user.save();
+
+    emitUserEvent(String(user.email), "user-updated", {
+      isSuspended: user.isSuspended,
+      suspendedUntil: user.suspendedUntil,
+    });
 
     return Response.json({
       success: true,

@@ -293,3 +293,75 @@ export function campaignEmailHtml(params: {
     `
   );
 }
+
+export function affiliateInviteHtml(params: {
+  inviteeName: string;
+  senderName: string;
+  referralLink: string;
+}): string {
+  return wrap(
+    "Invitación para ser Afiliado",
+    `
+      <div style="font-size:14px;color:#ccc;line-height:1.8;">
+        <p style="margin:0 0 16px;">Hola <strong style="color:#fff;">${params.inviteeName}</strong>,</p>
+        <p style="margin:0 0 20px;">
+          <strong style="color:#fff;">${params.senderName}</strong> te invita a unirte como
+          <strong style="color:#ef4444;">Afiliado de JANDOSOFT</strong> y empezar a ganar dinero
+          compartiendo tu link de referido.
+        </p>
+
+        <div style="background:#1a1a1a;border-radius:16px;border:1px solid #333;padding:24px;margin:20px 0;">
+          <p style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 12px;text-align:center;">Cómo funciona</p>
+
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+            <div style="min-width:28px;height:28px;background:#ef4444;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px;">1</div>
+            <div>
+              <p style="margin:0;color:#fff;font-weight:700;font-size:13px;">Regístrate gratis</p>
+              <p style="margin:2px 0 0;color:#888;font-size:12px;">Crea tu cuenta en Jandosoft (es gratis)</p>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+            <div style="min-width:28px;height:28px;background:#ef4444;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px;">2</div>
+            <div>
+              <p style="margin:0;color:#fff;font-weight:700;font-size:13px;">Verifica tu correo</p>
+              <p style="margin:2px 0 0;color:#888;font-size:12px;">Haz clic en el enlace de verificación que recibirás por email</p>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+            <div style="min-width:28px;height:28px;background:#ef4444;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px;">3</div>
+            <div>
+              <p style="margin:0;color:#fff;font-weight:700;font-size:13px;">Regístrate como Afiliado</p>
+              <p style="margin:2px 0 0;color:#888;font-size:12px;">Ve a <strong style="color:#ef4444;">/afiliados</strong> y completa el formulario</p>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+            <div style="min-width:28px;height:28px;background:#ef4444;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px;">4</div>
+            <div>
+              <p style="margin:0;color:#fff;font-weight:700;font-size:13px;">Comparte tu link</p>
+              <p style="margin:2px 0 0;color:#888;font-size:12px;">Invita a otros y gana <strong style="color:#22c55e;">20% de comisión</strong> por cada pago</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align:center;margin:28px 0;">
+          <a href="${params.referralLink}" style="display:inline-block;background:#ef4444;color:#fff;font-weight:900;font-size:15px;padding:14px 36px;border-radius:12px;text-decoration:none;letter-spacing:1px;">
+            UNIRME COMO AFILIADO
+          </a>
+        </div>
+
+        <div style="background:#1a1a1a;border-radius:12px;border:1px solid #333;padding:16px;margin:20px 0;">
+          <p style="font-size:12px;color:#888;margin:0 0 8px;text-transform:uppercase;letter-spacing:1px;">Tu beneficio</p>
+          <p style="font-size:24px;font-weight:900;color:#22c55e;margin:0;">20%</p>
+          <p style="font-size:12px;color:#ccc;margin:4px 0 0;">de comisión en cada pago de tus referidos</p>
+        </div>
+
+        <p style="font-size:12px;color:#666;margin:20px 0 0;text-align:center;">
+          No necesitas experiencia. Solo comparte tu link y gana dinero.
+        </p>
+      </div>
+    `
+  );
+}

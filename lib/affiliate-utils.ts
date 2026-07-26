@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/mongodb";
 import { Affiliate } from "@/lib/models/Affiliate";
 import { Referral } from "@/lib/models/Referral";
 import { Commission } from "@/lib/models/Commission";
+import { emitAffiliateEvent } from "@/lib/socket-server";
 
 export async function generateCommissionForPayment(
   userId: string,
@@ -54,6 +55,14 @@ export async function generateCommissionForPayment(
     });
 
     await commission.save();
+
+    emitAffiliateEvent("commission-created", {
+      affiliateId: affiliate._id,
+      commissionId: commission._id,
+      amount: commissionAmount,
+      plan,
+      period,
+    });
 
     await Referral.findByIdAndUpdate(referral._id, {
       status: "active",

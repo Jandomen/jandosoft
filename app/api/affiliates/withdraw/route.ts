@@ -5,6 +5,7 @@ import { Commission } from "@/lib/models/Commission";
 import { AffiliatePayout } from "@/lib/models/AffiliatePayout";
 import { User } from "@/lib/models/User";
 import { stripe } from "@/lib/stripe";
+import { emitAffiliateEvent } from "@/lib/socket-server";
 
 export async function POST(req: NextRequest) {
   try {
@@ -102,6 +103,13 @@ export async function POST(req: NextRequest) {
         await Affiliate.findByIdAndUpdate(affiliateId, {
           $inc: { paidBalance: amount },
           $set: { lastPayoutDate: new Date() },
+        });
+
+        emitAffiliateEvent("payout-completed", {
+          affiliateId,
+          payoutId: payout._id,
+          amount,
+          method,
         });
       } catch (stripeError: any) {
         console.error("Stripe transfer failed:", stripeError);

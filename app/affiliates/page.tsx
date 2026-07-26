@@ -345,16 +345,64 @@ export default function AffiliatesPage() {
             <div className="text-zinc-400 dark:text-zinc-500 italic">{t("status.loading")}</div>
           </div>
         ) : showRegister ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-md mx-auto bg-white dark:bg-zinc-900 rounded-2xl p-8 border border-zinc-100 dark:border-zinc-800 shadow-sm mt-8"
-          >
-            <div className="w-14 h-14 bg-red-50 dark:bg-red-900/30 rounded-xl mx-auto flex items-center justify-center mb-6">
-              <span className="text-2xl">💰</span>
-            </div>
-            <h1 className="text-2xl font-black italic text-zinc-950 dark:text-zinc-100 text-center mb-2">{t("affiliate.title")}</h1>
-            <p className="text-zinc-400 dark:text-zinc-500 text-center mb-6">{t("affiliate.subtitle")}</p>
+          <div className="max-w-4xl mx-auto mt-8 space-y-8">
+            {/* Guide Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white dark:bg-zinc-900 rounded-2xl p-8 border border-zinc-100 dark:border-zinc-800 shadow-sm"
+            >
+              <div className="text-center mb-8">
+                <h1 className="text-3xl font-black italic text-zinc-950 dark:text-zinc-100 mb-2">{t("affiliate.title")}</h1>
+                <p className="text-zinc-400 dark:text-zinc-500">{t("affiliate.guide_subtitle")}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                {[
+                  { step: "1", title: t("affiliate.step_register"), desc: t("affiliate.step_register_desc"), icon: "👤" },
+                  { step: "2", title: t("affiliate.step_verify"), desc: t("affiliate.step_verify_desc"), icon: "✉️" },
+                  { step: "3", title: t("affiliate.step_affiliate"), desc: t("affiliate.step_affiliate_desc"), icon: "🔗" },
+                  { step: "4", title: t("affiliate.step_earn"), desc: t("affiliate.step_earn_desc"), icon: "💰" },
+                ].map((item) => (
+                  <div key={item.step} className="text-center">
+                    <div className="w-14 h-14 bg-red-50 dark:bg-red-900/30 rounded-2xl mx-auto flex items-center justify-center mb-3">
+                      <span className="text-2xl">{item.icon}</span>
+                    </div>
+                    <div className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-1">{t("affiliate.step")} {item.step}</div>
+                    <h3 className="text-sm font-black text-zinc-950 dark:text-zinc-100 mb-1">{item.title}</h3>
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+                <div className="flex items-center justify-center gap-8 flex-wrap">
+                  <div className="text-center">
+                    <p className="text-3xl font-black text-green-600">20%</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("affiliate.commission_rate")}</p>
+                  </div>
+                  <div className="w-px h-10 bg-green-200 dark:bg-green-800 hidden sm:block" />
+                  <div className="text-center">
+                    <p className="text-3xl font-black text-green-600">$50</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("affiliate.min_withdrawal")}</p>
+                  </div>
+                  <div className="w-px h-10 bg-green-200 dark:bg-green-800 hidden sm:block" />
+                  <div className="text-center">
+                    <p className="text-3xl font-black text-green-600">∞</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("affiliate.unlimited_referrals")}</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Registration Form */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="max-w-md mx-auto bg-white dark:bg-zinc-900 rounded-2xl p-8 border border-zinc-100 dark:border-zinc-800 shadow-sm"
+            >
+              <h2 className="text-xl font-black italic text-zinc-950 dark:text-zinc-100 text-center mb-6">{t("affiliate.register")}</h2>
 
             <div className="space-y-4">
               <div>
@@ -401,7 +449,8 @@ export default function AffiliatesPage() {
                 {t("affiliate.register")}
               </button>
             </div>
-          </motion.div>
+            </motion.div>
+          </div>
         ) : (
           <>
             {/* Email Verification Banner */}

@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/mongodb";
 import Conversation from "@/lib/models/Conversation";
 import Message from "@/lib/models/Message";
 import { messageEvents, MESSAGE_NEW, type SSEEvent } from "@/lib/messaging/events";
+import { emitMessageEvent } from "@/lib/socket-server";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = getAuthFromHeaders(req) || await getAuthFromCookies();
@@ -92,6 +93,38 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     timestamp: Date.now(),
   };
   messageEvents.emit(`${MESSAGE_NEW}:${id}`, event);
+
+  const participants = (conv.participants || []) as any[];
+  for (const p of participants) {
+    if (p.userId && p.userId.toString() !== auth.userId) {
+      const participantUser = await import("@/lib/models/User").then(m =>
+        m.User.findById(p.userId).lean().select("email")
+      );
+      if (participantUser?.email) {
+        emitMessageEvent(String(participantUser.email), "new-message", {
+          conversationId: id,
+          message: event.payload.message,
+        });
+      }
+    }
+  }
+
+  for (const p of participants) {
+    if (p.userId) {
+      const participantUser = await import("@/lib/models/User").then(m =>
+        m.User.findById(p.userId).lean().select("email")
+      );
+      if (participantUser?.email) {
+        const convIds = (await Conversation.find({ "participants.userId": p.userId }).select("_id").lean()).map((c: any) => c._id);
+        const unread = await Message.countDocuments({
+          conversationId: { $in: convIds },
+          senderId: { $ne: p.userId },
+          readAt: null,
+        });
+        emitMessageEvent(String(participantUser.email), "unread-update", { unread });
+      }
+    }
+  }
 
   return NextResponse.json({ message });
 }

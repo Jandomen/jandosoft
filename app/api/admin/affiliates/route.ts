@@ -44,17 +44,26 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { affiliateId, status } = await req.json();
+    const { affiliateId, status, commissionRate } = await req.json();
 
-    if (!affiliateId || !status) {
-      return NextResponse.json({ error: "affiliateId and status required" }, { status: 400 });
+    if (!affiliateId) {
+      return NextResponse.json({ error: "affiliateId required" }, { status: 400 });
     }
 
     await connectDB();
 
+    const updateData: any = {};
+    if (status) updateData.status = status;
+    if (commissionRate !== undefined) {
+      if (commissionRate < 0 || commissionRate > 100) {
+        return NextResponse.json({ error: "Commission rate must be between 0 and 100" }, { status: 400 });
+      }
+      updateData.commissionRate = commissionRate;
+    }
+
     const affiliate = await Affiliate.findByIdAndUpdate(
       affiliateId,
-      { status },
+      updateData,
       { new: true }
     );
 

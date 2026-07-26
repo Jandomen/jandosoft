@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useToast } from "@/components/ui/Toast";
+import { useStoreSocket } from "@/lib/socket-client";
 import {
   Plus, X, Loader2, Clock, ArrowRight, ShoppingCart,
   UtensilsCrossed, Package, Truck, AlertTriangle,
@@ -92,19 +93,12 @@ export default function OrdersPanel({ storeId }: Props) {
 
   useEffect(() => { fetchData(); }, [storeId]);
 
-  useEffect(() => {
-    const prevCount = orders.length;
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/restaurant/${storeId}/orders`);
-        const data = await res.json();
-        const latest = data.orders || [];
-        if (latest.length > prevCount) setHasNewOrder(true);
-        setOrders(latest);
-      } catch {}
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [storeId, orders.length]);
+  useStoreSocket(storeId, (event, data) => {
+    if (event === "new-order" || event === "order-updated") {
+      fetchData();
+      setHasNewOrder(true);
+    }
+  });
 
   const filtered = activeTab === "all" ? orders : orders.filter(o => o.status === activeTab);
   const tabCounts = STATUS_TABS.reduce((acc, tab) => {

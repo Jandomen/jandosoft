@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { WhatsAppMessage } from "@/lib/models/WhatsAppMessage";
 import { WhatsAppConversation } from "@/lib/models/WhatsAppConversation";
 import { getWhatsAppAccountByWabaId, getWhatsAppAccountByPhoneNumberId, upsertConversation } from "@/lib/whatsapp-middleware";
+import { emitWhatsAppEvent } from "@/lib/socket-server";
 import crypto from "crypto";
 
 export const runtime = "nodejs";
@@ -141,6 +142,16 @@ async function processMessages(wabaId: string, value: any) {
         },
         { upsert: true, new: true }
       );
+
+      emitWhatsAppEvent(storeId, "new-whatsapp-message", {
+        storeId,
+        conversationId,
+        waId,
+        customerName,
+        body,
+        type,
+        direction: "incoming",
+      });
     } catch (e: any) {
       console.error("[WA Webhook] Error saving message:", e?.message);
     }
@@ -282,6 +293,16 @@ async function triggerAIReply(
       await WhatsAppConversation.findByIdAndUpdate(conversationId, {
         lastMessageAt: new Date(),
         lastMessagePreview: replyText.slice(0, 100),
+      });
+
+      emitWhatsAppEvent(storeId, "new-whatsapp-message", {
+        storeId,
+        conversationId,
+        waId,
+        body: replyText,
+        type: "text",
+        direction: "outgoing",
+        customerName,
       });
     }
   } catch (error: any) {

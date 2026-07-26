@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Affiliate } from "@/lib/models/Affiliate";
 import { User } from "@/lib/models/User";
-import { stripe } from "@/lib/stripe";
+import { emitAffiliateEvent } from "@/lib/socket-server";
 
 function generateAffiliateCode(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -60,6 +60,15 @@ export async function POST(req: NextRequest) {
     });
 
     await affiliate.save();
+
+    emitAffiliateEvent("affiliate-created", {
+      id: affiliate._id,
+      name: affiliate.name,
+      email: affiliate.email,
+      code: affiliate.code,
+      status: affiliate.status,
+      commissionRate: affiliate.commissionRate,
+    });
 
     return NextResponse.json({
       success: true,

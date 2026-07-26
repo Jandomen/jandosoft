@@ -5,6 +5,7 @@ import { Restaurant } from "@/lib/models/Restaurant";
 import { User } from "@/lib/models/User";
 import { getAuthFromHeaders, getAuthFromCookies } from "@/lib/auth";
 import { notifyOwner } from "@/lib/notify";
+import { emitOrderEvent } from "@/lib/socket-server";
 
 async function getAuth(req: NextRequest) {
   return getAuthFromHeaders(req) || (await getAuthFromCookies());
@@ -66,6 +67,12 @@ export async function PUT(
     }
 
     await restaurant.save();
+
+    emitOrderEvent(storeId, "order-updated", {
+      orderId: order.id,
+      status,
+      storeId,
+    });
 
     const ownerUser = await User.findOne({ email: store.ownerEmail }).lean() as any;
     if (ownerUser) {

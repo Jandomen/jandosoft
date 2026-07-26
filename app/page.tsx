@@ -69,6 +69,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn, slugify } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useTheme } from "@/components/public/ThemeProvider";
+import { useUserSocket } from "@/lib/socket-client";
 
 import { getPlanLimits, getPlanLabel } from "@/lib/plans";
 
@@ -361,8 +362,6 @@ export default function Page() {
       } catch {}
     };
     fetchUnread();
-    const interval = setInterval(fetchUnread, 10000);
-    return () => clearInterval(interval);
   }, [token]);
 
   useEffect(() => {
@@ -625,8 +624,8 @@ export default function Page() {
   }, [isLogged, activeTab]);
 
   useEffect(() => {
-    if (!isLogged || !token) return;
-    const interval = setInterval(async () => {
+    if (!isLogged || !user?.email) return;
+    const fetchProfile = async () => {
       try {
         const res = await fetch("/api/user", {
           headers: { Authorization: `Bearer ${token}` },
@@ -645,9 +644,21 @@ export default function Page() {
           }
         }
       } catch {}
-    }, 15000);
-    return () => clearInterval(interval);
+    };
+    fetchProfile();
   }, [isLogged, token]);
+
+  useUserSocket(user?.email ? user.email : null, (event, data) => {
+    if (event === "user-updated") {
+      setUser((prev) => ({
+        ...prev,
+        ...data,
+      }));
+    }
+    if (event === "unread-update") {
+      setUnreadMessages(data.unread || 0);
+    }
+  });
 
   const handleForgotPassword = async () => {
     if (!forgotEmail) { setForgotError("Ingresa tu correo electrónico"); return; }

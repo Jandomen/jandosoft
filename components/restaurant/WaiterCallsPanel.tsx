@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useToast } from "@/components/ui/Toast";
+import { useStoreSocket } from "@/lib/socket-client";
 import {
   Bell, Loader2, CheckCircle2, Clock, AlertTriangle,
 } from "lucide-react";
@@ -52,9 +53,16 @@ export default function WaiterCallsPanel({ storeId }: Props) {
 
   useEffect(() => {
     fetchCalls();
-    const interval = setInterval(fetchCalls, 10000);
-    return () => clearInterval(interval);
   }, [fetchCalls]);
+
+  useStoreSocket(storeId, (event, data) => {
+    if (event === "new-waiter-call" || event === "waiter-call-updated") {
+      fetchCalls();
+      if (event === "new-waiter-call") {
+        showToast(t("restaurant.new_waiter_call"), "info");
+      }
+    }
+  });
 
   const acknowledgeCall = async (id: string) => {
     try {

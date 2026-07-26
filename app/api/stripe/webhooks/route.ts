@@ -9,6 +9,7 @@ import { Affiliate } from "@/lib/models/Affiliate";
 import { stripe } from "@/lib/stripe";
 import { getPlanConfig } from "@/lib/plan-config";
 import { PLANS } from "@/lib/plans";
+import { emitUserEvent } from "@/lib/socket-server";
 
 function generateReceiptNumber(): string {
   const now = new Date();
@@ -128,6 +129,15 @@ async function updateUserSubscription(
   }
 
   console.log(`[Webhook] User updated: ${result ? "OK" : "NOT FOUND"} plan=${planType} sub=${subscriptionId} userId=${userId}`);
+
+  if (result) {
+    emitUserEvent(String(result.email), "user-updated", {
+      subscription: planType,
+      subscriptionExpiry: safePeriodEnd,
+      subscriptionStatus: status,
+    });
+  }
+
   return result;
 }
 
@@ -168,6 +178,15 @@ async function resetUserToFree(userId: string | null, email: string | null, subs
   }
 
   console.log(`[Webhook] User reset to Free: ${result ? "OK" : "NOT FOUND"} sub=${subscriptionId}`);
+
+  if (result) {
+    emitUserEvent(String(result.email), "user-updated", {
+      subscription: "free",
+      subscriptionExpiry: null,
+      subscriptionStatus: "canceled",
+    });
+  }
+
   return result;
 }
 

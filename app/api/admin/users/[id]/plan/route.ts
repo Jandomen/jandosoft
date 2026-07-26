@@ -4,6 +4,7 @@ import { User } from "@/lib/models/User";
 import { verifyAdminAuth } from "@/lib/admin-middleware";
 import { getPlanConfig } from "@/lib/plan-config";
 import { invalidatePlanCache } from "@/lib/plan-config";
+import { emitUserEvent } from "@/lib/socket-server";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const authResult = await verifyAdminAuth(req);
@@ -52,6 +53,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+
+    emitUserEvent(String(user.email), "user-updated", {
+      subscription: (user as any).subscription,
+      subscriptionExpiry: (user as any).subscriptionExpiry,
+      subscriptionStatus: (user as any).subscriptionStatus,
+    });
 
     return NextResponse.json({ success: true, user: { id: (user as any)._id, email: (user as any).email, subscription: (user as any).subscription, subscriptionExpiry: (user as any).subscriptionExpiry } });
   } catch (error) {

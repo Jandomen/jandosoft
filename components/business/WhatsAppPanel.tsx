@@ -9,6 +9,7 @@ import {
   MoreVertical, Archive, RotateCcw, Settings, Hash, Volume2, VolumeX, AlertTriangle, Wifi, WifiOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useStoreSocket } from "@/lib/socket-client";
 
 interface WhatsAppPanelProps {
   storeId: string;
@@ -215,15 +216,14 @@ export default function WhatsAppPanel({ storeId }: WhatsAppPanelProps) {
     Promise.all([fetchConversations(), fetchAccounts(), fetchHealth()]).finally(() => setLoading(false));
   }, [fetchConversations, fetchAccounts, fetchHealth]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
+  useStoreSocket(storeId, (event, data) => {
+    if (event === "new-whatsapp-message" || event === "whatsapp-conversation-updated") {
       if (!selectedConversation) {
         fetchConversations();
-        fetchHealth();
       }
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [fetchConversations, selectedConversation, fetchHealth]);
+      fetchHealth();
+    }
+  });
 
   useEffect(() => {
     if (!stats || !soundEnabled) return;

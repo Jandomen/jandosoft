@@ -5,6 +5,7 @@ import { Restaurant } from "@/lib/models/Restaurant";
 import { User } from "@/lib/models/User";
 import { getAuthFromHeaders, getAuthFromCookies } from "@/lib/auth";
 import { notifyOwner } from "@/lib/notify";
+import { emitWaiterCallEvent } from "@/lib/socket-server";
 
 async function getAuth(req: NextRequest) {
   return getAuthFromHeaders(req) || (await getAuthFromCookies());
@@ -94,6 +95,12 @@ export async function POST(
     restaurant.waiterCalls.push(call);
     await restaurant.save();
 
+    emitWaiterCallEvent(storeId, "new-waiter-call", {
+      call,
+      storeId,
+      tableNumber: resolvedTable,
+    });
+
     const ownerId = String((store as any).ownerId || (store as any).userId);
     if (ownerId) {
       await notifyOwner(
@@ -158,6 +165,12 @@ export async function PUT(
     }
 
     await restaurant.save();
+
+    emitWaiterCallEvent(storeId, "waiter-call-updated", {
+      callId: call.id,
+      status: body.status,
+      storeId,
+    });
 
     return NextResponse.json({ call });
   } catch (error) {
