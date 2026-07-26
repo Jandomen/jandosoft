@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { generateInvoicePDF } from "@/lib/pdf-utils";
 import EmailAdminSection from "./EmailAdminSection";
+import AffiliatesAdminSection from "./AffiliatesAdminSection";
 import NotificationPanel from "@/components/ui/NotificationPanel";
 
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ');
@@ -681,6 +682,7 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
                 <MenuItem icon={<Code2 />} label={"Widget"} active={activeTab === 'widget'} onClick={() => setActiveTab('widget')} />
                 <MenuItem icon={<Mail />} label={t("admin.email")} active={activeTab === 'email'} onClick={() => setActiveTab('email')} />
                 <MenuItem icon={<Star />} label={t("admin.plans")} active={activeTab === 'plans'} onClick={() => setActiveTab('plans')} />
+                <MenuItem icon={<Users />} label={"Afiliados"} active={activeTab === 'affiliates'} onClick={() => setActiveTab('affiliates')} />
                 <MenuItem icon={<Settings />} label={t("admin.settings_label")} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
            </div>
          </aside>
@@ -2146,6 +2148,13 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
                 )}
 
                 {activeTab === "email" && <EmailAdminSection />}
+
+                {activeTab === "affiliates" && (
+                  <motion.div key="affiliates" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
+                    <h2 className="text-2xl md:text-3xl font-black italic text-zinc-950">Affiliates Management</h2>
+                    <AffiliatesAdminSection />
+                  </motion.div>
+                )}
             </AnimatePresence>
          </main>
       </div>

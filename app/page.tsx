@@ -55,6 +55,7 @@ import {
   FileSpreadsheet,
   HelpCircle,
   Inbox,
+  Tag,
 } from "lucide-react";
 import ChatView from "@/components/chat/Chat";
 import BusinessDashboard from "@/components/business/BusinessDashboard";
@@ -202,14 +203,14 @@ function WebsitesContent({ userStores, user, onSelectStore, onCreateStore, onNav
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-          {filteredStores.map((store: any) => {
+          {filteredStores.map((store: any, index: number) => {
             const storeId = store._id || store.id;
             const pCount = store.products?.length || 0;
             const cCount = store.customers?.length || 0;
             const oCount = store.orders?.length || 0;
             const storeUrl = store.slug ? `https://jandosoft.vercel.app/s/${store.slug}` : null;
             return (
-              <div key={storeId || Math.random()}
+              <div key={storeId || `store-${index}`}
                 className="bg-white rounded-2xl border border-zinc-100 p-5 md:p-6 space-y-4 hover:border-red-200 hover:shadow-md transition-all group"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -318,7 +319,7 @@ export default function Page() {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
-  const [registerForm, setRegisterForm] = useState({ name: "", phone: "", email: "", password: "" });
+  const [registerForm, setRegisterForm] = useState({ name: "", phone: "", email: "", password: "", referralCode: "" });
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
@@ -363,6 +364,15 @@ export default function Page() {
     const interval = setInterval(fetchUnread, 10000);
     return () => clearInterval(interval);
   }, [token]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      setRegisterForm(prev => ({ ...prev, referralCode: ref }));
+      setActiveTab("register");
+    }
+  }, []);
 
   // Auto-advance tour when user navigates to AI section
   useEffect(() => {
@@ -565,7 +575,7 @@ export default function Page() {
         saveSession(data.user.email, data.token, data.user.organizationId);
         setActiveTab("dashboard");
         loadFromAPI(data.user.email);
-        setRegisterForm({ name: "", phone: "", email: "", password: "" });
+        setRegisterForm({ name: "", phone: "", email: "", password: "", referralCode: "" });
         setIsNewUser(true);
       } else {
         showToast(data.error || "Error al registrar", "error");
@@ -727,15 +737,15 @@ export default function Page() {
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-all"
             >
               {theme === "dark" ? (
-                <svg className="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                <svg className="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} suppressHydrationWarning>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" suppressHydrationWarning />
                 </svg>
               ) : (
-                <svg className="w-4 h-4 text-white/60 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                <svg className="w-4 h-4 text-white/60 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} suppressHydrationWarning>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" suppressHydrationWarning />
                 </svg>
               )}
-              <span className="text-[10px] uppercase tracking-wider">{theme === "dark" ? "Modo claro" : "Modo oscuro"}</span>
+              <span className="text-[10px] uppercase tracking-wider" suppressHydrationWarning>{theme === "dark" ? "Modo claro" : "Modo oscuro"}</span>
             </button>
           </div>
           <div className="px-3 mb-4">
@@ -784,6 +794,7 @@ export default function Page() {
                   <SideNavItem2 icon={<UserCircle className="w-4 h-4" />} label={t("nav.team")} active={activeTab === "business" && businessSection === "team"} onClick={() => { if (activeStoreId) { setBusinessSection("team"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
                   <SideNavItem2 icon={<Settings className="w-4 h-4" />} label={t("nav.config")} active={activeTab === "business" && businessSection === "orgsettings"} onClick={() => { if (activeStoreId) { setBusinessSection("orgsettings"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
                   <SideNavItem2 icon={<User className="w-4 h-4" />} label={t("nav.profile")} active={activeTab === "profile"} onClick={() => setActiveTab("profile")} />
+                  <SideNavItem2 icon={<Users className="w-4 h-4" />} label={t("affiliate.nav")} active={false} onClick={() => window.location.href = "/affiliates"} />
                 </div>
               </>
             )}
@@ -905,6 +916,7 @@ export default function Page() {
                       <MobileDrawerItem icon={<UserCircle className="w-4 h-4" />} label={t("nav.team")} active={activeTab === "business" && businessSection === "team"} onClick={() => { setMobileDrawerOpen(false); if (activeStoreId) { setBusinessSection("team"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
                       <MobileDrawerItem icon={<Settings className="w-4 h-4" />} label={t("nav.config")} active={activeTab === "business" && businessSection === "orgsettings"} onClick={() => { setMobileDrawerOpen(false); if (activeStoreId) { setBusinessSection("orgsettings"); setActiveTab("business"); } else showToast(t("status.select_store_first"), "info"); }} />
                       <MobileDrawerItem icon={<User className="w-4 h-4" />} label={t("nav.profile")} active={activeTab === "profile"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("profile"); }} />
+                      <MobileDrawerItem icon={<Users className="w-4 h-4" />} label={t("affiliate.nav")} active={false} onClick={() => { setMobileDrawerOpen(false); window.location.href = "/affiliates"; }} />
                     </MobileDrawerGroup>
                     <MobileDrawerItem icon={<Package className="w-4 h-4" />} label={user.subscription ? (t("nav.update_plan") || "Actualizar Plan") : t("nav.plans")} active={activeTab === "pricing"} onClick={() => { setMobileDrawerOpen(false); setActiveTab("pricing"); }} dataTour="explore" />
                   </>
@@ -1329,6 +1341,10 @@ function RegisterPanelContent({ registerForm, setRegisterForm, handleRegister, s
           <div className="relative group">
             <Lock className="absolute left-3 top-3 w-4 h-4 text-zinc-300 group-focus-within:text-red-500 transition-colors" />
             <input type="password" placeholder={t("register.password_placeholder")} value={registerForm.password} onChange={e => setRegisterForm({...registerForm, password: e.target.value})} className="w-full bg-zinc-50 p-3 pl-9 rounded-lg border border-zinc-100 outline-none text-sm focus:bg-white focus:border-red-200 transition-all" />
+          </div>
+          <div className="relative group">
+            <Tag className="absolute left-3 top-3 w-4 h-4 text-zinc-300 group-focus-within:text-red-500 transition-colors" />
+            <input type="text" placeholder="Referral code (optional)" value={registerForm.referralCode} onChange={e => setRegisterForm({...registerForm, referralCode: e.target.value})} className="w-full bg-zinc-50 p-3 pl-9 rounded-lg border border-zinc-100 outline-none text-sm focus:bg-white focus:border-red-200 transition-all" />
           </div>
           <motion.button whileTap={{ scale: 0.98 }} onClick={handleRegister} className="w-full py-3 bg-red-600 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 hover:bg-red-700 transition-all shadow-sm">
             {t("action.register")} <ChevronRight className="w-4 h-4" />

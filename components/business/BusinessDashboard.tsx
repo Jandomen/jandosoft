@@ -145,11 +145,19 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
     if (initialSection) setSection(initialSection as any);
   }, [initialSection]);
 
-  // Listen for navigate-to-integrations events from child components
+  // Listen for navigation events from child components and AI agent
   useEffect(() => {
-    const handler = () => setSection("integrations");
-    window.addEventListener("navigate-to-integrations", handler);
-    return () => window.removeEventListener("navigate-to-integrations", handler);
+    const handler = (e: Event) => {
+      const section = (e as CustomEvent).detail;
+      if (section) setSection(section);
+    };
+    const handlerIntegrations = () => setSection("integrations");
+    window.addEventListener("navigate-to-section", handler as EventListener);
+    window.addEventListener("navigate-to-integrations", handlerIntegrations);
+    return () => {
+      window.removeEventListener("navigate-to-section", handler as EventListener);
+      window.removeEventListener("navigate-to-integrations", handlerIntegrations);
+    };
   }, []);
 
   const [products, setProducts] = useState<{ id: number; name: string; price: number; currency: string; priceUSD: number; stock: number; images: string[] }[]>([]);

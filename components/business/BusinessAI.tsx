@@ -42,11 +42,11 @@ const MODULE_ACTIONS: Record<string, string[]> = {
   appointments: ["addAppointment", "updateAppointment", "cancelAppointment"],
 };
 
-const GENERIC_MODULES = new Set(["products", "customers", "orders", "services", "knowledgebase", "automations", "campaigns", "appointments"]);
+const GENERIC_MODULES = new Set(["products", "customers", "orders", "services", "knowledgebase", "automations", "campaigns", "appointments", "navigateToSection"]);
 
 function getAllowedActions(category: string): Set<string> {
   const catDef = CATEGORIES[category as CategoryId] || CATEGORIES.general;
-  const allowed = new Set<string>();
+  const allowed = new Set<string>(["navigateToSection"]);
   for (const mod of GENERIC_MODULES) {
     for (const action of MODULE_ACTIONS[mod] || []) allowed.add(action);
   }
@@ -1332,6 +1332,87 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
           })());
           break;
         }
+        case "navigateToSection": {
+          const sectionName = action.section || action.target;
+          const validSections = ["dashboard", "products", "services", "customers", "orders", "analytics", "team", "appointments", "invoices", "campaigns", "integrations", "ai", "knowledgebase", "automations", "agentconfig", "smartforms", "menu", "recipes", "gallery", "testimonials", "inventory", "barbers", "queue", "restaurant", "reservations", "promotions", "loyalty", "restaurant_reviews", "waiter_calls", "floor_plan", "restaurant_orders"];
+          if (!sectionName) {
+            result += `⚠️ Debes especificar la sección a la que quieres ir. `;
+            break;
+          }
+          const normalizedSection = sectionName.toLowerCase().replace(/\s+/g, "_").replace(/á/g, "a").replace(/é/g, "e").replace(/í/g, "i").replace(/ó/g, "o").replace(/ú/g, "u");
+          const sectionMap: Record<string, string> = {
+            inicio: "dashboard", panel: "dashboard", home: "dashboard",
+            productos: "products", product: "products",
+            servicios: "services", service: "services",
+            clientes: "customers", client: "customers",
+            pedidos: "orders", order: "orders",
+            estadisticas: "analytics", analytics: "analytics", reportes: "analytics",
+            equipo: "team", team: "team",
+            configuracion: "orgsettings", orgsettings: "orgsettings", settings: "orgsettings",
+            citas: "appointments", appointment: "appointments", agenda: "appointments",
+            facturas: "invoices", invoice: "invoices",
+            campanas: "campaigns", campañas: "campaigns", campaign: "campaigns",
+            integraciones: "integrations", integracion: "integrations", connected_apps: "integrations",
+            ia: "ai", inteligencia: "ai", agente: "ai", chat_ia: "ai",
+            base_de_conocimiento: "knowledgebase", knowledge: "knowledgebase", kb: "knowledgebase",
+            configuracion_del_agente: "agentconfig", agentconfig: "agentconfig",
+            instalacion_del_agente: "agentinstall", agentinstall: "agentinstall", widget: "agentinstall",
+            formularios: "smartforms", smartforms: "smartforms",
+            automatizaciones: "automations", automations: "automations", workflows: "automations",
+            menu: "menu", carta: "menu",
+            recetas: "recipes", recipes: "recipes",
+            cursos: "courses", courses: "courses",
+            clases: "classes", classes: "classes",
+            estudiantes: "students", students: "students",
+            calificaciones: "grades", grades: "grades",
+            clientes_legales: "clients", clients: "clients",
+            expedientes: "case_files", case_files: "case_files",
+            audiencias: "hearings", hearings: "hearings",
+            documentos: "documents", documents: "documents",
+            historial_medico: "medical_records", medical_records: "medical_records",
+            recetas_medicas: "prescriptions", prescriptions: "prescriptions",
+            doctores: "doctors", doctors: "doctors",
+            inventario: "inventory", inventory: "inventory",
+            galeria: "gallery", gallery: "gallery",
+            testimonios: "testimonials", testimonials: "testimonials",
+            barberos: "barbers", barbers: "barbers",
+            cola: "queue", queue: "queue",
+            historial_barbero: "barber_history", barber_history: "barber_history",
+            restaurante: "restaurant", restaurant: "restaurant",
+            reservaciones: "reservations", reservations: "reservations",
+            promociones: "promotions", promotions: "promotions", promos: "promotions",
+            fidelidad: "loyalty", loyalty: "loyalty", puntos: "loyalty",
+            resenas: "restaurant_reviews", reviews: "restaurant_reviews", reseñas: "restaurant_reviews",
+            mesero: "waiter_calls", waiter: "waiter_calls", llamadas: "waiter_calls",
+            plano: "floor_plan", floor: "floor_plan", mesas: "floor_plan",
+            pedidos_restaurante: "restaurant_orders", restaurant_orders: "restaurant_orders",
+          };
+          const targetSection = sectionMap[normalizedSection] || normalizedSection;
+          window.dispatchEvent(new CustomEvent("navigate-to-section", { detail: targetSection }));
+          const sectionLabels: Record<string, string> = {
+            dashboard: "Dashboard", products: "Productos", services: "Servicios",
+            customers: "Clientes", orders: "Pedidos", analytics: "Estadísticas",
+            team: "Equipo", orgsettings: "Configuración", appointments: "Citas",
+            invoices: "Facturas", campaigns: "Campañas", integrations: "Integraciones",
+            ai: "Chat IA", knowledgebase: "Base de Conocimiento",
+            agentconfig: "Configuración del Agente", agentinstall: "Instalación del Agente",
+            smartforms: "Formularios", automations: "Automatizaciones",
+            menu: "Menú", recipes: "Recetas", courses: "Cursos",
+            classes: "Clases", students: "Estudiantes", grades: "Calificaciones",
+            clients: "Clientes Legales", case_files: "Expedientes",
+            hearings: "Audiencias", documents: "Documentos",
+            medical_records: "Historial Médico", prescriptions: "Recetas Médicas",
+            doctors: "Doctores", inventory: "Inventario", gallery: "Galería",
+            testimonials: "Testimonios", barbers: "Barberos", queue: "Cola",
+            barber_history: "Historial Barbero", restaurant: "Restaurante",
+            reservations: "Reservaciones", promotions: "Promociones",
+            loyalty: "Fidelidad", restaurant_reviews: "Reseñas",
+            waiter_calls: "Llamadas al Mesero", floor_plan: "Plano",
+            restaurant_orders: "Pedidos Restaurante",
+          };
+          result += `✅ Te llevo a **${sectionLabels[targetSection] || targetSection}**. `;
+          break;
+        }
       }
     }
     await Promise.all(asyncOps);
@@ -1450,6 +1531,9 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
         queue: `  {"type":"addToQueue","customerName":"Pedro","phone":"555-5678","serviceRequested":"Corte de cabello","notes":"Quiere fade alto"},
   {"type":"updateQueueEntry","id":"Q_ID","data":{"status":"in_progress"}},
   {"type":"addBarberHistoryEntry","barberName":"Carlos","customerName":"Pedro","service":"Corte de cabello","price":150,"duration":30,"rating":5,"date":"2026-07-15"}`,
+        navigateToSection: `  {"type":"navigateToSection","section":"dashboard"},
+  {"type":"navigateToSection","section":"products"},
+  {"type":"navigateToSection","section":"appointments"}`,
       };
 
       const MODULE_DESCRIPTIONS: Record<string, string> = {
@@ -1479,6 +1563,7 @@ export default function BusinessAI({ agentName, store, products, setProducts, cu
         recipes: "- Puedes gestionar recetas: crear (addRecipe), modificar (updateRecipe) y eliminar (deleteRecipe).",
         restaurant: "- Puedes gestionar reservaciones (addReservation/updateReservation/cancelReservation), responder reseñas (replyToReview), promociones (addPromotion/updatePromotion/deletePromotion), pedidos de restaurante (addRestaurantOrder/updateRestaurantOrder), puntos de lealtad (addLoyaltyPoints/updateLoyaltySettings), llamadas de mesero (updateWaiterCall).",
         barbers: "- Puedes gestionar barberos (addBarber/updateBarber/deleteBarber), cola de barbershop (addToQueue/updateQueueEntry) e historial de barbero (addBarberHistoryEntry).",
+        navigateToSection: "- Puedes navegar al usuario a cualquier sección del panel con el campo section. Usa el JSON: {\"type\":\"navigateToSection\",\"section\":\"<nombre_seccion>\"}. Secciones válidas: dashboard, products, services, customers, orders, analytics, team, orgsettings, appointments, invoices, campaigns, integrations, ai, knowledgebase, agentconfig, agentinstall, smartforms, automations, menu, recipes, courses, classes, students, grades, clients, case_files, hearings, documents, medical_records, prescriptions, doctors, inventory, gallery, testimonials, barbers, queue, barber_history, restaurant, reservations, promotions, loyalty, restaurant_reviews, waiter_calls, floor_plan, restaurant_orders.",
       };
 
       const activeExamples = Object.entries(MODULE_EXAMPLES)
@@ -1519,7 +1604,7 @@ REGLAS:
 - Puedes enviar mensajes (sendMessage) con los campos to y content.
 - Puedes añadir contactos (addContact) con el campo email.
 - Puedes cambiar el idioma de la plataforma Y del chat widget (changeLanguage) con el campo language. Idiomas válidos: es, en, fr, zh, hi, ko, ja, it, pt, ru.
-- Puedes cambiar el idioma de la plataforma Y del chat widget (changeLanguage) con el campo language. Idiomas válidos: es, en, fr, zh, hi, ko, ja, it, pt, ru.
+- Puedes navegar al usuario a cualquier sección del panel (navigateToSection) con el campo section. Secciones válidas: dashboard, products, services, customers, orders, analytics, team, orgsettings, appointments, invoices, campaigns, integrations, ai, knowledgebase, agentconfig, agentinstall, smartforms, automations, menu, recipes, courses, classes, students, grades, clients, case_files, hearings, documents, medical_records, prescriptions, doctors, inventory, gallery, testimonials, barbers, queue, barber_history, restaurant, reservations, promotions, loyalty, restaurant_reviews, waiter_calls, floor_plan, restaurant_orders.
 ${activeDescriptions}
 - IMPORTANTE: SIEMPRE que el usuario te pida crear, modificar, eliminar o enviar algo, DEBES incluir el bloque JSON con las acciones correspondientes. No te limites a decir "lo haré" sin generar el JSON.
 
@@ -1559,6 +1644,7 @@ LÍMITES ÉTICOS:
         botContent += plansMsg;
       }
 
+      let actionsParsed = false;
       const jsonMatch = botContent.match(/```json\n?([\s\S]*?)```/);
       if (jsonMatch) {
         try {
@@ -1573,9 +1659,31 @@ LÍMITES ÉTICOS:
               botContent += `\n\n—\n*${actionResult}*`;
             }
             onPersist?.(newProducts, newCustomers, newOrders, newKbEntries, newAutomations, newCampaigns, undefined, newServices);
+            actionsParsed = true;
           }
         } catch (e) {
-          // JSON parse failed — show response as-is
+          // JSON parse failed — try raw JSON below
+        }
+      }
+      if (!actionsParsed) {
+        const rawMatch = botContent.match(/\{"actions"\s*:\s*\[[\s\S]*?\]\s*\}/);
+        if (rawMatch) {
+          try {
+            const parsed = JSON.parse(rawMatch[0].trim());
+            if (parsed.actions && Array.isArray(parsed.actions) && parsed.actions.length > 0) {
+              const actionTypes = parsed.actions.map((a: any) => a.type).join(", ");
+              setMessages(prev => [...prev, { role: "action", content: `⚡ Ejecutando: ${actionTypes}...`, timestamp: Date.now() }]);
+              const { result: actionResult, newProducts, newCustomers, newOrders, newServices, newCampaigns, newKbEntries, newAutomations } = await executeActions(parsed.actions);
+              setMessages(prev => prev.filter(m => !(m.role === "action" && m.content?.startsWith("⚡ Ejecutando"))));
+              botContent = botContent.replace(rawMatch[0], "").trim();
+              if (actionResult) {
+                botContent += `\n\n—\n*${actionResult}*`;
+              }
+              onPersist?.(newProducts, newCustomers, newOrders, newKbEntries, newAutomations, newCampaigns, undefined, newServices);
+            }
+          } catch (e) {
+            // Raw JSON parse also failed — show as-is
+          }
         }
       }
 

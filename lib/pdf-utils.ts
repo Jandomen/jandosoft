@@ -210,6 +210,149 @@ export async function generatePaymentReceiptPDF(transaction: {
   return new Uint8Array(doc.output("arraybuffer"));
 }
 
+export async function generateAffiliatePayoutReceiptPDF(data: {
+  receiptNumber: string;
+  affiliateName: string;
+  affiliateEmail: string;
+  amount: number;
+  currency: string;
+  method: string;
+  payoutId: string;
+  processedAt?: string;
+  commissionCount?: number;
+  referralCount?: number;
+}): Promise<Uint8Array> {
+  const doc = new jsPDF();
+  await addBrandHeader(doc);
+
+  doc.setFontSize(14);
+  doc.setTextColor(30, 30, 30);
+  await ensureWallpoetFont(doc);
+  if (wallpoetLoaded) {
+    doc.setFont("Wallpoet", "normal");
+  } else {
+    doc.setFont("helvetica", "bold");
+  }
+  doc.text("RECIBO DE COMISIÓN AFILIADO", 20, 52);
+
+  doc.setDrawColor(255, 0, 0);
+  doc.setLineWidth(0.8);
+  doc.line(20, 56, 120, 56);
+
+  const now = new Date();
+  const tz = "America/Mexico_City";
+  const fullDate = data.processedAt
+    ? new Date(data.processedAt).toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric", timeZone: tz })
+    : now.toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric", timeZone: tz });
+  const fullTime = now.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: tz });
+
+  const infoBoxY = 65;
+  doc.setFillColor(248, 248, 250);
+  doc.roundedRect(20, infoBoxY, 170, 58, 3, 3, "F");
+
+  doc.setFontSize(9);
+  doc.setTextColor(130, 130, 140);
+  doc.setFont("helvetica", "normal");
+
+  doc.text("RECIBO #", 28, infoBoxY + 10);
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("helvetica", "bold");
+  doc.text(data.receiptNumber, 60, infoBoxY + 10);
+
+  doc.setTextColor(130, 130, 140);
+  doc.setFont("helvetica", "normal");
+  doc.text("FECHA", 28, infoBoxY + 20);
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("helvetica", "bold");
+  doc.text(fullDate, 60, infoBoxY + 20);
+
+  doc.setTextColor(130, 130, 140);
+  doc.setFont("helvetica", "normal");
+  doc.text("HORA", 120, infoBoxY + 20);
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("helvetica", "bold");
+  doc.text(fullTime, 138, infoBoxY + 20);
+
+  doc.setTextColor(130, 130, 140);
+  doc.setFont("helvetica", "normal");
+  doc.text("AFILIADO", 28, infoBoxY + 30);
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("helvetica", "bold");
+  doc.text(data.affiliateName || "N/A", 60, infoBoxY + 30);
+
+  doc.setTextColor(130, 130, 140);
+  doc.setFont("helvetica", "normal");
+  doc.text("EMAIL", 28, infoBoxY + 40);
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("helvetica", "bold");
+  const emailText = data.affiliateEmail || "N/A";
+  doc.text(emailText.length > 40 ? emailText.slice(0, 38) + "..." : emailText, 60, infoBoxY + 40);
+
+  doc.setTextColor(130, 130, 140);
+  doc.setFont("helvetica", "normal");
+  doc.text("MÉTODO", 28, infoBoxY + 50);
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("helvetica", "bold");
+  const methodLabel = data.method === "stripe" ? "Stripe Transfer" : data.method === "paypal" ? "PayPal" : "Transferencia Bancaria";
+  doc.text(methodLabel, 60, infoBoxY + 50);
+
+  const tableTopY = 140;
+  doc.setFillColor(255, 0, 0);
+  doc.roundedRect(20, tableTopY, 170, 10, 2, 2, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("CONCEPTO", 28, tableTopY + 7);
+  doc.text("IMPORTE", 170, tableTopY + 7, { align: "right" });
+
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  const rowY = tableTopY + 20;
+  const desc = `Comisión afiliado - ${data.commissionCount || 0} comision(es)`;
+  doc.text(desc, 28, rowY);
+
+  const symbol = getCurrencySymbol(data.currency);
+  doc.setFont("helvetica", "bold");
+  doc.text(`${symbol}${data.amount.toFixed(2)} ${data.currency.toUpperCase()}`, 170, rowY, { align: "right" });
+
+  const totalY = rowY + 15;
+  doc.setDrawColor(255, 0, 0);
+  doc.setLineWidth(1);
+  doc.line(20, totalY, 190, totalY);
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(30, 30, 30);
+  doc.text("TOTAL RETIRADO", 28, totalY + 10);
+  doc.setTextColor(255, 0, 0);
+  doc.setFontSize(13);
+  doc.text(`${symbol}${data.amount.toFixed(2)} ${data.currency.toUpperCase()}`, 170, totalY + 10, { align: "right" });
+
+  const infoBottomY = totalY + 22;
+  doc.setFillColor(248, 248, 250);
+  doc.roundedRect(20, infoBottomY, 170, 16, 3, 3, "F");
+
+  doc.setTextColor(130, 130, 140);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(`Método de pago: ${methodLabel}`, 28, infoBottomY + 6);
+  doc.text(`ID de retiro: ${data.payoutId}`, 28, infoBottomY + 12);
+
+  doc.setDrawColor(220, 220, 225);
+  doc.setLineWidth(0.3);
+  doc.line(20, 270, 190, 270);
+
+  doc.setTextColor(180, 180, 185);
+  doc.setFontSize(7);
+  doc.text("Este recibo es generado automaticamente por JANDOSOFT Soluciones.", 105, 275, { align: "center" });
+  doc.text("Para soporte: soporte@jandosoft.com", 105, 279, { align: "center" });
+
+  await addBrandFooter(doc, 285);
+
+  return new Uint8Array(doc.output("arraybuffer"));
+}
+
 export const generateInvoicePDF = async (transaction: {
   id?: string;
   invoiceNumber?: string;

@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     }
 
     await connectDB();
-    const { name, phone, email, password } = await req.json();
+    const { name, phone, email, password, referralCode } = await req.json();
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
     }
@@ -57,6 +57,30 @@ export async function POST(req: Request) {
       joinedAt: new Date(),
     });
     await org.save();
+
+    if (referralCode) {
+      try {
+        const { Referral } = await import("@/lib/models/Referral");
+        const { Affiliate } = await import("@/lib/models/Affiliate");
+        const affiliate = await Affiliate.findOne({ code: referralCode.toUpperCase() });
+        if (affiliate) {
+          const referral = new Referral({
+            affiliateId: affiliate._id,
+            referredUserId: user._id,
+            referredUserEmail: email,
+            plan: "pending",
+            planPrice: 0,
+            status: "pending",
+          });
+          await referral.save();
+          await Affiliate.findByIdAndUpdate(affiliate._id, {
+            $inc: { totalReferrals: 1 },
+          });
+        }
+      } catch (e) {
+        console.error("Error tracking referral:", e);
+      }
+    }
 
     const verificationResult = await sendEmail({
       to: user.email,

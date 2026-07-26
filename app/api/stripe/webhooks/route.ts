@@ -5,6 +5,7 @@ import { Store } from "@/lib/models/Store";
 import { User } from "@/lib/models/User";
 import { Payment } from "@/lib/models/Payment";
 import { Appointment } from "@/lib/models/Appointment";
+import { Affiliate } from "@/lib/models/Affiliate";
 import { stripe } from "@/lib/stripe";
 import { getPlanConfig } from "@/lib/plan-config";
 import { PLANS } from "@/lib/plans";
@@ -231,6 +232,18 @@ export async function POST(req: NextRequest) {
               userId, customerEmail, planId || "starter",
               subscriptionId, customerId, status, periodEnd, billingInterval
             );
+
+            if (userId) {
+              try {
+                const { generateCommissionForPayment } = await import("@/lib/affiliate-utils");
+                const config = await getPlanConfig();
+                const plan = config.plans.find((p: any) => p.id === planId) || PLANS.find((p) => p.id === planId);
+                const planPrice = plan?.price || 0;
+                await generateCommissionForPayment(userId, planId || "starter", planPrice, piId || "");
+              } catch (e) {
+                console.error("[Webhook] Failed to generate affiliate commission:", e);
+              }
+            }
 
             if (orgId) {
               try {
@@ -498,6 +511,16 @@ export async function POST(req: NextRequest) {
                 storeName: "",
                 ownerEmail: "",
               });
+
+              if (userId) {
+                try {
+                  const { generateCommissionForPayment } = await import("@/lib/affiliate-utils");
+                  const planPrice = planDef2?.price || 0;
+                  await generateCommissionForPayment(userId, planId || "starter", planPrice, invoice.payment_intent as string || "");
+                } catch (e) {
+                  console.error("[Webhook] Failed to generate affiliate commission for renewal:", e);
+                }
+              }
             } catch (e) {
               console.error("[Webhook] Failed to create payment record for renewal:", e);
             }
@@ -623,6 +646,19 @@ export async function POST(req: NextRequest) {
               account.details_submitted,
           }
         );
+
+        if (account.charges_enabled && account.payouts_enabled && account.details_submitted) {
+          await Affiliate.findOneAndUpdate(
+            { stripeAccountId: account.id },
+            { stripeAccountStatus: "active" }
+          );
+        } else if (account.requirements?.currently_due?.length) {
+          await Affiliate.findOneAndUpdate(
+            { stripeAccountId: account.id },
+            { stripeAccountStatus: "restricted" }
+          );
+        }
+
         break;
       }
     }
