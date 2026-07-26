@@ -335,6 +335,14 @@ export default function AffiliatesPage() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-zinc-400 dark:text-zinc-500 hidden md:inline">{userEmail}</span>
+          <a
+            href="/api/affiliates/manual"
+            download
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-xs font-bold text-zinc-600 dark:text-zinc-300 transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Manual</span>
+          </a>
           <LanguageCarousel />
         </div>
       </header>

@@ -504,3 +504,208 @@ export const generateInvoicePDF = async (transaction: {
     console.error("Error saving invoice:", e);
   }
 };
+
+export async function generateAffiliateManualPDF(): Promise<Uint8Array> {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageW = 210;
+  const margin = 20;
+  const contentW = pageW - margin * 2;
+  let y = 0;
+
+  await addBrandHeader(doc);
+  y = 52;
+
+  // Title
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(20);
+  doc.setFont("helvetica", "bold");
+  doc.text("MANUAL DEL AFILIADO", pageW / 2, y, { align: "center" });
+  y += 8;
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(100, 100, 100);
+  doc.text("Guia paso a paso para empezar a generar ingresos", pageW / 2, y, { align: "center" });
+  y += 14;
+
+  // Divider
+  doc.setDrawColor(255, 0, 0);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageW - margin, y);
+  y += 12;
+
+  // === SECTION: What is JANDOSOFT ===
+  doc.setFillColor(255, 240, 240);
+  doc.roundedRect(margin, y, contentW, 36, 3, 3, "F");
+  y += 7;
+
+  doc.setTextColor(200, 0, 0);
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text("Que es JANDOSOFT?", margin + 6, y);
+  y += 7;
+
+  doc.setTextColor(50, 50, 50);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  const whatIs = doc.splitTextToSize(
+    "JANDOSOFT es la plataforma empresarial #1 en Latinoamerica. Ofrece herramientas de negocios en la nube: CRM, chatbot con inteligencia artificial, sistema de reservas (booking), tienda en linea, panel derestaurantes, mensajeria integrada y mucho mas. Miles de empresas ya confian en JANDOSOFT para escalar sus operaciones digitales.",
+    contentW - 12
+  );
+  doc.text(whatIs, margin + 6, y);
+  y += whatIs.length * 4.2 + 10;
+
+  // === SECTION: How it works ===
+  doc.setTextColor(200, 0, 0);
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text("Como funciona el Programa de Afiliados", margin, y);
+  y += 7;
+
+  doc.setTextColor(50, 50, 50);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  const howItWorks = doc.splitTextToSize(
+    "Compartes tu enlace unico de afiliado con clientes, amigos o seguidores. Cuando alguien se registra a traves de tu enlace y adquiere un plan de pago, tu recibes una comision por cada pago procesado. Es asi de simple.",
+    contentW
+  );
+  doc.text(howItWorks, margin, y);
+  y += howItWorks.length * 4.2 + 10;
+
+  // === STEP 1 ===
+  y = drawStep(doc, y, "1", "Crear tu cuenta o iniciar sesion",
+    "Si aun no tienes cuenta en JANDOSOFT, ve a jandosoft.vercel.app y haz clic en COMENZAR o CREAR CUENTA GRATIS. Completa el formulario con tu nombre, correo electronico y contrasena. Si ya tienes cuenta, simplemente inicia sesion.",
+    margin, contentW);
+
+  // === STEP 2 ===
+  y = drawStep(doc, y, "2", "Verifica tu correo electronico",
+    "Despues de registrarte, recibiras un correo de verificacion en tu bandeja. Abre el correo y haz clic en el boton de verificacion. Este paso es OBLIGATORIO sin no verificas tu correo no podras acceder al programa de afiliados ni retirar tus comisiones.",
+    margin, contentW);
+
+  // === STEP 3 ===
+  y = drawStep(doc, y, "3", "Accede a la seccion de Afiliados",
+    "Una vez verificado tu correo, busca el boton de Afiliados en el menu principal de tu dashboard. Haz clic en el y seras redirigido al panel de afiliados donde podras gestionar todo.",
+    margin, contentW);
+
+  // === STEP 4 ===
+  y = drawStep(doc, y, "4", "Configura tu cuenta de Stripe",
+    "Para recibir tus pagos necesitas una cuenta de Stripe ACTIVA. En el panel de afiliados, haz clic en Conectar con Stripe y sigue el proceso de onboarding de Stripe Connect. Te pediran: nombre legal, correo, pais, tipo de cuenta (individual o empresa), numero de identificacion fiscal, datos bancarios para recibir transferencias. Sin una cuenta de Stripe activa y verificada no podras retirar fondos.",
+    margin, contentW);
+
+  // === STEP 5 ===
+  y = drawStep(doc, y, "5", "Copia tu enlace y compartelo",
+    "En el panel de afiliados veras tu enlace unico de referido. Copialo y compartelo con tus clientes, en redes sociales, por WhatsApp, email o donde quieras. Cada persona que se registre a traves de tu enlace sera vinculada a tu cuenta como tu referido.",
+    margin, contentW);
+
+  // === STEP 6 ===
+  y = drawStep(doc, y, "6", "Gana comisiones y retira tus fondos",
+    "Cuando tus referidos adquieren un plan de pago, las comisiones se generan automaticamente en tu panel. Puedes solicitar un retiro cuando tu saldo acumulado supere el minimo. Los fondos se transfieren directamente a tu cuenta de Stripe conectada.",
+    margin, contentW);
+
+  // === IMPORTANT NOTES ===
+  y += 4;
+  doc.setFillColor(255, 245, 230);
+  doc.setDrawColor(255, 165, 0);
+  doc.roundedRect(margin, y, contentW, 50, 3, 3, "FD");
+  y += 7;
+
+  doc.setTextColor(180, 100, 0);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Requisitos Importantes", margin + 6, y);
+  y += 7;
+
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+
+  const notes = [
+    "Cuenta de Stripe activa y verificada (obligatorio para recibir pagos).",
+    "Correo electronico verificado en JANDOSOFT.",
+    "El minimo para retirar es $50 USD o su equivalente en MXN.",
+    "Las comisiones se calculan automaticamente por cada pago procesado.",
+    "Puedes desconectar tu cuenta de Stripe en cualquier momento.",
+    "El estado de tu cuenta Stripe aparece en tu panel (Conectado/Pendiente).",
+  ];
+
+  for (const note of notes) {
+    doc.text("  " + note, margin + 6, y);
+    y += 5;
+  }
+  y += 8;
+
+  // === NEED HELP ===
+  doc.setFillColor(240, 245, 255);
+  doc.setDrawColor(100, 150, 255);
+  doc.roundedRect(margin, y, contentW, 22, 3, 3, "FD");
+  y += 7;
+
+  doc.setTextColor(50, 80, 180);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Necesitas ayuda?", margin + 6, y);
+  y += 6;
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(60, 60, 60);
+  doc.text("Visita jandosoft.vercel.app o contacta a nuestro equipo de soporte desde tu dashboard.", margin + 6, y);
+  y += 16;
+
+  // Footer
+  addBrandFooter(doc, y);
+
+  return new Uint8Array(doc.output("arraybuffer"));
+}
+
+function drawStep(
+  doc: jsPDF,
+  startY: number,
+  num: string,
+  title: string,
+  desc: string,
+  margin: number,
+  contentW: number
+): number {
+  let y = startY;
+
+  // Check if we need a new page
+  if (y > 250) {
+    doc.addPage();
+    y = 20;
+  }
+
+  // Step number circle
+  doc.setFillColor(255, 0, 0);
+  doc.circle(margin + 5, y + 1, 5, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text(num, margin + 5, y + 2.5, { align: "center" });
+
+  // Step title
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text(title, margin + 14, y + 2.5);
+  y += 9;
+
+  // Step description
+  doc.setTextColor(70, 70, 70);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  const lines = doc.splitTextToSize(desc, contentW - 14);
+  doc.text(lines, margin + 14, y);
+  y += lines.length * 4.2 + 8;
+
+  // Separator line
+  doc.setDrawColor(230, 230, 230);
+  doc.setLineWidth(0.3);
+  doc.line(margin + 14, y - 3, margin + contentW, y - 3);
+
+  return y;
+}
+
+function text(str: string, x: number, y: number) {
+  return str;
+}
