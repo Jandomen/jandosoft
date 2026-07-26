@@ -597,11 +597,21 @@ export async function generateAffiliateManualPDF(): Promise<Uint8Array> {
   // === STEP 2 ===
   y = drawStep(doc, y, "2", "Verifica tu correo electronico",
     "Despues de registrarte, recibiras un correo de verificacion en tu bandeja. Abre el correo y haz clic en el boton de verificacion. Este paso es OBLIGATORIO: si no verificas tu correo no podras acceder al programa de afiliados ni retirar tus comisiones.",
-    margin, contentW, img2);
+    margin, contentW);
 
   // === STEP 3 ===
   y = drawStep(doc, y, "3", "Accede a la seccion de Afiliados",
     "Una vez verificado tu correo, busca el boton de Afiliados en el menu principal de tu dashboard. Haz clic en el y seras redirigido al panel de afiliados donde podras gestionar todo.",
+    margin, contentW, img2);
+
+  // === STEP 4 ===
+  y = drawStep(doc, y, "4", "Configura tu cuenta de Stripe",
+    "Para recibir tus pagos necesitas una cuenta de Stripe ACTIVA. En el panel de afiliados, haz clic en Conectar con Stripe y sigue el proceso de onboarding de Stripe Connect. Te pediran: nombre legal, correo, pais, tipo de cuenta (individual o empresa), numero de identificacion fiscal, datos bancarios para recibir transferencias. Sin una cuenta de Stripe activa y verificada no podras retirar fondos.",
+    margin, contentW);
+
+  // === STEP 5 ===
+  y = drawStep(doc, y, "5", "Copia tu enlace y compartelo",
+    "En el panel de afiliados veras tu enlace unico de referido. Copialo y compartelo con tus clientes, en redes sociales, por WhatsApp, email o donde quieras. Cada persona que se registre a traves de tu enlace sera vinculada a tu cuenta como tu referido.",
     margin, contentW, img3);
 
   // === STEP 4 ===
@@ -718,14 +728,15 @@ function drawStep(
 
   // Embed image if provided
   if (imageBase64) {
-    if (y > 180) {
+    if (y > 170) {
       doc.addPage();
       y = 20;
     }
-    const imgW = contentW - 14;
+    const imgW = contentW - 20;
     const imgH = imgW * 0.55;
+    const imgX = margin + (contentW - imgW) / 2;
     try {
-      doc.addImage(imageBase64, "JPEG", margin + 14, y, imgW, imgH);
+      doc.addImage(imageBase64, "JPEG", imgX, y, imgW, imgH);
       y += imgH + 4;
     } catch {}
   }
