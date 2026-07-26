@@ -64,6 +64,8 @@ async function addBrandFooter(doc: jsPDF, y: number) {
   } else {
     doc.setFont("helvetica", "normal");
   }
+  doc.text("jandosoft.vercel.app", 105, y, { align: "center" });
+  y += 5;
   doc.text("© 2026 JANDOSOFT ENTERPRISE", 105, y, { align: "center" });
 }
 
@@ -512,6 +514,21 @@ export async function generateAffiliateManualPDF(): Promise<Uint8Array> {
   const contentW = pageW - margin * 2;
   let y = 0;
 
+  // Load images
+  let img1: string | null = null;
+  let img2: string | null = null;
+  let img3: string | null = null;
+  try {
+    const [r1, r2, r3] = await Promise.all([
+      fetch("/images/affiliate-manual/step1-register.jpg"),
+      fetch("/images/affiliate-manual/step2-verify.jpg"),
+      fetch("/images/affiliate-manual/step3-link.jpg"),
+    ]);
+    if (r1.ok) { const b = await r1.arrayBuffer(); img1 = Buffer.from(b).toString("base64"); }
+    if (r2.ok) { const b = await r2.arrayBuffer(); img2 = Buffer.from(b).toString("base64"); }
+    if (r3.ok) { const b = await r3.arrayBuffer(); img3 = Buffer.from(b).toString("base64"); }
+  } catch {}
+
   await addBrandHeader(doc);
   y = 52;
 
@@ -549,7 +566,7 @@ export async function generateAffiliateManualPDF(): Promise<Uint8Array> {
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   const whatIs = doc.splitTextToSize(
-    "JANDOSOFT es la plataforma empresarial #1 en Latinoamerica. Ofrece herramientas de negocios en la nube: CRM, chatbot con inteligencia artificial, sistema de reservas (booking), tienda en linea, panel derestaurantes, mensajeria integrada y mucho mas. Miles de empresas ya confian en JANDOSOFT para escalar sus operaciones digitales.",
+    "JANDOSOFT es una plataforma empresarial en la nube que ofrece herramientas para hacer crecer tu negocio: CRM, chatbot con inteligencia artificial, sistema de reservas (booking), tienda en linea, panel de restaurantes, mensajeria integrada y mucho mas. Miles de empresas ya confian en JANDOSOFT para escalar sus operaciones digitales.",
     contentW - 12
   );
   doc.text(whatIs, margin + 6, y);
@@ -574,18 +591,18 @@ export async function generateAffiliateManualPDF(): Promise<Uint8Array> {
 
   // === STEP 1 ===
   y = drawStep(doc, y, "1", "Crear tu cuenta o iniciar sesion",
-    "Si aun no tienes cuenta en JANDOSOFT, ve a jandosoft.vercel.app y haz clic en COMENZAR o CREAR CUENTA GRATIS. Completa el formulario con tu nombre, correo electronico y contrasena. Si ya tienes cuenta, simplemente inicia sesion.",
-    margin, contentW);
+    "Si aun no tienes cuenta en JANDOSOFT, ve a https://jandosoft.vercel.app y haz clic en COMENZAR o CREAR CUENTA GRATIS. Completa el formulario con tu nombre, correo electronico y contrasena. Si ya tienes cuenta, simplemente inicia sesion.",
+    margin, contentW, img1);
 
   // === STEP 2 ===
   y = drawStep(doc, y, "2", "Verifica tu correo electronico",
-    "Despues de registrarte, recibiras un correo de verificacion en tu bandeja. Abre el correo y haz clic en el boton de verificacion. Este paso es OBLIGATORIO sin no verificas tu correo no podras acceder al programa de afiliados ni retirar tus comisiones.",
-    margin, contentW);
+    "Despues de registrarte, recibiras un correo de verificacion en tu bandeja. Abre el correo y haz clic en el boton de verificacion. Este paso es OBLIGATORIO: si no verificas tu correo no podras acceder al programa de afiliados ni retirar tus comisiones.",
+    margin, contentW, img2);
 
   // === STEP 3 ===
   y = drawStep(doc, y, "3", "Accede a la seccion de Afiliados",
     "Una vez verificado tu correo, busca el boton de Afiliados en el menu principal de tu dashboard. Haz clic en el y seras redirigido al panel de afiliados donde podras gestionar todo.",
-    margin, contentW);
+    margin, contentW, img3);
 
   // === STEP 4 ===
   y = drawStep(doc, y, "4", "Configura tu cuenta de Stripe",
@@ -622,7 +639,7 @@ export async function generateAffiliateManualPDF(): Promise<Uint8Array> {
   const notes = [
     "Cuenta de Stripe activa y verificada (obligatorio para recibir pagos).",
     "Correo electronico verificado en JANDOSOFT.",
-    "El minimo para retirar es $50 USD o su equivalente en MXN.",
+    "El minimo para retirar es $50 MXN.",
     "Las comisiones se calculan automaticamente por cada pago procesado.",
     "Puedes desconectar tu cuenta de Stripe en cualquier momento.",
     "El estado de tu cuenta Stripe aparece en tu panel (Conectado/Pendiente).",
@@ -649,7 +666,7 @@ export async function generateAffiliateManualPDF(): Promise<Uint8Array> {
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(60, 60, 60);
-  doc.text("Visita jandosoft.vercel.app o contacta a nuestro equipo de soporte desde tu dashboard.", margin + 6, y);
+  doc.text("Visita https://jandosoft.vercel.app o contacta a nuestro equipo de soporte desde tu dashboard.", margin + 6, y);
   y += 16;
 
   // Footer
@@ -665,12 +682,13 @@ function drawStep(
   title: string,
   desc: string,
   margin: number,
-  contentW: number
+  contentW: number,
+  imageBase64?: string | null
 ): number {
   let y = startY;
 
   // Check if we need a new page
-  if (y > 250) {
+  if (y > 240) {
     doc.addPage();
     y = 20;
   }
@@ -696,12 +714,27 @@ function drawStep(
   doc.setFont("helvetica", "normal");
   const lines = doc.splitTextToSize(desc, contentW - 14);
   doc.text(lines, margin + 14, y);
-  y += lines.length * 4.2 + 8;
+  y += lines.length * 4.2 + 6;
+
+  // Embed image if provided
+  if (imageBase64) {
+    if (y > 180) {
+      doc.addPage();
+      y = 20;
+    }
+    const imgW = contentW - 14;
+    const imgH = imgW * 0.55;
+    try {
+      doc.addImage(imageBase64, "JPEG", margin + 14, y, imgW, imgH);
+      y += imgH + 4;
+    } catch {}
+  }
 
   // Separator line
   doc.setDrawColor(230, 230, 230);
   doc.setLineWidth(0.3);
-  doc.line(margin + 14, y - 3, margin + contentW, y - 3);
+  doc.line(margin + 14, y - 2, margin + contentW, y - 2);
+  y += 4;
 
   return y;
 }

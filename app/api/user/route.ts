@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/lib/models/User";
 import { Store } from "@/lib/models/Store";
+import { DeletedUserData } from "@/lib/models/DeletedUserData";
 import bcrypt from "bcryptjs";
 import { getAuthFromCookies, getAuthFromHeaders } from "@/lib/auth";
 import { getPlanConfig, getPlanLimitsFromConfig } from "@/lib/plan-config";
@@ -239,6 +240,34 @@ export async function DELETE(req: NextRequest) {
       }
 
       await Promise.all(cleanupPromises);
+    }
+
+    // BACKUP: Save affiliate data before deletion
+    try {
+      const { Affiliate } = await import("@/lib/models/Affiliate");
+      const { Commission } = await import("@/lib/models/Commission");
+      const { AffiliatePayout } = await import("@/lib/models/AffiliatePayout");
+      const { Referral } = await import("@/lib/models/Referral");
+
+      const affiliate = await Affiliate.findOne({ userId: auth.userId }).lean();
+      const commissions = await Commission.find({ affiliateId: affiliate?._id }).lean();
+      const payouts = await AffiliatePayout.find({ affiliateId: affiliate?._id }).lean();
+      const referrals = await Referral.find({ affiliateId: affiliate?._id }).lean();
+
+      if (affiliate || commissions.length || payouts.length || referrals.length) {
+        await DeletedUserData.create({
+          originalUserId: String(auth.userId),
+          email: userEmail,
+          deletedAt: new Date(),
+          affiliate: affiliate || null,
+          commissions: commissions || [],
+          payouts: payouts || [],
+          referrals: referrals || [],
+        });
+        console.log(`[BACKUP] Affiliate data saved for ${userEmail} before deletion`);
+      }
+    } catch (backupErr) {
+      console.error("[BACKUP] Error saving affiliate backup:", backupErr);
     }
 
     // Finally delete stores and user
