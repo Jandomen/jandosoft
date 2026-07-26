@@ -2179,7 +2179,7 @@ export default function Admin({ currency, onLogout }: AdminProps & { onLogout?: 
 
                 {activeTab === "affiliates" && (
                   <motion.div key="affiliates" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
-                    <h2 className="text-2xl md:text-3xl font-black italic text-zinc-950">Affiliates Management</h2>
+                    <h2 className="text-2xl md:text-3xl font-black italic text-zinc-950">{t("affiliate.management")}</h2>
                     <AffiliatesAdminSection />
                   </motion.div>
                 )}

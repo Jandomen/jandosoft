@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAdminSocket } from "@/lib/socket-client";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 interface Affiliate {
   _id: string;
@@ -43,6 +44,7 @@ interface AffiliateStats {
 }
 
 export default function AffiliatesAdminSection() {
+  const { t } = useLanguage();
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [stats, setStats] = useState<AffiliateStats>({
@@ -153,23 +155,23 @@ export default function AffiliatesAdminSection() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-100">
-          <div className="text-zinc-400 text-xs font-bold">Total Affiliates</div>
+          <div className="text-zinc-400 text-xs font-bold">{t("affiliate.total_affiliates")}</div>
           <div className="text-2xl font-black text-zinc-950">{stats.totalAffiliates}</div>
         </div>
         <div className="bg-green-50 rounded-xl p-4 border border-green-100">
-          <div className="text-green-600 text-xs font-bold">Active</div>
+          <div className="text-green-600 text-xs font-bold">{t("affiliate.active")}</div>
           <div className="text-2xl font-black text-green-700">{stats.activeAffiliates}</div>
         </div>
         <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-          <div className="text-blue-600 text-xs font-bold">Total Referrals</div>
+          <div className="text-blue-600 text-xs font-bold">{t("affiliate.total_referrals")}</div>
           <div className="text-2xl font-black text-blue-700">{stats.totalReferrals}</div>
         </div>
         <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-100">
-          <div className="text-yellow-600 text-xs font-bold">Pending Payouts</div>
+          <div className="text-yellow-600 text-xs font-bold">{t("affiliate.pending_payouts")}</div>
           <div className="text-2xl font-black text-yellow-700">${stats.pendingPayouts.toFixed(2)}</div>
         </div>
         <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
-          <div className="text-purple-600 text-xs font-bold">Total Paid</div>
+          <div className="text-purple-600 text-xs font-bold">{t("affiliate.total_paid")}</div>
           <div className="text-2xl font-black text-purple-700">${stats.totalCommissionsPaid.toFixed(2)}</div>
         </div>
       </div>
@@ -177,7 +179,7 @@ export default function AffiliatesAdminSection() {
       {/* View Tabs */}
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
-          {["overview", "affiliates", "commissions"].map((view) => (
+          {(["overview", "affiliates", "commissions"] as const).map((view) => (
             <button
               key={view}
               onClick={() => setActiveView(view as any)}
@@ -187,23 +189,23 @@ export default function AffiliatesAdminSection() {
                   : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
               }`}
             >
-              {view}
+              {t(`affiliate.${view}`)}
             </button>
           ))}
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-xs text-zinc-400">Tiempo real (WebSocket)</span>
+            <span className="text-xs text-zinc-400">{t("affiliate.realtime")}</span>
           </div>
           <span className="text-[10px] text-zinc-300">
-            Última actualización: {lastUpdate.toLocaleTimeString("es-MX")}
+            {t("affiliate.last_update")}: {lastUpdate.toLocaleTimeString()}
           </span>
           <button
             onClick={fetchAll}
             className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-xs font-bold rounded-lg transition-colors"
           >
-            Refresh manual
+            {t("affiliate.refresh_manual")}
           </button>
         </div>
       </div>
@@ -219,7 +221,7 @@ export default function AffiliatesAdminSection() {
           >
             {/* Top Affiliates */}
             <div className="bg-zinc-50 rounded-xl p-6 border border-zinc-100">
-              <h3 className="text-lg font-black text-zinc-950 mb-4">Top Affiliates</h3>
+              <h3 className="text-lg font-black text-zinc-950 mb-4">{t("affiliate.top_affiliates")}</h3>
               <div className="space-y-3">
                 {affiliates
                   .sort((a, b) => b.totalEarnings - a.totalEarnings)
@@ -237,19 +239,19 @@ export default function AffiliatesAdminSection() {
                       </div>
                       <div className="text-right">
                         <div className="font-bold text-green-600">${affiliate.totalEarnings.toFixed(2)}</div>
-                        <div className="text-zinc-400 text-xs">{affiliate.activeReferrals} referrals</div>
+                        <div className="text-zinc-400 text-xs">{affiliate.activeReferrals} {t("affiliate.referrals")}</div>
                       </div>
                     </div>
                   ))}
                 {affiliates.length === 0 && (
-                  <div className="text-center py-8 text-zinc-400 italic">No affiliates yet</div>
+                  <div className="text-center py-8 text-zinc-400 italic">{t("affiliate.no_affiliates")}</div>
                 )}
               </div>
             </div>
 
             {/* Recent Commissions */}
             <div className="bg-zinc-50 rounded-xl p-6 border border-zinc-100">
-              <h3 className="text-lg font-black text-zinc-950 mb-4">Recent Commissions</h3>
+              <h3 className="text-lg font-black text-zinc-950 mb-4">{t("affiliate.recent_commissions")}</h3>
               <div className="space-y-3">
                 {commissions
                   .slice(0, 10)
@@ -258,7 +260,7 @@ export default function AffiliatesAdminSection() {
                     return (
                       <div key={commission._id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-zinc-100">
                         <div>
-                          <div className="font-bold text-zinc-950 text-sm">{affiliate?.name || "Unknown"}</div>
+                          <div className="font-bold text-zinc-950 text-sm">{affiliate?.name || t("affiliate.unknown")}</div>
                           <div className="text-zinc-400 text-xs">{commission.plan} - {commission.period}</div>
                         </div>
                         <div className="text-right">
@@ -275,7 +277,7 @@ export default function AffiliatesAdminSection() {
                     );
                   })}
                 {commissions.length === 0 && (
-                  <div className="text-center py-8 text-zinc-400 italic">No commissions yet</div>
+                  <div className="text-center py-8 text-zinc-400 italic">{t("affiliate.no_commissions")}</div>
                 )}
               </div>
             </div>
@@ -293,14 +295,14 @@ export default function AffiliatesAdminSection() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-zinc-200">
-                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">Affiliate</th>
-                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">Code</th>
-                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">Status</th>
+                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">{t("affiliate.col_affiliate")}</th>
+                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">{t("affiliate.col_code")}</th>
+                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">{t("affiliate.col_status")}</th>
                     <th className="text-left p-4 text-zinc-500 text-xs font-bold">Stripe</th>
-                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">Commission</th>
-                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">Referrals</th>
-                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">Earnings</th>
-                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">Actions</th>
+                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">{t("affiliate.col_commission")}</th>
+                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">{t("affiliate.col_referrals")}</th>
+                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">{t("affiliate.col_earnings")}</th>
+                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">{t("affiliate.col_actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -333,7 +335,7 @@ export default function AffiliatesAdminSection() {
                           affiliate.stripeAccountStatus === "pending" ? "bg-yellow-100 text-yellow-700" :
                           "bg-zinc-100 text-zinc-500"
                         }`}>
-                          {affiliate.stripeAccountStatus || "Not connected"}
+                          {affiliate.stripeAccountStatus || t("affiliate.not_connected")}
                         </span>
                       </td>
                       <td className="p-4">
@@ -388,16 +390,16 @@ export default function AffiliatesAdminSection() {
                           onChange={(e) => handleStatusChange(affiliate._id, e.target.value)}
                           className="text-xs bg-white border border-zinc-200 rounded px-2 py-1"
                         >
-                          <option value="active">Active</option>
-                          <option value="pending">Pending</option>
-                          <option value="suspended">Suspended</option>
+                          <option value="active">{t("affiliate.status_active")}</option>
+                          <option value="pending">{t("affiliate.status_pending")}</option>
+                          <option value="suspended">{t("affiliate.status_suspended")}</option>
                         </select>
                       </td>
                     </tr>
                   ))}
                   {affiliates.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-zinc-400 italic">No affiliates found</td>
+                      <td colSpan={8} className="p-8 text-center text-zinc-400 italic">{t("affiliate.no_affiliates")}</td>
                     </tr>
                   )}
                 </tbody>
@@ -417,12 +419,12 @@ export default function AffiliatesAdminSection() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-zinc-200">
-                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">Affiliate</th>
-                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">Plan</th>
-                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">Period</th>
-                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">Amount</th>
-                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">Status</th>
-                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">Date</th>
+                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">{t("affiliate.col_affiliate")}</th>
+                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">{t("affiliate.col_plan")}</th>
+                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">{t("affiliate.col_period")}</th>
+                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">{t("affiliate.col_amount")}</th>
+                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">{t("affiliate.col_status")}</th>
+                    <th className="text-left p-4 text-zinc-500 text-xs font-bold">{t("affiliate.col_date")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -431,7 +433,7 @@ export default function AffiliatesAdminSection() {
                     return (
                       <tr key={commission._id} className="border-b border-zinc-100 hover:bg-white">
                         <td className="p-4">
-                          <div className="font-bold text-zinc-950 text-sm">{affiliate?.name || "Unknown"}</div>
+                          <div className="font-bold text-zinc-950 text-sm">{affiliate?.name || t("affiliate.unknown")}</div>
                           <div className="text-zinc-400 text-xs">{affiliate?.code}</div>
                         </td>
                         <td className="p-4 text-sm text-zinc-600 capitalize">{commission.plan}</td>
@@ -452,7 +454,7 @@ export default function AffiliatesAdminSection() {
                   })}
                   {commissions.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-zinc-400 italic">No commissions found</td>
+                      <td colSpan={6} className="p-8 text-center text-zinc-400 italic">{t("affiliate.no_commissions")}</td>
                     </tr>
                   )}
                 </tbody>
