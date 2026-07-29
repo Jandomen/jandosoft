@@ -794,6 +794,7 @@ const TOOL_WORKFLOW_SCOPE: Record<string, string[]> = {
 
 export class WorkflowManager {
   private state: WorkflowState | null = null;
+  private store: any = null;
 
   static deserialize(data: string | null): WorkflowManager {
     const manager = new WorkflowManager();
@@ -1042,6 +1043,7 @@ export class WorkflowManager {
   startWorkflow(type: string, store: any, initialData?: Record<string, any>): WorkflowState | null {
     // Only start if no active workflow
     if (this.isActive()) return null;
+    this.store = store;
 
     let steps: WorkflowStep[];
     let description: string;
@@ -1236,10 +1238,9 @@ export class WorkflowManager {
   private buildQuestion(step: WorkflowStep): string {
     let question = step.questionTemplate;
 
-    // Replace {services} placeholder
     if (question.includes("{services}")) {
-      // This would need store context — for now leave it
-      question = question.replace("{services}", "los servicios disponibles");
+      const services = (this.store?.services || []).map((s: any) => s.name).join(", ");
+      question = question.replace("{services}", services || "los servicios disponibles");
     }
 
     return question;

@@ -1,10 +1,10 @@
+import { estimateTokens } from "@/lib/ai/config";
+
+export { estimateTokens, trimContextByTokens, shrinkContext } from "@/lib/ai/config";
+
 export const MAX_CONTEXT_TOKENS = 10000;
 export const RECENT_MESSAGE_COUNT = 30;
 export const SUMMARIZE_THRESHOLD = 40;
-
-export function estimateTokens(text: string): number {
-  return Math.ceil((text?.length || 0) / 4);
-}
 
 export function countContextTokens<T extends { role: string; content: string | any[] }>(
   messages: T[]
@@ -15,35 +15,4 @@ export function countContextTokens<T extends { role: string; content: string | a
     total += estimateTokens(content) + 4;
   }
   return total;
-}
-
-export function trimContextByTokens<T extends { role: string; content: string | any[] }>(
-  messages: T[],
-  maxTokens: number = MAX_CONTEXT_TOKENS
-): T[] {
-  const system: T[] = [];
-  const nonSystem: T[] = [];
-  for (const m of messages) {
-    if (m.role === "system") system.push(m);
-    else nonSystem.push(m);
-  }
-
-  let total = countContextTokens(messages);
-
-  while (total > maxTokens && nonSystem.length > 1) {
-    const removed = nonSystem.shift()!;
-    total -= estimateTokens(
-      typeof removed.content === "string" ? removed.content : JSON.stringify(removed.content)
-    ) + 4;
-  }
-
-  return [...system, ...nonSystem];
-}
-
-export function shrinkContext<T extends { role: string; content: string | any[] }>(
-  messages: T[],
-  factor: number = 0.5
-): T[] {
-  const halfMax = Math.max(200, Math.floor(MAX_CONTEXT_TOKENS * factor));
-  return trimContextByTokens(messages, halfMax);
 }

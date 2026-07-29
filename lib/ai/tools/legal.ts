@@ -184,33 +184,39 @@ export async function executeLegalTool(name: string, args: any, store: any, _use
   const { connectDB } = await import("@/lib/mongodb");
   const { Store } = await import("@/lib/models/Store");
   await connectDB();
-  const s = await Store.findById(storeId);
-  if (!s) return { error: "Store not found" };
 
   if (name === "create_document") {
-    const maxId = Math.max(0, ...s.documents.map((d: any) => d.id || 0));
-    s.documents.push({
-      id: maxId + 1,
+    const doc = {
       name: args.name,
       type: args.type || "",
       desc: args.description || "",
       tags: args.tags ? args.tags.split(",").map((t: string) => t.trim()) : [],
       uploadDate: new Date().toISOString(),
-    });
-    await s.save();
-    return { success: true, message: `Documento "${args.name}" creado con éxito` };
+    };
+    const updated = await Store.findOneAndUpdate(
+      { _id: storeId },
+      { $push: { documents: doc } },
+      { new: true, runValidators: true }
+    );
+    if (!updated) return { error: "Store not found" };
+    const newDoc = updated.documents?.[updated.documents.length - 1];
+    return { success: true, message: `Documento "${args.name}" creado con éxito`, id: newDoc?.id || newDoc?._id };
   }
 
   if (name === "delete_document") {
-    const idx = s.documents.findIndex((d: any) => d.name === args.name);
-    if (idx === -1) return { error: `Documento "${args.name}" no encontrado` };
-    s.documents.splice(idx, 1);
-    await s.save();
+    const result = await Store.updateOne(
+      { _id: storeId },
+      { $pull: { documents: { name: args.name } as any } }
+    );
+    if (result.matchedCount === 0) return { error: "Store not found" };
+    if (result.modifiedCount === 0) return { error: `Documento "${args.name}" no encontrado` };
     return { success: true, message: `Documento "${args.name}" eliminado con éxito` };
   }
 
   if (name === "list_documents") {
-    let docs = s.documents || [];
+    const s = await Store.findById(storeId).lean();
+    if (!s) return { error: "Store not found" };
+    let docs = (s as any).documents || [];
     if (args.type) docs = docs.filter((d: any) => d.type === args.type);
     docs = docs.slice(0, args.limit || 50);
     return {
@@ -221,9 +227,7 @@ export async function executeLegalTool(name: string, args: any, store: any, _use
   }
 
   if (name === "create_casefile") {
-    const maxId = Math.max(0, ...s.caseFiles.map((c: any) => c.id || 0));
-    s.caseFiles.push({
-      id: maxId + 1,
+    const cf = {
       caseNumber: args.caseNumber,
       clientName: args.clientName,
       type: args.type || "",
@@ -231,31 +235,44 @@ export async function executeLegalTool(name: string, args: any, store: any, _use
       court: args.court || "",
       status: "active",
       filingDate: new Date().toISOString().split("T")[0],
-    });
-    await s.save();
+    };
+    const updated = await Store.findOneAndUpdate(
+      { _id: storeId },
+      { $push: { caseFiles: cf } },
+      { new: true, runValidators: true }
+    );
+    if (!updated) return { error: "Store not found" };
     return { success: true, message: `Expediente ${args.caseNumber} creado para ${args.clientName}` };
   }
 
   if (name === "update_casefile") {
-    const cf = s.caseFiles.find((c: any) => c.caseNumber === args.caseNumber);
-    if (!cf) return { error: `Expediente ${args.caseNumber} no encontrado` };
-    if (args.status) cf.status = args.status;
-    if (args.description !== undefined) cf.description = args.description;
-    if (args.outcome) cf.outcome = args.outcome;
-    await s.save();
+    const updateFields: Record<string, any> = {};
+    if (args.status) updateFields["caseFiles.$.status"] = args.status;
+    if (args.description !== undefined) updateFields["caseFiles.$.description"] = args.description;
+    if (args.outcome) updateFields["caseFiles.$.outcome"] = args.outcome;
+    if (Object.keys(updateFields).length === 0) return { error: "No fields to update" };
+    const result = await Store.updateOne(
+      { _id: storeId, "caseFiles.caseNumber": args.caseNumber },
+      { $set: updateFields }
+    );
+    if (result.matchedCount === 0) return { error: `Expediente ${args.caseNumber} no encontrado` };
     return { success: true, message: `Expediente ${args.caseNumber} actualizado` };
   }
 
   if (name === "delete_casefile") {
-    const idx = s.caseFiles.findIndex((c: any) => c.caseNumber === args.caseNumber);
-    if (idx === -1) return { error: `Expediente ${args.caseNumber} no encontrado` };
-    s.caseFiles.splice(idx, 1);
-    await s.save();
+    const result = await Store.updateOne(
+      { _id: storeId },
+      { $pull: { caseFiles: { caseNumber: args.caseNumber } as any } }
+    );
+    if (result.matchedCount === 0) return { error: "Store not found" };
+    if (result.modifiedCount === 0) return { error: `Expediente ${args.caseNumber} no encontrado` };
     return { success: true, message: `Expediente ${args.caseNumber} eliminado` };
   }
 
   if (name === "list_casefiles") {
-    let cfs = s.caseFiles || [];
+    const s = await Store.findById(storeId).lean();
+    if (!s) return { error: "Store not found" };
+    let cfs = (s as any).caseFiles || [];
     if (args.status) cfs = cfs.filter((c: any) => c.status === args.status);
     cfs = cfs.slice(0, args.limit || 50);
     return {
@@ -275,9 +292,7 @@ export async function executeLegalTool(name: string, args: any, store: any, _use
   }
 
   if (name === "create_hearing") {
-    const maxId = Math.max(0, ...s.hearings.map((h: any) => h.id || 0));
-    s.hearings.push({
-      id: maxId + 1,
+    const hearing = {
       caseNumber: args.caseNumber,
       date: args.date,
       time: args.time || "",
@@ -285,32 +300,45 @@ export async function executeLegalTool(name: string, args: any, store: any, _use
       hearingType: args.hearingType || "",
       notes: args.notes || "",
       outcome: "",
-    });
-    await s.save();
+    };
+    const updated = await Store.findOneAndUpdate(
+      { _id: storeId },
+      { $push: { hearings: hearing } },
+      { new: true, runValidators: true }
+    );
+    if (!updated) return { error: "Store not found" };
     return { success: true, message: `Audiencia creada para el expediente ${args.caseNumber} el ${args.date}` };
   }
 
   if (name === "update_hearing") {
-    const h = s.hearings.find((h: any) => String(h.id) === String(args.hearingId));
-    if (!h) return { error: `Audiencia con ID ${args.hearingId} no encontrada` };
-    if (args.date) h.date = args.date;
-    if (args.time) h.time = args.time;
-    if (args.notes !== undefined) h.notes = args.notes;
-    if (args.outcome) h.outcome = args.outcome;
-    await s.save();
+    const updateFields: Record<string, any> = {};
+    if (args.date) updateFields["hearings.$.date"] = args.date;
+    if (args.time) updateFields["hearings.$.time"] = args.time;
+    if (args.notes !== undefined) updateFields["hearings.$.notes"] = args.notes;
+    if (args.outcome) updateFields["hearings.$.outcome"] = args.outcome;
+    if (Object.keys(updateFields).length === 0) return { error: "No fields to update" };
+    const result = await Store.updateOne(
+      { _id: storeId, "hearings.id": Number(args.hearingId) },
+      { $set: updateFields }
+    );
+    if (result.matchedCount === 0) return { error: `Audiencia con ID ${args.hearingId} no encontrada` };
     return { success: true, message: `Audiencia actualizada` };
   }
 
   if (name === "delete_hearing") {
-    const idx = s.hearings.findIndex((h: any) => String(h.id) === String(args.hearingId));
-    if (idx === -1) return { error: `Audiencia con ID ${args.hearingId} no encontrada` };
-    s.hearings.splice(idx, 1);
-    await s.save();
+    const result = await Store.updateOne(
+      { _id: storeId },
+      { $pull: { hearings: { id: Number(args.hearingId) } as any } }
+    );
+    if (result.matchedCount === 0) return { error: "Store not found" };
+    if (result.modifiedCount === 0) return { error: `Audiencia con ID ${args.hearingId} no encontrada` };
     return { success: true, message: `Audiencia eliminada` };
   }
 
   if (name === "list_hearings") {
-    let hearings = s.hearings || [];
+    const s = await Store.findById(storeId).lean();
+    if (!s) return { error: "Store not found" };
+    let hearings = (s as any).hearings || [];
     if (args.caseNumber) hearings = hearings.filter((h: any) => h.caseNumber === args.caseNumber);
     if (args.date) hearings = hearings.filter((h: any) => h.date === args.date);
     hearings = hearings.slice(0, args.limit || 50);

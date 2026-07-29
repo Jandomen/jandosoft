@@ -69,7 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   };
 
-  const executeAction = async (action: { type: string; params: any }) => {
+  const executeAction = async (action: { type: string; params: Record<string, unknown> }) => {
     try {
       switch (action.type) {
         case "createCommercial":

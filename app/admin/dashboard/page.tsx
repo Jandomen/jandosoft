@@ -10,7 +10,6 @@ const SESS_DURATION = 7 * 24 * 60 * 60 * 1000;
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
-  const [currency, setCurrency] = useState("USD");
 
   useEffect(() => {
     const saved = localStorage.getItem(ADMIN_SESSION_KEY);
@@ -25,7 +24,7 @@ export default function AdminDashboardPage() {
         router.push("/admin");
         return;
       }
-      setAuthorized(true);
+      setAuthorized(true); // eslint-disable-line react-hooks/set-state-in-effect
     } catch {
       localStorage.removeItem(ADMIN_SESSION_KEY);
       router.push("/admin");
@@ -51,7 +50,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-white">
       <AdminView
-        currency={currency}
+        currency="USD"
         onLogout={handleLogout}
       />
     </div>

@@ -1,6 +1,4 @@
-const OPENAI_KEY = process.env.OPENAI_API_KEY;
-const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
-
+import OpenAI from "openai";
 import { AI_CONFIG, trimHistory, trimContextByTokens, shrinkContext, logMetrics } from "@/lib/ai/config";
 import { detectDomain, getDomainLabel, type Domain } from "@/lib/ai/router";
 import { aiCache, cachedStoreData, invalidateStoreCache } from "@/lib/ai/cache";
@@ -13,6 +11,10 @@ import { buildContext, type ContextRequest } from "@/lib/ai/context-builder";
 import { validateInput, detectPromptInjection } from "@/lib/ai/guardrails";
 import { getStoreTimezone, getDateComponents } from "@/lib/ai/time";
 import { type GoalManager } from "@/lib/ai/goal-manager";
+
+const OPENAI_KEY = process.env.OPENAI_API_KEY;
+const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
+const openaiClient = OPENAI_KEY ? new OpenAI({ apiKey: OPENAI_KEY }) : null;
 
 registerAllTools();
 registerWorkflowPlugins();
@@ -57,11 +59,9 @@ export async function callLLM(messages: any[], tools?: any[], maxTokens?: number
     }
 
     // 2) Platform OpenAI
-    if (OPENAI_KEY) {
-      const { default: OpenAI } = await import("openai");
-      const client = new OpenAI({ apiKey: OPENAI_KEY });
+    if (openaiClient) {
       const openaiModel = options.model.replace("openai/", "");
-      return await client.chat.completions.create({
+      return await openaiClient.chat.completions.create({
         ...options,
         model: openaiModel,
       });
@@ -95,7 +95,7 @@ export async function callLLM(messages: any[], tools?: any[], maxTokens?: number
   try {
     const result = await attempt();
     const duration = Date.now() - startTime;
-    const usage = result.usage || result?.usage;
+    const usage = result?.usage;
     const inputTokens = usage?.prompt_tokens || 0;
     const outputTokens = usage?.completion_tokens || 0;
     logMetrics(options.model, mt, inputTokens, outputTokens, duration);
@@ -127,7 +127,7 @@ export async function callLLM(messages: any[], tools?: any[], maxTokens?: number
         try {
           const result = await attempt();
           const duration = Date.now() - startTime;
-          const usage = result.usage || result?.usage;
+          const usage = result?.usage;
           const inputTokens = usage?.prompt_tokens || 0;
           const outputTokens = usage?.completion_tokens || 0;
           logMetrics(options.model, 256, inputTokens, outputTokens, duration);

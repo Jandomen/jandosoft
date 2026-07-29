@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
-    const query: any = {};
+    const query: Record<string, unknown> = {};
     if (status) {
       query.status = status;
     }
@@ -32,8 +32,9 @@ export async function GET(req: NextRequest) {
         pages: Math.ceil(total / limit),
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching commissions:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

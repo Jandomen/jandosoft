@@ -1,5 +1,6 @@
 import type { ToolDefinition } from "@/lib/ai/tools";
 import type { Domain } from "@/lib/ai/tools";
+import { DOMAIN_TOOLS } from "@/lib/ai/tools/domains";
 
 interface ModuleManifest {
   domain: Domain;
@@ -51,7 +52,6 @@ export function filterToolsByPlan(
 }
 
 function getDomainForTool(toolName: string): Domain | null {
-  const { DOMAIN_TOOLS } = require("./tools/domains") as typeof import("./tools/domains");
   for (const [domain, tools] of Object.entries(DOMAIN_TOOLS)) {
     if (tools.includes(toolName)) return domain as Domain;
   }

@@ -62,6 +62,7 @@ export class AICache {
 export const aiCache = new AICache();
 
 const CACHE_TTL = 30_000;
+const CACHE_SLICE_LIMIT = 500;
 
 export function cachedStoreData(store: any, storeId?: string): any {
   const sid = storeId || String(store._id || store.id);
@@ -87,14 +88,14 @@ export function cachedStoreData(store: any, storeId?: string): any {
     agentConfig: store.agentConfig || {},
     _stores: store._stores,
     _subscription: store._subscription,
-    products: (store.products || []).slice(0, 30),
-    customers: (store.customers || []).slice(0, 30),
-    orders: (store.orders || []).slice(0, 30),
-    services: (store.services || []).slice(0, 30),
-    knowledgebase: (store.knowledgebase || []).slice(0, 30),
-    automations: (store.automations || []).slice(0, 30),
-    campaigns: (store.campaigns || []).slice(0, 30),
-    smartForms: (store.smartForms || []).slice(0, 30),
+    products: (store.products || []).slice(0, CACHE_SLICE_LIMIT),
+    customers: (store.customers || []).slice(0, CACHE_SLICE_LIMIT),
+    orders: (store.orders || []).slice(0, CACHE_SLICE_LIMIT),
+    services: (store.services || []).slice(0, CACHE_SLICE_LIMIT),
+    knowledgebase: (store.knowledgebase || []).slice(0, CACHE_SLICE_LIMIT),
+    automations: (store.automations || []).slice(0, CACHE_SLICE_LIMIT),
+    campaigns: (store.campaigns || []).slice(0, CACHE_SLICE_LIMIT),
+    smartForms: (store.smartForms || []).slice(0, CACHE_SLICE_LIMIT),
   };
 
   aiCache.set("store", sid, sid, data, CACHE_TTL);
