@@ -795,7 +795,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       <div className="w-8 h-8 md:w-10 md:h-10 bg-red-100 rounded-xl flex items-center justify-center shrink-0"><TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-red-600" /></div>
                       <div>
                         <p className="text-[11px] md:text-sm font-black italic text-zinc-950">Tu plan <span className="text-red-600">{getPlanName(subscription)}</span> expiró</p>
-                        <p className="text-[8px] md:text-[10px] font-bold text-zinc-400 italic">Reactiva para desbloquear todas las funciones</p>
+                        <p className="text-[8px] md:text-[10px] font-bold text-zinc-600 italic">Reactiva para desbloquear todas las funciones</p>
                       </div>
                     </div>
                     <motion.button whileTap={{ scale: 0.95 }} onClick={onNavigateToPricing} className="px-3 md:px-6 py-2 md:py-3 bg-red-600 text-white rounded-xl font-black text-[8px] md:text-[10px] italic hover:bg-red-700 transition-all shadow-lg whitespace-nowrap shrink-0">
@@ -809,7 +809,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       <div className="w-8 h-8 md:w-10 md:h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0"><TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-amber-600" /></div>
                       <div>
                         <p className="text-[11px] md:text-sm font-black italic text-zinc-950">Estás en el plan <span className="text-amber-600">Gratis</span></p>
-                        <p className="text-[8px] md:text-[10px] font-bold text-zinc-400 italic">Desbloquea analytics, clientes, campañas y más</p>
+                        <p className="text-[8px] md:text-[10px] font-bold text-zinc-600 italic">Desbloquea analytics, clientes, campañas y más</p>
                       </div>
                     </div>
                     <motion.button whileTap={{ scale: 0.95 }} onClick={onNavigateToPricing} className="px-3 md:px-6 py-2 md:py-3 bg-red-600 text-white rounded-xl font-black text-[8px] md:text-[10px] italic hover:bg-red-700 transition-all shadow-lg whitespace-nowrap shrink-0">
@@ -3185,7 +3185,7 @@ function FreePlanBlock({ feature, plan, price, onUpgrade, expired }: { feature: 
         {expired ? (
           <>
             <h3 className="text-xl md:text-2xl font-black italic text-zinc-950">Tu plan <span className="text-red-600">{plan}</span> expiró</h3>
-            <p className="text-sm text-zinc-400 font-bold italic">Reactiva para seguir usando <span className="text-red-600">{feature}</span></p>
+            <p className="text-sm text-zinc-600 font-bold italic">Reactiva para seguir usando <span className="text-red-600">{feature}</span></p>
           </>
         ) : (
           <>
