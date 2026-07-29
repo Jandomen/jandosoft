@@ -1684,9 +1684,31 @@ LÍMITES ÉTICOS:
                 botContent += `\n\n—\n*${actionResult}*`;
               }
               onPersist?.(newProducts, newCustomers, newOrders, newKbEntries, newAutomations, newCampaigns, undefined, newServices);
+              actionsParsed = true;
             }
           } catch (e) {
-            // Raw JSON parse also failed — show as-is
+            // Raw JSON parse also failed — try standalone action JSON below
+          }
+        }
+      }
+
+      if (!actionsParsed) {
+        const singleMatch = botContent.match(/\{"type"\s*:\s*"[^"]+"\s*,[^}]*\}/);
+        if (singleMatch) {
+          try {
+            const singleParsed = JSON.parse(singleMatch[0].trim());
+            if (singleParsed.type) {
+              const actions = [singleParsed];
+              setMessages(prev => [...prev, { role: "action", content: `⚡ Ejecutando: ${singleParsed.type}...`, timestamp: Date.now() }]);
+              const { result: actionResult } = await executeActions(actions);
+              setMessages(prev => prev.filter(m => !(m.role === "action" && m.content?.startsWith("⚡ Ejecutando"))));
+              botContent = botContent.replace(singleMatch[0], "").trim();
+              if (actionResult) {
+                botContent += `\n\n—\n*${actionResult}*`;
+              }
+            }
+          } catch (e) {
+            // Single JSON parse failed — show as-is
           }
         }
       }
