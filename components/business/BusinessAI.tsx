@@ -1693,7 +1693,7 @@ LÍMITES ÉTICOS:
       }
 
       if (!actionsParsed) {
-        const singleMatch = botContent.match(/\{"type"\s*:\s*"[^"]+"\s*,[^}]*\}/);
+        const singleMatch = botContent.match(/\{"type"\s*:\s*"[^"]+"(?:\s*,[^}]*)?\s*\}/);
         if (singleMatch) {
           try {
             const singleParsed = JSON.parse(singleMatch[0].trim());
@@ -1706,9 +1706,30 @@ LÍMITES ÉTICOS:
               if (actionResult) {
                 botContent += `\n\n—\n*${actionResult}*`;
               }
+              actionsParsed = true;
             }
           } catch (e) {
             // Single JSON parse failed — show as-is
+          }
+        }
+      }
+
+      if (!actionsParsed) {
+        const lastMatch = botContent.match(/\{"type"\s*:\s*"[^"]+"[^}]*\}/);
+        if (lastMatch) {
+          try {
+            const parsed = JSON.parse(lastMatch[0].trim());
+            if (parsed.type) {
+              setMessages(prev => [...prev, { role: "action", content: `⚡ Ejecutando: ${parsed.type}...`, timestamp: Date.now() }]);
+              const { result: actionResult } = await executeActions([parsed]);
+              setMessages(prev => prev.filter(m => !(m.role === "action" && m.content?.startsWith("⚡ Ejecutando"))));
+              botContent = botContent.replace(lastMatch[0], "").trim();
+              if (actionResult) {
+                botContent += `\n\n—\n*${actionResult}*`;
+              }
+            }
+          } catch {
+            botContent = botContent.replace(/\{"type"\s*:\s*"[^"]+"[^}]*\}/g, "").trim();
           }
         }
       }
