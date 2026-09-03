@@ -69,6 +69,10 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
   };
 
   const runNow = async () => {
+    if (!cfg.enabled || !cfg.location.trim()) {
+      showToast("Guarda primero: activa Prospecting y pon ubicación (ej: Madrid, España)", "error");
+      return;
+    }
     setRunning(true);
     try {
       const res = await fetch(`/api/stores/${storeId}/prospecting`, { method: "POST" });

@@ -7,9 +7,16 @@ let socket: Socket | null = null;
 
 function getSocket(): Socket {
   if (!socket) {
+    const isVercel = typeof window !== "undefined" && window.location.hostname.includes("vercel.app");
     socket = io(typeof window !== "undefined" ? window.location.origin : "", {
       path: "/api/socketio",
-      transports: ["websocket", "polling"],
+      transports: isVercel ? ["polling"] : ["websocket", "polling"],
+      reconnectionAttempts: isVercel ? 1 : 5,
+      timeout: 5000,
+    });
+    // Silencia error de WebSocket en Vercel (usa SSE como fallback en BusinessDashboard)
+    socket.on("connect_error", () => {
+      // No spamear consola en prod
     });
   }
   return socket;

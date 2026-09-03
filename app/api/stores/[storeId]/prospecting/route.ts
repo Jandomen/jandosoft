@@ -114,7 +114,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ sto
     const store = await Store.findOne({ _id: storeId, organizationId: auth.organizationId }).lean() as any;
     if (!store) return NextResponse.json({ error: "Store not found" }, { status: 404 });
     const cfg = store.prospectingConfig;
-    if (!cfg?.enabled) return NextResponse.json({ error: "Prospecting no está habilitado" }, { status: 400 });
+    if (!cfg?.enabled) return NextResponse.json({ error: "Prospecting no está habilitado — guarda primero con location y Activo en ON" }, { status: 400 });
+    if (!cfg?.location) return NextResponse.json({ error: "Falta location — configúralo y guarda antes de Ejecutar ahora" }, { status: 400 });
 
     const task = await ScheduledTask.create({
       type: "prospecting",
