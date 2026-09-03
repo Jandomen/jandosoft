@@ -112,7 +112,25 @@ export async function POST(req: NextRequest) {
       notes: notes || "",
       status: "pending",
       createdBy: "customer",
-    });
+      settingStage: "appointment_set",
+      source: "website",
+    } as any);
+
+    // Schedule reminders + no-show rescue
+    try {
+      const { ScheduledTask } = await import("@/lib/models/ScheduledTask");
+      const aptDate = new Date(`${date}T${time}:00`);
+      if (!isNaN(aptDate.getTime())) {
+        const t24 = new Date(aptDate.getTime() - 24 * 60 * 60 * 1000);
+        const t1 = new Date(aptDate.getTime() - 60 * 60 * 1000);
+        const noshow = new Date(aptDate.getTime() + 30 * 60 * 1000);
+        if (t24 > new Date()) await ScheduledTask.create({ type: "appointment_reminder", payload: { appointmentId: String(appointment._id) }, runAt: t24, status: "pending", storeId });
+        if (t1 > new Date()) await ScheduledTask.create({ type: "appointment_reminder", payload: { appointmentId: String(appointment._id) }, runAt: t1, status: "pending", storeId });
+        await ScheduledTask.create({ type: "prospect_noshow", payload: { appointmentId: String(appointment._id), storeId }, runAt: noshow, status: "pending", storeId });
+      }
+      // Mark customer as prospect -> customer
+      if (customerId) await Customer.updateOne({ _id: customerId }, { $set: { status: "customer" } });
+    } catch {}
 
     const ownerId = String((store as any).ownerId || (store as any).userId);
     if (ownerId) {

@@ -382,6 +382,18 @@ export interface IStore extends Document {
     minHoursBetweenCampaigns: number;
     autoExcludeInvalidPhones: boolean;
   };
+  prospectingConfig?: {
+    enabled: boolean;
+    location: string;
+    category: string;
+    customKeyword: string;
+    radius: number;
+    maxResults: number;
+    intervalHours: number;
+    autoOutreach: boolean;
+    outreachChannel: "email" | "whatsapp" | "sms";
+    lastRunAt?: string;
+  };
 }
 
 export interface IWorkflowStep {
@@ -942,6 +954,21 @@ const StoreSchema = new Schema<IStore>({
       enableBatching: { type: Boolean, default: true },
       minHoursBetweenCampaigns: { type: Number, default: 6 },
       autoExcludeInvalidPhones: { type: Boolean, default: true },
+    },
+    default: null,
+  },
+  prospectingConfig: {
+    type: {
+      enabled: { type: Boolean, default: false },
+      location: { type: String, default: "" },
+      category: { type: String, default: "store" },
+      customKeyword: { type: String, default: "" },
+      radius: { type: Number, default: 2000 },
+      maxResults: { type: Number, default: 10 },
+      intervalHours: { type: Number, default: 24 },
+      autoOutreach: { type: Boolean, default: true },
+      outreachChannel: { type: String, enum: ["email", "whatsapp", "sms"], default: "email" },
+      lastRunAt: { type: String, default: null },
     },
     default: null,
   },

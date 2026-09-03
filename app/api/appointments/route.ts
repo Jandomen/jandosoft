@@ -135,7 +135,23 @@ export async function POST(req: NextRequest) {
       notes: notes || "",
       status: status || "pending",
       createdBy: "owner",
-    });
+      settingStage: "appointment_set",
+      source: "manual",
+    } as any);
+
+    // Schedule reminders T-24h and T-1h + auto no-show rescue
+    try {
+      const { ScheduledTask } = await import("@/lib/models/ScheduledTask");
+      const aptDate = new Date(`${date}T${time}:00`);
+      if (!isNaN(aptDate.getTime())) {
+        const t24 = new Date(aptDate.getTime() - 24 * 60 * 60 * 1000);
+        const t1 = new Date(aptDate.getTime() - 60 * 60 * 1000);
+        const noshow = new Date(aptDate.getTime() + 30 * 60 * 1000);
+        if (t24 > new Date()) await ScheduledTask.create({ type: "appointment_reminder", payload: { appointmentId: String(appointment._id) }, runAt: t24, status: "pending", storeId: storeId || undefined });
+        if (t1 > new Date()) await ScheduledTask.create({ type: "appointment_reminder", payload: { appointmentId: String(appointment._id) }, runAt: t1, status: "pending", storeId: storeId || undefined });
+        await ScheduledTask.create({ type: "prospect_noshow", payload: { appointmentId: String(appointment._id), storeId: storeId || undefined }, runAt: noshow, status: "pending", storeId: storeId || undefined });
+      }
+    } catch {}
 
     if (storeId) {
       try {

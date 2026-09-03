@@ -22,11 +22,17 @@ export interface IAppointment extends Document {
   duration: number;
   notes: string;
   status: AppointmentStatus;
-  createdBy: "customer" | "owner";
+  createdBy: "customer" | "owner" | "ai";
   paymentStatus: "unpaid" | "pending" | "paid" | "refunded";
   stripePaymentUrl?: string;
   stripePaymentIntentId?: string;
   reminders: { type: "email"; sentAt: Date }[];
+  // Appointment Setting
+  settingStage?: "new" | "contacted" | "qualified" | "appointment_set" | "showed" | "no_show" | "closed";
+  assignedStaffId?: string;
+  source?: string;
+  showUpAt?: Date;
+  noShowReason?: string;
   createdAt: Date;
 }
 
@@ -54,7 +60,7 @@ const AppointmentSchema = new Schema<IAppointment>({
     enum: ["pending", "confirmed", "in_progress", "completed", "cancelled"],
     default: "pending",
   },
-  createdBy: { type: String, enum: ["customer", "owner"], default: "owner" },
+  createdBy: { type: String, enum: ["customer", "owner", "ai"], default: "owner" },
   paymentStatus: { type: String, enum: ["unpaid", "pending", "paid", "refunded"], default: "unpaid" },
   stripePaymentUrl: { type: String, default: "" },
   stripePaymentIntentId: { type: String, default: "" },
@@ -62,6 +68,11 @@ const AppointmentSchema = new Schema<IAppointment>({
     type: { type: String, enum: ["email"] },
     sentAt: { type: Date },
   }],
+  settingStage: { type: String, enum: ["new", "contacted", "qualified", "appointment_set", "showed", "no_show", "closed"], default: "new", index: true },
+  assignedStaffId: { type: String, default: "" },
+  source: { type: String, default: "manual" },
+  showUpAt: { type: Date, default: null },
+  noShowReason: { type: String, default: "" },
 }, { timestamps: true });
 
 AppointmentSchema.index({ storeId: 1, date: 1, time: 1 });

@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export type TaskType = "email" | "sms" | "ai" | "reminder" | "campaign" | "store_notification" | "appointment_reminder" | "email_campaign" | "ai_followup";
+export type TaskType = "email" | "sms" | "ai" | "reminder" | "campaign" | "store_notification" | "appointment_reminder" | "email_campaign" | "ai_followup" | "prospecting" | "prospect_outreach" | "prospect_followup" | "prospect_noshow";
 export type TaskStatus = "pending" | "processing" | "done" | "failed";
 
 export interface IScheduledTask extends Document {
@@ -21,7 +21,7 @@ export interface IScheduledTask extends Document {
 const ScheduledTaskSchema = new Schema<IScheduledTask>({
   type: {
     type: String,
-    enum: ["email", "sms", "ai", "reminder", "campaign", "store_notification", "appointment_reminder", "email_campaign", "ai_followup"],
+    enum: ["email", "sms", "ai", "reminder", "campaign", "store_notification", "appointment_reminder", "email_campaign", "ai_followup", "prospecting", "prospect_outreach", "prospect_followup", "prospect_noshow"],
     required: true,
     index: true,
   },
