@@ -783,13 +783,11 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                       badge={isFreePlan && gatedKeys.includes(mod.sectionKey) ? "PRO" : undefined}
                     />
                   ))}
+                  {group.groupId === "automation" && (
+                    <SideBtn icon={<Zap className="w-4 h-4" />} label="Prospecting" active={section === "prospecting"} onClick={() => handleSectionChange("prospecting")} badge={isFreePlan ? "PRO" : undefined} />
+                  )}
                 </div>
               ))}
-              {/* Prospecting autónomo */}
-              <div className="space-y-1">
-                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 italic">AUTOMATIZACIÓN</h3>
-                <SideBtn icon={<Zap className="w-4 h-4" />} label="Prospecting" active={section === "prospecting"} onClick={() => handleSectionChange("prospecting")} badge={isFreePlan ? "PRO" : undefined} />
-              </div>
               {isFreePlan && (
                 <motion.button whileTap={{ scale: 0.95 }} onClick={onNavigateToPricing} className="mt-auto p-4 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-2xl text-center space-y-2 hover:from-red-600 hover:to-red-700 transition-all shadow-lg shadow-red-200">
                   <TrendingUp className="w-5 h-5 mx-auto" />
