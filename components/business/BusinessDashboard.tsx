@@ -61,6 +61,7 @@ import QueuePanel from "@/components/barbershop/QueuePanel";
 import BarberHistoryPanel from "@/components/barbershop/BarberHistoryPanel";
 
 import ChatAppearancePanel from "./ChatAppearancePanel";
+import ProspectingPanel from "./ProspectingPanel";
 
 
 interface BusinessDashboardProps {
@@ -125,6 +126,7 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
     messages:         { requiredPlan: "El Gallito", message: "La mensajería inteligente está disponible desde el plan El Gallito ($299 MXN/mes)" },
     widget:           { requiredPlan: "El Gallito", message: "La configuración del widget está disponible desde el plan El Gallito ($299 MXN/mes)" },
     appointments:     { requiredPlan: "El Gallito", message: "Las citas están disponibles desde el plan El Gallito ($299 MXN/mes)" },
+    prospecting:      { requiredPlan: "El Gallito", message: "Prospecting autónomo está disponible desde el plan El Gallito ($299 MXN/mes)" },
     team:             { requiredPlan: "El Jefe", message: "El equipo está disponible desde el plan El Jefe ($599 MXN/mes)" },
     smartforms:       { requiredPlan: "El Jefe", message: "Los formularios inteligentes están disponibles desde el plan El Jefe ($599 MXN/mes)" },
   };
@@ -756,6 +758,12 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                 )}
               </motion.button>
             ))}
+            {/* Prospecting — extra potente */}
+            <motion.button whileTap={{ scale: 0.92 }} onClick={() => handleSectionChange("prospecting")}
+              className={cn("flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[10px] font-black italic transition-all whitespace-nowrap", section === "prospecting" ? "bg-violet-600 text-white shadow-md" : "bg-zinc-50 text-zinc-500 hover:bg-zinc-100")}>
+              <Zap className="w-4 h-4 shrink-0" /> Prospecting
+              {isFreePlan && <span className="text-[7px] bg-amber-100 text-amber-600 px-1 py-0.5 rounded-full font-black">PRO</span>}
+            </motion.button>
           </div>
         </div>
 
@@ -777,6 +785,11 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
                   ))}
                 </div>
               ))}
+              {/* Prospecting autónomo */}
+              <div className="space-y-1">
+                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3 italic">AUTOMATIZACIÓN</h3>
+                <SideBtn icon={<Zap className="w-4 h-4" />} label="Prospecting" active={section === "prospecting"} onClick={() => handleSectionChange("prospecting")} badge={isFreePlan ? "PRO" : undefined} />
+              </div>
               {isFreePlan && (
                 <motion.button whileTap={{ scale: 0.95 }} onClick={onNavigateToPricing} className="mt-auto p-4 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-2xl text-center space-y-2 hover:from-red-600 hover:to-red-700 transition-all shadow-lg shadow-red-200">
                   <TrendingUp className="w-5 h-5 mx-auto" />
@@ -1394,6 +1407,14 @@ export default function BusinessDashboard({ userStore, userEmail, storeId, planL
 
             {section === "appointments" && (
               <AppointmentsPanel storeId={String(storeId)} />
+            )}
+
+            {section === "prospecting" && (
+              isFreePlan ? (
+                <FreePlanBlock feature="Prospecting autónomo" plan="El Gallito" price={29} onUpgrade={onNavigateToPricing} expired={isExpiredPaid} />
+              ) : (
+                <ProspectingPanel storeId={String(storeId)} />
+              )
             )}
 
             {section === "invoices" && (
