@@ -44,7 +44,7 @@ export function useAdminSocket(onEvent: (event: string, data: any) => void) {
     const handler = (event: string, data: any) => onEventRef.current(event, data);
 
     const events = ["affiliate-updated", "commission-created", "payout-completed", "affiliate-created"];
-    events.forEach((e) => s.on(e, (data) => handler(e, data)));
+    events.forEach((e) => s.on(e, (data: any) => handler(e, data)));
 
     return () => events.forEach((e) => s.off(e));
   }, []);
@@ -71,7 +71,7 @@ export function useStoreSocket(storeId: string | null, onEvent: (event: string, 
       "new-whatsapp-message",
       "whatsapp-conversation-updated",
     ];
-    events.forEach((e) => s.on(e, (data) => handler(e, data)));
+    events.forEach((e) => s.on(e, (data: any) => handler(e, data)));
 
     return () => {
       events.forEach((e) => s.off(e));
@@ -93,7 +93,7 @@ export function useUserSocket(identifier: string | null, onEvent: (event: string
     const handler = (event: string, data: any) => onEventRef.current(event, data);
 
     const events = ["unread-update", "user-updated", "new-message"];
-    events.forEach((e) => s.on(e, (data) => handler(e, data)));
+    events.forEach((e) => s.on(e, (data: any) => handler(e, data)));
 
     return () => events.forEach((e) => s.off(e));
   }, [identifier]);
