@@ -61,8 +61,9 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
         fetch(`/api/appointments?storeId=${storeId}&limit=50`).then(r => r.json()).catch(() => ({ appointments: [] })),
       ]);
       const prospectTasks = (tasksRes.tasks || []).filter((t: any) => t.type?.startsWith("prospect") || t.payload?.storeId === storeId);
-      const prospectCustomers = (custRes.customers || []).filter((c: any) => (c.tags || []).includes("prospecting") || c.source === "ai");
-      setProgress({ tasks: prospectTasks.slice(0, 8), customers: prospectCustomers.length, appointments: (apptRes.appointments || []).length, allTasks: tasksRes.tasks || [] });
+      const allCustomers = custRes.customers || [];
+      const prospectCustomers = allCustomers.filter((c: any) => (c.tags || []).includes("prospecting") || c.source === "ai");
+      setProgress({ tasks: prospectTasks.slice(0, 8), customers: prospectCustomers.length, customersList: prospectCustomers.slice(0, 10), allCustomers, appointments: (apptRes.appointments || []).length, allTasks: tasksRes.tasks || [] });
     } catch {} finally { setProgressLoading(false); }
   };
 
@@ -234,8 +235,40 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
             <p className="text-lg font-black italic text-emerald-700">{progress.appointments}</p>
           </div>
         </div>
+        {/* Prospectos encontrados */}
+        {progress.customersList?.length > 0 && (
+          <div className="space-y-2">
+            <h5 className="text-[10px] font-black text-zinc-500 uppercase italic">Últimos negocios encontrados ({progress.customersList.length})</h5>
+            <div className="space-y-1.5">
+              {progress.customersList.map((c: any) => (
+                <motion.div key={c._id} whileTap={{ scale: 0.98 }} onClick={async () => {
+                  const fakeTask: any = { _id: c._id, type: "customer", status: c.status, runAt: c.createdAt, payload: { customerId: c._id, channel: "email" } };
+                  setSelectedTask(fakeTask);
+                  setSelectedCustomer(c);
+                  try {
+                    const [cr, ar] = await Promise.all([
+                      fetch(`/api/communications?storeId=${storeId}&customerId=${c._id}`).then(x => x.json()).catch(() => ({ communications: [] })),
+                      fetch(`/api/appointments?storeId=${storeId}&customerId=${c._id}`).then(x => x.json()).catch(() => ({ appointments: [] })),
+                    ]);
+                    setSelectedComms(cr.communications || cr.data || []);
+                    setSelectedAppts(ar.appointments || []);
+                  } catch {}
+                }} className="p-3 bg-white rounded-xl border border-zinc-200 cursor-pointer hover:border-violet-300 transition-all">
+                  <p className="text-[12px] font-black text-zinc-900">{c.name}</p>
+                  <p className="text-[11px] text-zinc-600 flex items-center gap-1"><MapPin className="w-3 h-3" /> {c.address || "Sin dirección"} {c.industry ? `• ${c.industry}` : ""}</p>
+                  <div className="flex gap-3 mt-1 flex-wrap text-[11px]">
+                    {c.email ? <span className="flex items-center gap-1 text-blue-600"><Mail className="w-3 h-3" /> {c.email}</span> : <span className="text-zinc-400">Sin email</span>}
+                    {c.phone ? <span className="flex items-center gap-1 text-emerald-600"><Phone className="w-3 h-3" /> {c.phone}</span> : <span className="text-zinc-400">Sin teléfono</span>}
+                  </div>
+                  {c.notes && <p className="text-[10px] text-zinc-400 mt-1 line-clamp-2">{c.notes.slice(0, 120)}</p>}
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
         {progress.tasks?.length > 0 ? (
           <div className="space-y-1.5">
+            <p className="text-[10px] font-black text-zinc-500 uppercase italic">Historial de tareas</p>
             {progress.tasks.map((t: any) => (
               <motion.div key={t._id} whileTap={{ scale: 0.98 }} onClick={async () => {
                 setSelectedTask(t);
@@ -259,7 +292,7 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
                     {t.status === "done" ? <CheckCircle2 className="w-3.5 h-3.5" /> : t.status === "failed" ? <XCircle className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
                   </span>
                   <div>
-                    <p className="text-[11px] font-black italic text-zinc-700">{t.type} {t.payload?.channel ? `• ${t.payload.channel}` : ""} {t.payload?.customerId ? "• click para ver qué se envió" : ""}</p>
+                    <p className="text-[11px] font-black italic text-zinc-700">{t.type === "prospecting" ? "Búsqueda" : t.type === "prospect_outreach" ? "Contacto" : t.type} {t.payload?.channel ? `• ${t.payload.channel}` : ""} {t.payload?.customerId ? "• ver mensaje" : t.payload?.location ? `• ${t.payload.location}` : ""}</p>
                     <p className="text-[10px] text-zinc-400">{new Date(t.runAt).toLocaleString()} • {t.status}{t.error ? ` • ${t.error.slice(0, 40)}` : ""}</p>
                   </div>
                 </div>
@@ -281,10 +314,28 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
               <div className="text-[11px] space-y-2">
                 <p className="text-zinc-500">RunAt: {new Date(selectedTask.runAt).toLocaleString()} • Intentos {selectedTask.attempts}/{selectedTask.maxAttempts}</p>
                 {selectedTask.error && <p className="text-red-600 bg-red-50 p-2 rounded-xl">{selectedTask.error}</p>}
-                <div>
-                  <p className="font-black text-zinc-700">Payload:</p>
-                  <pre className="bg-zinc-50 p-3 rounded-xl text-[10px] overflow-x-auto border border-zinc-100">{JSON.stringify(selectedTask.payload, null, 2)}</pre>
-                </div>
+                {selectedTask.type === "customer" ? (
+                  <div className="bg-white border border-zinc-100 p-3 rounded-xl space-y-1">
+                    <p className="font-black text-zinc-700">Negocio:</p>
+                    <p className="text-zinc-700"><b>{selectedCustomer?.name}</b> • {selectedCustomer?.status}</p>
+                    <p className="text-zinc-600"><MapPin className="w-3 h-3 inline" /> {selectedCustomer?.address || "Sin dirección"}</p>
+                    <p className="text-zinc-600"><Mail className="w-3 h-3 inline" /> {selectedCustomer?.email || "Sin email"} • <Phone className="w-3 h-3 inline" /> {selectedCustomer?.phone || "Sin teléfono"}</p>
+                    {selectedCustomer?.notes && <p className="text-zinc-500 text-[11px]">{selectedCustomer.notes}</p>}
+                  </div>
+                ) : selectedTask.type === "prospecting" ? (
+                  <div className="bg-white border border-zinc-100 p-3 rounded-xl space-y-1 text-zinc-700">
+                    <p className="font-black">Búsqueda realizada:</p>
+                    <p>📍 Ubicación: <b>{selectedTask.payload.location}</b></p>
+                    <p>🏷️ Categoría: <b>{selectedTask.payload.category}</b> {selectedTask.payload.customKeyword ? `(${selectedTask.payload.customKeyword})` : ""}</p>
+                    <p>📏 Radio: <b>{selectedTask.payload.radius} m</b> • Máx: <b>{selectedTask.payload.maxResults} negocios</b></p>
+                  </div>
+                ) : (
+                  <div className="bg-zinc-50 p-3 rounded-xl border border-zinc-100 space-y-1 text-zinc-700">
+                    <p className="font-black">Contacto:</p>
+                    <p>Canal: <b>{selectedTask.payload.channel}</b> • Cliente: <b>{selectedTask.payload.customerId?.slice(-6)}</b></p>
+                    <p>Run: {new Date(selectedTask.runAt).toLocaleString()}</p>
+                  </div>
+                )}
                 {selectedTask.payload?.customerId && (
                   <div className="bg-violet-50 border border-violet-100 p-3 rounded-xl space-y-2">
                     <p className="font-black text-violet-700">Qué se envió:</p>
