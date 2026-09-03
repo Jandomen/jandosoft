@@ -38,6 +38,8 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
 
   const [progress, setProgress] = useState<any>({ tasks: [], customers: 0, appointments: 0 });
   const [progressLoading, setProgressLoading] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
 
   const load = async () => {
     try {
@@ -64,8 +66,9 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
 
   useEffect(() => { load(); loadProgress(); }, [storeId]);
 
-  const save = async () => {
-    if (cfg.enabled && !cfg.location.trim()) {
+  const save = async (overrideCfg?: any) => {
+    const toSave = overrideCfg || cfg;
+    if (toSave.enabled && !toSave.location.trim()) {
       showToast("Location es requerido", "error");
       return;
     }
@@ -74,15 +77,23 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
       const res = await fetch(`/api/stores/${storeId}/prospecting`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cfg),
+        body: JSON.stringify(toSave),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setCfg(data.prospectingConfig);
       showToast(data.message || "Guardado", "success");
+      loadProgress();
     } catch (e: any) {
       showToast(e.message || "Error", "error");
     } finally { setSaving(false); }
+  };
+
+  const stop = async () => {
+    const off = { ...cfg, enabled: false };
+    setCfg(off);
+    await save(off);
+    showToast("Prospecting detenido — tareas pendientes canceladas", "success");
   };
 
   const runNow = async () => {
@@ -186,13 +197,17 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
         </div>
 
         <div className="flex gap-2 pt-2">
-          <motion.button whileTap={{ scale: 0.95 }} onClick={save} disabled={saving} className="flex-1 flex items-center justify-center gap-2 py-3 bg-violet-600 text-white rounded-xl text-xs font-black italic hover:bg-violet-700 disabled:opacity-50">
+          <motion.button whileTap={{ scale: 0.95 }} onClick={() => save()} disabled={saving} className="flex-1 flex items-center justify-center gap-2 py-3 bg-violet-600 text-white rounded-xl text-xs font-black italic hover:bg-violet-700 disabled:opacity-50">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Settings className="w-4 h-4" />} Guardar
           </motion.button>
           <motion.button whileTap={{ scale: 0.95 }} onClick={runNow} disabled={running || !cfg.enabled} className="flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white rounded-xl text-xs font-black italic hover:bg-zinc-800 disabled:opacity-50">
-            {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Ejecutar ahora
+            {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Ejecutar
+          </motion.button>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={stop} disabled={saving || !cfg.enabled} className="flex items-center gap-2 px-5 py-3 bg-red-50 text-red-600 border border-red-200 rounded-xl text-xs font-black italic hover:bg-red-100 disabled:opacity-30">
+            <XCircle className="w-4 h-4" /> Detener
           </motion.button>
         </div>
+        {cfg.enabled && <p className="text-[11px] text-violet-600 font-medium italic text-center">✓ Automático: no necesitas dar Ejecutar a cada rato. Con Activo ON corre solo cada {cfg.intervalHours}h (batch de {cfg.maxResults}) vía scheduler cada 5 min. Detener lo pausa y cancela pendientes.</p>}
       </div>
 
       {/* Progress */}
@@ -220,21 +235,65 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
         {progress.tasks?.length > 0 ? (
           <div className="space-y-1.5">
             {progress.tasks.map((t: any) => (
-              <div key={t._id} className="flex items-center justify-between p-2.5 bg-zinc-50 rounded-xl border border-zinc-100">
+              <motion.div key={t._id} whileTap={{ scale: 0.98 }} onClick={async () => {
+                setSelectedTask(t);
+                if (t.payload?.customerId) {
+                  try {
+                    const r = await fetch(`/api/customers?storeId=${storeId}`);
+                    const d = await r.json();
+                    const c = (d.customers || []).find((x: any) => String(x._id) === String(t.payload.customerId));
+                    setSelectedCustomer(c || null);
+                  } catch { setSelectedCustomer(null); }
+                } else setSelectedCustomer(null);
+              }} className="flex items-center justify-between p-2.5 bg-zinc-50 rounded-xl border border-zinc-100 cursor-pointer hover:border-violet-300 hover:bg-violet-50/50 transition-all">
                 <div className="flex items-center gap-2">
                   <span className={`p-1.5 rounded-lg text-[10px] ${t.status === "done" ? "bg-emerald-100 text-emerald-600" : t.status === "failed" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"}`}>
                     {t.status === "done" ? <CheckCircle2 className="w-3.5 h-3.5" /> : t.status === "failed" ? <XCircle className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
                   </span>
                   <div>
-                    <p className="text-[11px] font-black italic text-zinc-700">{t.type}</p>
+                    <p className="text-[11px] font-black italic text-zinc-700">{t.type} {t.payload?.channel ? `• ${t.payload.channel}` : ""} {t.payload?.customerId ? "• click para ver qué se envió" : ""}</p>
                     <p className="text-[10px] text-zinc-400">{new Date(t.runAt).toLocaleString()} • {t.status}{t.error ? ` • ${t.error.slice(0, 40)}` : ""}</p>
                   </div>
                 </div>
-              </div>
+                <Search className="w-3 h-3 text-zinc-400" />
+              </motion.div>
             ))}
           </div>
         ) : (
           <p className="text-[11px] text-zinc-400 italic text-center py-4">Sin tareas prospecting aún — guarda y ejecuta</p>
+        )}
+        {/* Detail modal */}
+        {selectedTask && (
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedTask(null)}>
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-black italic text-zinc-950">{selectedTask.type} • {selectedTask.status}</h4>
+                <button onClick={() => setSelectedTask(null)} className="p-1.5 hover:bg-zinc-100 rounded-xl"><XCircle className="w-4 h-4 text-zinc-400" /></button>
+              </div>
+              <div className="text-[11px] space-y-2">
+                <p className="text-zinc-500">RunAt: {new Date(selectedTask.runAt).toLocaleString()} • Intentos {selectedTask.attempts}/{selectedTask.maxAttempts}</p>
+                {selectedTask.error && <p className="text-red-600 bg-red-50 p-2 rounded-xl">{selectedTask.error}</p>}
+                <div>
+                  <p className="font-black text-zinc-700">Payload:</p>
+                  <pre className="bg-zinc-50 p-3 rounded-xl text-[10px] overflow-x-auto border border-zinc-100">{JSON.stringify(selectedTask.payload, null, 2)}</pre>
+                </div>
+                {selectedTask.payload?.customerId && (
+                  <div className="bg-violet-50 border border-violet-100 p-3 rounded-xl space-y-1">
+                    <p className="font-black text-violet-700">Qué se envió:</p>
+                    {selectedCustomer ? (
+                      <>
+                        <p className="text-violet-700"><b>Cliente:</b> {selectedCustomer.name} {selectedCustomer.email ? `• ${selectedCustomer.email}` : ""} {selectedCustomer.phone ? `• ${selectedCustomer.phone}` : ""}</p>
+                        <p className="text-violet-700"><b>Canal:</b> {selectedTask.payload.channel || "email"}</p>
+                        <p className="text-zinc-600 italic">Mensaje template: &quot;Hola {selectedCustomer.name}, soy {'{Store.name}'}... Reserva: /s/{"{slug}"}/reservar&quot; — ver `Communication` si canal whatsapp/sms, o `EmailLog` si email.</p>
+                      </>
+                    ) : <p className="text-zinc-500">Cliente {selectedTask.payload.customerId} — ver en Clientes</p>}
+                  </div>
+                )}
+                {selectedTask.type === "prospecting" && <p className="text-zinc-500">Buscó: {selectedTask.payload.location} • {selectedTask.payload.category} {selectedTask.payload.customKeyword} • radio {selectedTask.payload.radius}m • max {selectedTask.payload.maxResults}</p>}
+              </div>
+              <button onClick={() => setSelectedTask(null)} className="w-full py-2.5 bg-zinc-900 text-white rounded-xl text-xs font-black italic">Cerrar</button>
+            </motion.div>
+          </div>
         )}
         <p className="text-[10px] text-zinc-500 italic">Detalles completos en `Clientes` (tag prospecting), `Citas` y `Tareas Programadas` (filtra prospecting). Scheduler corre vía `GET /api/scheduler/run` con `CRON_SECRET`.</p>
       </div>
