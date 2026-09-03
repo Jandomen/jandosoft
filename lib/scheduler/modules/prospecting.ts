@@ -6,7 +6,7 @@ import { Appointment } from "@/lib/models/Appointment";
 import { getAvailableSlots } from "@/lib/appointment-utils";
 import type { SchedulerModule } from "../registry";
 
-// Reuse OSM search without importing route (to avoid next/server deps)
+// OSM search — mapea categoría a tags OSM reales (no solo name~keyword)
 async function osmSearch(location: string, keyword: string, radius: number, limit: number) {
   const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`, {
     headers: { "User-Agent": "Jandosoft-Prospecting/1.0" },
@@ -16,23 +16,58 @@ async function osmSearch(location: string, keyword: string, radius: number, limi
   if (!geo?.length) return null;
   const lat = parseFloat(geo[0].lat);
   const lon = parseFloat(geo[0].lon);
-  const delta = radius / 111000;
-  const viewbox = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
-  const q = `[out:json][timeout:25];(node["name"]["name"~"${keyword}",i]({{bbox}});way["name"]["name"~"${keyword}",i]({{bbox}}););out body ${limit};`;
-  const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q.replace("{{bbox}}", viewbox))}`;
-  const res = await fetch(url, { headers: { "User-Agent": "Jandosoft-Prospecting/1.0" } });
+  const r = Math.min(radius, 5000);
+
+  // Mapea keyword de categoría a tag OSM
+  const kw = keyword.toLowerCase();
+  let tagFilter = `["name"~"${keyword}",i]`;
+  if (["restaurant", "restaurante"].includes(kw)) tagFilter = `["amenity"="restaurant"]`;
+  else if (["store", "tienda", "shop"].includes(kw)) tagFilter = `["shop"]`;
+  else if (["doctor", "clinica", "clinic"].includes(kw)) tagFilter = `["amenity"~"^(doctors|clinic|hospital)$"]`;
+  else if (kw.includes("beauty") || kw.includes("belleza") || kw.includes("salon")) tagFilter = `["shop"~"beauty|hairdresser"]`;
+  else if (kw === "gym" || kw.includes("gimnasio")) tagFilter = `["leisure"="fitness_centre"]`;
+  else if (kw.includes("school") || kw.includes("escuela")) tagFilter = `["amenity"~"school|college"]`;
+  else if (kw.includes("lawyer") || kw.includes("abogado")) tagFilter = `["office"="lawyer"]`;
+  else if (kw.includes("barber") || kw.includes("barberia")) tagFilter = `["shop"~"hairdresser|barber"]`;
+  else if (kw) tagFilter = `["name"~"${keyword}",i]`;
+
+  const q = `[out:json][timeout:15];node(around:${r},${lat},${lon})${tagFilter};out ${limit};`;
+  const res = await fetch("https://overpass-api.de/api/interpreter", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Jandosoft-Prospecting/1.0" },
+    body: `data=${encodeURIComponent(q)}`,
+  });
   if (!res.ok) return null;
   const data = await res.json();
-  const elements = (data.elements || []).slice(0, limit);
+  const elements = (data.elements || []).filter((e: any) => e.tags?.name).slice(0, limit);
+  if (!elements.length && tagFilter !== `["name"~"${keyword}",i]`) {
+    // Fallback: si tag específico dio 0, intenta name~keyword
+    const q2 = `[out:json][timeout:15];node(around:${r},${lat},${lon})["name"~"${keyword}",i];out ${limit};`;
+    const r2 = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Jandosoft-Prospecting/1.0" },
+      body: `data=${encodeURIComponent(q2)}`,
+    });
+    if (r2.ok) {
+      const d2 = await r2.json();
+      const e2 = (d2.elements || []).filter((e: any) => e.tags?.name).slice(0, limit);
+      if (e2.length) return e2.map((el: any) => ({
+        name: el.tags.name,
+        address: [el.tags["addr:street"], el.tags["addr:city"]].filter(Boolean).join(", ") || location,
+        phone: el.tags.phone || el.tags["contact:phone"] || "",
+        website: el.tags.website || el.tags["contact:website"] || "",
+        rating: 0, ratingCount: 0, types: [keyword],
+        coordinates: { lat: el.lat, lng: el.lon },
+      }));
+    }
+  }
   return elements.map((el: any) => ({
-    name: el.tags?.name || keyword,
-    address: [el.tags?.["addr:street"], el.tags?.["addr:city"]].filter(Boolean).join(", ") || location,
-    phone: el.tags?.phone || el.tags?.["contact:phone"] || "",
-    website: el.tags?.website || el.tags?.["contact:website"] || "",
-    rating: 0,
-    ratingCount: 0,
-    types: [keyword],
-    coordinates: { lat: el.lat || lat, lng: el.lon || lon },
+    name: el.tags.name,
+    address: [el.tags["addr:street"], el.tags["addr:city"]].filter(Boolean).join(", ") || `${el.lat.toFixed(5)}, ${el.lon.toFixed(5)}`,
+    phone: el.tags.phone || el.tags["contact:phone"] || "",
+    website: el.tags.website || el.tags["contact:website"] || "",
+    rating: 0, ratingCount: 0, types: [el.tags.amenity || el.tags.shop || keyword],
+    coordinates: { lat: el.lat, lng: el.lon },
   }));
 }
 
