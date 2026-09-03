@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, MapPin, Clock, Zap, Loader2, Settings, Play, Power, Mail, MessageSquare, Phone } from "lucide-react";
+import { Search, MapPin, Clock, Zap, Loader2, Settings, Play, Power, Mail, MessageSquare, Phone, RefreshCw, CheckCircle2, XCircle, BarChart3 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useToast } from "@/components/ui/Toast";
 
@@ -36,6 +36,9 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
     { keyword: "auto_repair", label: "Taller" },
   ];
 
+  const [progress, setProgress] = useState<any>({ tasks: [], customers: 0, appointments: 0 });
+  const [progressLoading, setProgressLoading] = useState(false);
+
   const load = async () => {
     try {
       setLoading(true);
@@ -45,7 +48,21 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
     } catch {} finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [storeId]);
+  const loadProgress = async () => {
+    try {
+      setProgressLoading(true);
+      const [tasksRes, custRes, apptRes] = await Promise.all([
+        fetch(`/api/scheduler/tasks`).then(r => r.json()).catch(() => ({ tasks: [] })),
+        fetch(`/api/customers?storeId=${storeId}`).then(r => r.json()).catch(() => ({ customers: [] })),
+        fetch(`/api/appointments?storeId=${storeId}&limit=50`).then(r => r.json()).catch(() => ({ appointments: [] })),
+      ]);
+      const prospectTasks = (tasksRes.tasks || []).filter((t: any) => t.type?.startsWith("prospect") || t.payload?.storeId === storeId);
+      const prospectCustomers = (custRes.customers || []).filter((c: any) => (c.tags || []).includes("prospecting") || c.source === "ai");
+      setProgress({ tasks: prospectTasks.slice(0, 8), customers: prospectCustomers.length, appointments: (apptRes.appointments || []).length, allTasks: tasksRes.tasks || [] });
+    } catch {} finally { setProgressLoading(false); }
+  };
+
+  useEffect(() => { load(); loadProgress(); }, [storeId]);
 
   const save = async () => {
     if (cfg.enabled && !cfg.location.trim()) {
@@ -79,6 +96,7 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       showToast("Prospecting encolado — corre en 1-2 min via scheduler", "success");
+      loadProgress();
     } catch (e: any) {
       showToast(e.message || "Error", "error");
     } finally { setRunning(false); }
@@ -177,6 +195,50 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
         </div>
       </div>
 
+      {/* Progress */}
+      <div className="bg-white rounded-2xl border border-zinc-100 p-4 md:p-6 space-y-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-black italic uppercase tracking-tight flex items-center gap-2"><BarChart3 className="w-4 h-4 text-violet-600" /> Progreso</h4>
+          <motion.button whileTap={{ scale: 0.9 }} onClick={loadProgress} className="p-1.5 hover:bg-zinc-50 rounded-xl">
+            <RefreshCw className={`w-4 h-4 text-zinc-400 ${progressLoading ? "animate-spin" : ""}`} />
+          </motion.button>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-violet-50 border border-violet-100 rounded-xl p-3 text-center">
+            <p className="text-[9px] font-black text-violet-600 uppercase italic">Leads prospecting</p>
+            <p className="text-lg font-black italic text-violet-700">{progress.customers}</p>
+          </div>
+          <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
+            <p className="text-[9px] font-black text-amber-600 uppercase italic">Tasks</p>
+            <p className="text-lg font-black italic text-amber-700">{progress.tasks?.length || 0}</p>
+          </div>
+          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
+            <p className="text-[9px] font-black text-emerald-600 uppercase italic">Citas</p>
+            <p className="text-lg font-black italic text-emerald-700">{progress.appointments}</p>
+          </div>
+        </div>
+        {progress.tasks?.length > 0 ? (
+          <div className="space-y-1.5">
+            {progress.tasks.map((t: any) => (
+              <div key={t._id} className="flex items-center justify-between p-2.5 bg-zinc-50 rounded-xl border border-zinc-100">
+                <div className="flex items-center gap-2">
+                  <span className={`p-1.5 rounded-lg text-[10px] ${t.status === "done" ? "bg-emerald-100 text-emerald-600" : t.status === "failed" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"}`}>
+                    {t.status === "done" ? <CheckCircle2 className="w-3.5 h-3.5" /> : t.status === "failed" ? <XCircle className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+                  </span>
+                  <div>
+                    <p className="text-[11px] font-black italic text-zinc-700">{t.type}</p>
+                    <p className="text-[10px] text-zinc-400">{new Date(t.runAt).toLocaleString()} • {t.status}{t.error ? ` • ${t.error.slice(0, 40)}` : ""}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[11px] text-zinc-400 italic text-center py-4">Sin tareas prospecting aún — guarda y ejecuta</p>
+        )}
+        <p className="text-[10px] text-zinc-500 italic">Detalles completos en `Clientes` (tag prospecting), `Citas` y `Tareas Programadas` (filtra prospecting). Scheduler corre vía `GET /api/scheduler/run` con `CRON_SECRET`.</p>
+      </div>
+
       {/* How it works */}
       <div className="bg-zinc-950 text-white rounded-2xl p-4 md:p-6 space-y-3">
         <h4 className="text-xs font-black italic uppercase tracking-wider flex items-center gap-2"><Zap className="w-4 h-4 text-violet-400" /> Cómo funciona — ya está activo si está habilitado</h4>
@@ -187,7 +249,7 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
           <li><span className="text-white font-black">4. Persigue:</span> `prospect_followup` 24h y 48h si no hay `Appointment` (max 3).</li>
           <li><span className="text-white font-black">5. Agenda:</span> Cuando el lead reserva, crea `Appointment settingStage:appointment_set` + `ScheduledTask T-24h/T-1h + no-show rescue 30min`.</li>
         </ol>
-        <p className="text-[10px] text-zinc-500 italic">Corre vía `GET /api/scheduler/run` (Bearer CRON_SECRET) — Vercel Cron cada minuto si hay tasks. Ver progreso en `ScheduledTasks` / `Customers`.</p>
+        <p className="text-[10px] text-zinc-500 italic">Corre vía `GET /api/scheduler/run` (Bearer CRON_SECRET) — Vercel Cron cada minuto si hay tasks.</p>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, Loader2, CheckCircle2, XCircle, Trash2, RefreshCw, Calendar, Mail, Bell, Bot, Zap } from "lucide-react";
+import { Clock, Loader2, CheckCircle2, XCircle, Trash2, RefreshCw, Calendar, Mail, Bell, Bot, Zap, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
@@ -23,6 +23,10 @@ const TASK_ICONS: Record<string, React.ReactNode> = {
   email_campaign: <Mail className="w-4 h-4 md:w-5 md:h-5" />,
   store_notification: <Bell className="w-4 h-4 md:w-5 md:h-5" />,
   ai_followup: <Bot className="w-4 h-4 md:w-5 md:h-5" />,
+  prospecting: <Search className="w-4 h-4 md:w-5 md:h-5" />,
+  prospect_outreach: <Mail className="w-4 h-4 md:w-5 md:h-5" />,
+  prospect_followup: <RefreshCw className="w-4 h-4 md:w-5 md:h-5" />,
+  prospect_noshow: <Bell className="w-4 h-4 md:w-5 md:h-5" />,
 };
 
 const TASK_COLORS: Record<string, string> = {
@@ -30,6 +34,10 @@ const TASK_COLORS: Record<string, string> = {
   email_campaign: "text-blue-600 bg-blue-50",
   store_notification: "text-emerald-600 bg-emerald-50",
   ai_followup: "text-purple-600 bg-purple-50",
+  prospecting: "text-violet-600 bg-violet-50",
+  prospect_outreach: "text-indigo-600 bg-indigo-50",
+  prospect_followup: "text-sky-600 bg-sky-50",
+  prospect_noshow: "text-rose-600 bg-rose-50",
 };
 
 const STATUS_ICONS: Record<string, React.ReactNode> = {
@@ -90,6 +98,10 @@ export default function ScheduledTasksPanel() {
       email_campaign: "Campaña Email",
       store_notification: "Notificación Tienda",
       ai_followup: "Followup IA",
+      prospecting: "Prospecting",
+      prospect_outreach: "Outreach",
+      prospect_followup: "Followup",
+      prospect_noshow: "No-show Rescue",
     };
     return labels[type] || type;
   };
