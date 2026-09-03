@@ -104,7 +104,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ stor
   }
 }
 
-// Manual trigger: POST to run now
+// Manual trigger: POST to run now — si no está habilitado pero hay location, lo permite (one-off)
 export async function POST(req: NextRequest, { params }: { params: Promise<{ storeId: string }> }) {
   try {
     const auth = await getAuth(req);
@@ -114,7 +114,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ sto
     const store = await Store.findOne({ _id: storeId, organizationId: auth.organizationId }).lean() as any;
     if (!store) return NextResponse.json({ error: "Store not found" }, { status: 404 });
     const cfg = store.prospectingConfig;
-    if (!cfg?.enabled) return NextResponse.json({ error: "Prospecting no está habilitado — guarda primero con location y Activo en ON" }, { status: 400 });
     if (!cfg?.location) return NextResponse.json({ error: "Falta location — configúralo y guarda antes de Ejecutar ahora" }, { status: 400 });
 
     const task = await ScheduledTask.create({

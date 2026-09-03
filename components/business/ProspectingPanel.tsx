@@ -100,9 +100,24 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
   };
 
   const runNow = async () => {
-    if (!cfg.enabled || !cfg.location.trim()) {
-      showToast("Guarda primero: activa Prospecting y pon ubicación (ej: Madrid, España)", "error");
+    if (!cfg.location.trim()) {
+      showToast("Pon ubicación (ej: CDMX, Madrid) y Guardar primero", "error");
       return;
+    }
+    // Auto-guardar si hay cambios sin guardar (evita 400 por cfg.enabled desincronizado)
+    if (!cfg.enabled) {
+      showToast("Activando y guardando...", "info");
+      const toSave = { ...cfg, enabled: true };
+      setCfg(toSave);
+      try {
+        const s = await fetch(`/api/stores/${storeId}/prospecting`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(toSave) });
+        const sd = await s.json();
+        if (!s.ok) throw new Error(sd.error);
+        setCfg(sd.prospectingConfig);
+      } catch (e: any) {
+        showToast(e.message, "error");
+        return;
+      }
     }
     setRunning(true);
     try {
@@ -254,13 +269,14 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
                     setSelectedAppts(ar.appointments || []);
                   } catch {}
                 }} className="p-3 bg-white rounded-xl border border-zinc-200 cursor-pointer hover:border-violet-300 transition-all">
-                  <p className="text-[12px] font-black text-zinc-900">{c.name}</p>
-                  <p className="text-[11px] text-zinc-600 flex items-center gap-1"><MapPin className="w-3 h-3" /> {c.address || "Sin dirección"} {c.industry ? `• ${c.industry}` : ""}</p>
+                  <p className="text-[12px] font-black text-zinc-900">{c.name} {c.category ? `• ${c.category}` : ""}</p>
+                  <p className="text-[11px] text-zinc-600 flex items-center gap-1"><MapPin className="w-3 h-3" /> {c.address || "Sin dirección"}</p>
+                  {c.coordinates?.lat && <a href={`https://www.google.com/maps/search/?api=1&query=${c.coordinates.lat},${c.coordinates.lng}`} target="_blank" onClick={e => e.stopPropagation()} className="text-[10px] text-blue-500 hover:underline">📍 {c.coordinates.lat.toFixed(5)}, {c.coordinates.lng.toFixed(5)} → Ver en Maps</a>}
                   <div className="flex gap-3 mt-1 flex-wrap text-[11px]">
                     {c.email ? <span className="flex items-center gap-1 text-blue-600"><Mail className="w-3 h-3" /> {c.email}</span> : <span className="text-zinc-400">Sin email</span>}
                     {c.phone ? <span className="flex items-center gap-1 text-emerald-600"><Phone className="w-3 h-3" /> {c.phone}</span> : <span className="text-zinc-400">Sin teléfono</span>}
                   </div>
-                  {c.notes && <p className="text-[10px] text-zinc-400 mt-1 line-clamp-2">{c.notes.slice(0, 120)}</p>}
+                  {c.notes && <p className="text-[10px] text-zinc-400 mt-1 line-clamp-2">{c.notes.slice(0, 140)}</p>}
                 </motion.div>
               ))}
             </div>
@@ -317,23 +333,26 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
                 {selectedTask.type === "customer" ? (
                   <div className="bg-white border border-zinc-100 p-3 rounded-xl space-y-1">
                     <p className="font-black text-zinc-700">Negocio:</p>
-                    <p className="text-zinc-700"><b>{selectedCustomer?.name}</b> • {selectedCustomer?.status}</p>
-                    <p className="text-zinc-600"><MapPin className="w-3 h-3 inline" /> {selectedCustomer?.address || "Sin dirección"}</p>
-                    <p className="text-zinc-600"><Mail className="w-3 h-3 inline" /> {selectedCustomer?.email || "Sin email"} • <Phone className="w-3 h-3 inline" /> {selectedCustomer?.phone || "Sin teléfono"}</p>
+                    <p className="text-zinc-700"><b>{selectedCustomer?.name}</b> • {selectedCustomer?.status} • {selectedCustomer?.category}</p>
+                    <p className="text-zinc-600 flex items-center gap-1"><MapPin className="w-3 h-3" /> {selectedCustomer?.address || "Sin dirección"}</p>
+                    {selectedCustomer?.coordinates?.lat && <a href={`https://www.google.com/maps/search/?api=1&query=${selectedCustomer.coordinates.lat},${selectedCustomer.coordinates.lng}`} target="_blank" className="text-[11px] text-blue-600 hover:underline">📍 {selectedCustomer.coordinates.lat.toFixed(5)}, {selectedCustomer.coordinates.lng.toFixed(5)} → Ver en Maps</a>}
+                    <p className="text-zinc-600 flex items-center gap-2"><Mail className="w-3 h-3" /> {selectedCustomer?.email || "Sin email"} • <Phone className="w-3 h-3" /> {selectedCustomer?.phone || "Sin teléfono"}</p>
                     {selectedCustomer?.notes && <p className="text-zinc-500 text-[11px]">{selectedCustomer.notes}</p>}
                   </div>
                 ) : selectedTask.type === "prospecting" ? (
                   <div className="bg-white border border-zinc-100 p-3 rounded-xl space-y-1 text-zinc-700">
                     <p className="font-black">Búsqueda realizada:</p>
-                    <p>📍 Ubicación: <b>{selectedTask.payload.location}</b></p>
+                    <p>📍 Ubicación: <b>{selectedTask.payload.location}</b> {selectedTask.payload.location && <a href={`https://www.google.com/maps/search/${encodeURIComponent(selectedTask.payload.location)}`} target="_blank" className="text-blue-600 text-[11px] ml-2">Ver zona</a>}</p>
                     <p>🏷️ Categoría: <b>{selectedTask.payload.category}</b> {selectedTask.payload.customKeyword ? `(${selectedTask.payload.customKeyword})` : ""}</p>
                     <p>📏 Radio: <b>{selectedTask.payload.radius} m</b> • Máx: <b>{selectedTask.payload.maxResults} negocios</b></p>
+                    <p className="text-[11px] text-zinc-500 italic">Los {progress.customersList?.length || 0} negocios de arriba son el resultado de esta búsqueda — clic en cada negocio para ver qué mensaje se le envió.</p>
                   </div>
                 ) : (
                   <div className="bg-zinc-50 p-3 rounded-xl border border-zinc-100 space-y-1 text-zinc-700">
                     <p className="font-black">Contacto:</p>
-                    <p>Canal: <b>{selectedTask.payload.channel}</b> • Cliente: <b>{selectedTask.payload.customerId?.slice(-6)}</b></p>
-                    <p>Run: {new Date(selectedTask.runAt).toLocaleString()}</p>
+                    <p>Canal: <b>{selectedTask.payload.channel}</b> • Cliente ID: <b>{selectedTask.payload.customerId?.slice(-6)}</b></p>
+                    {selectedCustomer && <div className="bg-white p-2 rounded-xl border"><p className="font-bold">{selectedCustomer.name}</p><p className="text-[11px]"><MapPin className="w-3 h-3 inline" /> {selectedCustomer.address} {selectedCustomer.coordinates?.lat ? `• ${selectedCustomer.coordinates.lat.toFixed(4)},${selectedCustomer.coordinates.lng.toFixed(4)}` : ""}</p><p className="text-[11px]"><Mail className="w-3 h-3 inline" /> {selectedCustomer.email || "Sin email"} • <Phone className="w-3 h-3 inline" /> {selectedCustomer.phone || "Sin teléfono"}</p></div>}
+                    <p className="text-[11px]">Mensaje: &quot;Hola {selectedCustomer?.name || "cliente"}, soy Store... Reserva: /s/slug/reservar&quot; • {selectedTask.payload.channel === "email" ? "Email vía sendEmail" : "WhatsApp/SMS vía Communication"}</p>
                   </div>
                 )}
                 {selectedTask.payload?.customerId && (
