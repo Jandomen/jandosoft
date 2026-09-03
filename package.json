@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npx tsx server.ts",
-    "build": "next build",
-    "start": "NODE_ENV=production npx tsx server.ts",
+    "dev": "node api.js && npx tsx server.ts",
+    "build": "node api.js && next build",
+    "start": "node api.js && NODE_ENV=production npx tsx server.ts",
     "lint": "eslint",
     "setup": "cd cli && npm install && npm link"
   },
