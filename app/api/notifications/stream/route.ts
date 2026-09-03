@@ -22,6 +22,22 @@ export async function GET(req: NextRequest) {
 
   const stream = new ReadableStream({
     start(controller) {
+      let heartbeat: ReturnType<typeof setInterval> | null = null;
+      let closeTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const cleanup = () => {
+        if (closed) return;
+        closed = true;
+        if (heartbeat) clearInterval(heartbeat);
+        if (closeTimer) clearTimeout(closeTimer);
+        convIds.forEach((cid) => {
+          messageEvents.off(`${MESSAGE_NEW}:${cid}`, handler);
+        });
+        messageEvents.off(CONVERSATION_NEW, handler);
+        messageEvents.off(NOTIFICATION_NEW, notificationHandler);
+        try { controller.close(); } catch {}
+      };
+
       const handler = (event: SSEEvent) => {
         if (closed) return;
         try {
@@ -46,15 +62,18 @@ export async function GET(req: NextRequest) {
       messageEvents.on(CONVERSATION_NEW, handler);
       messageEvents.on(NOTIFICATION_NEW, notificationHandler);
 
-      req.signal.addEventListener("abort", () => {
-        closed = true;
-        convIds.forEach((cid) => {
-          messageEvents.off(`${MESSAGE_NEW}:${cid}`, handler);
-        });
-        messageEvents.off(CONVERSATION_NEW, handler);
-        messageEvents.off(NOTIFICATION_NEW, notificationHandler);
-        try { controller.close(); } catch {}
-      });
+      // Heartbeat cada 15s para keep-alive en Vercel
+      heartbeat = setInterval(() => {
+        if (closed) return;
+        try { controller.enqueue(encoder.encode(": heartbeat\n\n")); } catch {}
+      }, 15000);
+
+      // Cierra graciosamente a los 25s antes del timeout 30s de Vercel → evita 504
+      closeTimer = setTimeout(() => {
+        cleanup();
+      }, 25000);
+
+      req.signal.addEventListener("abort", cleanup);
     },
   });
 
