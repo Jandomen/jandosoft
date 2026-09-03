@@ -341,11 +341,15 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
                   </div>
                 ) : selectedTask.type === "prospecting" ? (
                   <div className="bg-white border border-zinc-100 p-3 rounded-xl space-y-1 text-zinc-700">
-                    <p className="font-black">Búsqueda realizada:</p>
+                    <p className="font-black">Búsqueda {selectedTask.status === "pending" ? "programada" : "realizada"}:</p>
                     <p>📍 Ubicación: <b>{selectedTask.payload.location}</b> {selectedTask.payload.location && <a href={`https://www.google.com/maps/search/${encodeURIComponent(selectedTask.payload.location)}`} target="_blank" className="text-blue-600 text-[11px] ml-2">Ver zona</a>}</p>
                     <p>🏷️ Categoría: <b>{selectedTask.payload.category}</b> {selectedTask.payload.customKeyword ? `(${selectedTask.payload.customKeyword})` : ""}</p>
                     <p>📏 Radio: <b>{selectedTask.payload.radius} m</b> • Máx: <b>{selectedTask.payload.maxResults} negocios</b></p>
-                    <p className="text-[11px] text-zinc-500 italic">Los {progress.customersList?.length || 0} negocios de arriba son el resultado de esta búsqueda — clic en cada negocio para ver qué mensaje se le envió.</p>
+                    {selectedTask.status === "pending" ? (
+                      <p className="text-[11px] text-amber-600 bg-amber-50 p-2 rounded-xl">⏳ Aún no se ha ejecutado — en cola para el scheduler (cada 5 min). Cuando pase a done verás arriba los negocios con coordenadas y mensaje.</p>
+                    ) : (
+                      <p className="text-[11px] text-zinc-500 italic">Los {progress.customersList?.length || 0} negocios de arriba son el resultado — clic en cada negocio para ver coordenadas y mensaje.</p>
+                    )}
                   </div>
                 ) : (
                   <div className="bg-zinc-50 p-3 rounded-xl border border-zinc-100 space-y-1 text-zinc-700">
