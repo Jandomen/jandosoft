@@ -40,6 +40,8 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
   const [progressLoading, setProgressLoading] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [selectedComms, setSelectedComms] = useState<any[]>([]);
+  const [selectedAppts, setSelectedAppts] = useState<any[]>([]);
 
   const load = async () => {
     try {
@@ -237,12 +239,18 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
             {progress.tasks.map((t: any) => (
               <motion.div key={t._id} whileTap={{ scale: 0.98 }} onClick={async () => {
                 setSelectedTask(t);
+                setSelectedComms([]); setSelectedAppts([]); setSelectedCustomer(null);
                 if (t.payload?.customerId) {
                   try {
-                    const r = await fetch(`/api/customers?storeId=${storeId}`);
-                    const d = await r.json();
-                    const c = (d.customers || []).find((x: any) => String(x._id) === String(t.payload.customerId));
+                    const [r, cr, ar] = await Promise.all([
+                      fetch(`/api/customers?storeId=${storeId}`).then(x => x.json()).catch(() => ({ customers: [] })),
+                      fetch(`/api/communications?storeId=${storeId}&customerId=${t.payload.customerId}`).then(x => x.json()).catch(() => ({ communications: [] })),
+                      fetch(`/api/appointments?storeId=${storeId}&customerId=${t.payload.customerId}`).then(x => x.json()).catch(() => ({ appointments: [] })),
+                    ]);
+                    const c = (r.customers || []).find((x: any) => String(x._id) === String(t.payload.customerId));
                     setSelectedCustomer(c || null);
+                    setSelectedComms(cr.communications || cr.data || []);
+                    setSelectedAppts(ar.appointments || []);
                   } catch { setSelectedCustomer(null); }
                 } else setSelectedCustomer(null);
               }} className="flex items-center justify-between p-2.5 bg-zinc-50 rounded-xl border border-zinc-100 cursor-pointer hover:border-violet-300 hover:bg-violet-50/50 transition-all">
@@ -278,15 +286,37 @@ export default function ProspectingPanel({ storeId }: { storeId: string }) {
                   <pre className="bg-zinc-50 p-3 rounded-xl text-[10px] overflow-x-auto border border-zinc-100">{JSON.stringify(selectedTask.payload, null, 2)}</pre>
                 </div>
                 {selectedTask.payload?.customerId && (
-                  <div className="bg-violet-50 border border-violet-100 p-3 rounded-xl space-y-1">
+                  <div className="bg-violet-50 border border-violet-100 p-3 rounded-xl space-y-2">
                     <p className="font-black text-violet-700">Qué se envió:</p>
                     {selectedCustomer ? (
                       <>
-                        <p className="text-violet-700"><b>Cliente:</b> {selectedCustomer.name} {selectedCustomer.email ? `• ${selectedCustomer.email}` : ""} {selectedCustomer.phone ? `• ${selectedCustomer.phone}` : ""}</p>
+                        <p className="text-violet-700"><b>Cliente:</b> {selectedCustomer.name} {selectedCustomer.email ? `• ${selectedCustomer.email}` : ""} {selectedCustomer.phone ? `• ${selectedCustomer.phone}` : ""} • {selectedCustomer.status}</p>
                         <p className="text-violet-700"><b>Canal:</b> {selectedTask.payload.channel || "email"}</p>
-                        <p className="text-zinc-600 italic">Mensaje template: &quot;Hola {selectedCustomer.name}, soy {'{Store.name}'}... Reserva: /s/{"{slug}"}/reservar&quot; — ver `Communication` si canal whatsapp/sms, o `EmailLog` si email.</p>
+                        <p className="text-zinc-600 italic">Template: &quot;Hola {selectedCustomer.name}, soy Store... Reserva: /s/slug/reservar&quot;</p>
                       </>
                     ) : <p className="text-zinc-500">Cliente {selectedTask.payload.customerId} — ver en Clientes</p>}
+                    {/* Conversación */}
+                    {selectedComms.length > 0 ? (
+                      <div className="space-y-1.5 pt-2 border-t border-violet-200">
+                        <p className="font-black text-violet-700">Conversación ({selectedComms.length}):</p>
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
+                          {selectedComms.slice(0, 8).map((m: any) => (
+                            <div key={m._id} className={`p-2 rounded-xl text-[11px] ${m.direction === "sent" || m.direction === "outbound" ? "bg-white border border-violet-200" : "bg-emerald-50 border border-emerald-200"}`}>
+                              <p className="font-bold">{m.direction === "sent" || m.direction === "outbound" ? "→ Enviado" : "← Recibido"} {m.type} • {new Date(m.createdAt).toLocaleString()}</p>
+                              <p className="text-zinc-700">{m.body || m.content || m.subject || "(sin contenido)"}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : <p className="text-[11px] text-zinc-500 italic">Sin conversación aún — si responde aparece aquí (email/whatsapp/sms webhook → Communication direction:received)</p>}
+                    {selectedAppts.length > 0 && (
+                      <div className="pt-2 border-t border-violet-200">
+                        <p className="font-black text-emerald-700">Citas ({selectedAppts.length}):</p>
+                        {selectedAppts.slice(0, 3).map((a: any) => (
+                          <p key={a._id} className="text-emerald-700 text-[11px]">{a.date} {a.time} • {a.service?.name} • {a.status} {a.settingStage ? `• ${a.settingStage}` : ""}</p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 {selectedTask.type === "prospecting" && <p className="text-zinc-500">Buscó: {selectedTask.payload.location} • {selectedTask.payload.category} {selectedTask.payload.customKeyword} • radio {selectedTask.payload.radius}m • max {selectedTask.payload.maxResults}</p>}
