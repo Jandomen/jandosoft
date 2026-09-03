@@ -4,19 +4,29 @@ import { useEffect, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 
 let socket: Socket | null = null;
+let isVercelEnv = false;
 
-function getSocket(): Socket {
+function getSocket(): Socket | any {
+  if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) {
+    isVercelEnv = true;
+    // Vercel serverless no corre server.ts custom — no hay /api/socketio. Retorna mock no-op para no spamear 404
+    if (!socket) {
+      socket = {
+        emit: () => {},
+        on: () => {},
+        off: () => {},
+        close: () => {},
+        disconnect: () => {},
+      } as any;
+    }
+    return socket;
+  }
   if (!socket) {
-    const isVercel = typeof window !== "undefined" && window.location.hostname.includes("vercel.app");
     socket = io(typeof window !== "undefined" ? window.location.origin : "", {
       path: "/api/socketio",
-      transports: isVercel ? ["polling"] : ["websocket", "polling"],
-      reconnectionAttempts: isVercel ? 1 : 5,
+      transports: ["websocket", "polling"],
+      reconnectionAttempts: 5,
       timeout: 5000,
-    });
-    // Silencia error de WebSocket en Vercel (usa SSE como fallback en BusinessDashboard)
-    socket.on("connect_error", () => {
-      // No spamear consola en prod
     });
   }
   return socket;
@@ -27,6 +37,7 @@ export function useAdminSocket(onEvent: (event: string, data: any) => void) {
   onEventRef.current = onEvent;
 
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) return;
     const s = getSocket();
     s.emit("join-admin");
 
@@ -45,6 +56,7 @@ export function useStoreSocket(storeId: string | null, onEvent: (event: string, 
 
   useEffect(() => {
     if (!storeId) return;
+    if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) return;
     const s = getSocket();
     const room = `store:${storeId}`;
     s.emit("join-store", storeId);
@@ -74,6 +86,7 @@ export function useUserSocket(identifier: string | null, onEvent: (event: string
 
   useEffect(() => {
     if (!identifier) return;
+    if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) return;
     const s = getSocket();
     s.emit("join-user", identifier);
 
